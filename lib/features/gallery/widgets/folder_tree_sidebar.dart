@@ -8,7 +8,7 @@ import '../../../shared/models/gallery_sort.dart';
 import '../../../shared/utils/natural_compare.dart';
 import '../gallery_service.dart';
 
-class FolderTreeSidebar extends StatelessWidget {
+class FolderTreeSidebar extends StatefulWidget {
   const FolderTreeSidebar({
     required this.rootPath,
     required this.currentFolderPath,
@@ -29,124 +29,42 @@ class FolderTreeSidebar extends StatelessWidget {
   final VoidCallback? onClose;
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 10, 10),
-            child: Row(
-              children: [
-                const Icon(Icons.account_tree_outlined),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Folders & Media',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                if (onClose != null)
-                  IconButton(
-                    tooltip: 'Close sidebar',
-                    onPressed: onClose,
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(top: 8, bottom: 16),
-              children: [
-                _FolderNode(
-                  directory: Directory(rootPath),
-                  currentFolderPath: currentFolderPath,
-                  activeMediaPath: activeMediaPath,
-                  sort: sort,
-                  onFolderSelected: onFolderSelected,
-                  onMediaSelected: onMediaSelected,
-                  initiallyExpanded: true,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<FolderTreeSidebar> createState() => _FolderTreeSidebarState();
 }
 
-class _FolderNode extends StatefulWidget {
-  const _FolderNode({
-    required this.directory,
-    required this.currentFolderPath,
-    required this.activeMediaPath,
-    required this.sort,
-    required this.onFolderSelected,
-    required this.onMediaSelected,
-    this.initiallyExpanded = false,
-  });
-
-  final Directory directory;
-  final String currentFolderPath;
-  final String? activeMediaPath;
-  final GallerySort sort;
-  final ValueChanged<String>? onFolderSelected;
-  final ValueChanged<MediaItem> onMediaSelected;
-  final bool initiallyExpanded;
-
-  @override
-  State<_FolderNode> createState() => _FolderNodeState();
-}
-
-class _FolderNodeState extends State<_FolderNode> {
-  final _expansionController = ExpansibleController();
-  Future<_FolderContents>? _contents;
+class _FolderTreeSidebarState extends State<FolderTreeSidebar> {
+  final _expandedPaths = <String>{};
+  final _loadingPaths = <String>{};
+  final _contentsByPath = <String, _FolderContents>{};
+  final _revealKeys = <String, GlobalKey>{};
+  int _revealGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    if (_shouldAutoExpand(widget)) _contents = _readContents();
+    _expandedPaths.add(widget.rootPath);
+    _revealActiveLocation();
   }
 
   @override
-  void didUpdateWidget(covariant _FolderNode oldWidget) {
+  void didUpdateWidget(covariant FolderTreeSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!path.equals(oldWidget.rootPath, widget.rootPath)) {
+      _expandedPaths
+        ..clear()
+        ..add(widget.rootPath);
+      _loadingPaths.clear();
+      _contentsByPath.clear();
+      _revealKeys.clear();
+    }
     final locationChanged =
         !_samePath(oldWidget.currentFolderPath, widget.currentFolderPath) ||
         !_samePath(oldWidget.activeMediaPath, widget.activeMediaPath);
-    if (locationChanged && _shouldAutoExpand(widget)) {
-      _contents ??= _readContents();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_expansionController.isExpanded) {
-          _expansionController.expand();
-        }
-      });
+    if (locationChanged || !_contentsByPath.containsKey(widget.rootPath)) {
+      _revealActiveLocation();
+    } else if (oldWidget.sort != widget.sort) {
+      setState(() {});
     }
-  }
-
-  @override
-  void dispose() {
-    _expansionController.dispose();
-    super.dispose();
-  }
-
-  bool _shouldAutoExpand(_FolderNode node) {
-    if (node.initiallyExpanded) return true;
-    final directoryPath = node.directory.path;
-    if (path.equals(directoryPath, node.currentFolderPath) ||
-        path.isWithin(directoryPath, node.currentFolderPath)) {
-      return true;
-    }
-    final mediaPath = node.activeMediaPath;
-    return mediaPath != null &&
-        (path.equals(directoryPath, path.dirname(mediaPath)) ||
-            path.isWithin(directoryPath, mediaPath));
   }
 
   bool _samePath(String? left, String? right) {
@@ -154,11 +72,56 @@ class _FolderNodeState extends State<_FolderNode> {
     return path.equals(left, right);
   }
 
-  Future<_FolderContents> _readContents() async {
+  String get _targetFolderPath => widget.activeMediaPath == null
+      ? widget.currentFolderPath
+      : path.dirname(widget.activeMediaPath!);
+
+  Future<void> _revealActiveLocation() async {
+    final generation = ++_revealGeneration;
+    final ancestors = _ancestorsTo(_targetFolderPath);
+    for (final ancestor in ancestors) {
+      if (generation != _revealGeneration) return;
+      _expandedPaths.add(ancestor);
+      await _loadFolder(ancestor);
+    }
+    if (!mounted || generation != _revealGeneration) return;
+    setState(() {});
+    final activeMediaPath = widget.activeMediaPath;
+    if (activeMediaPath != null) _scheduleReveal(activeMediaPath);
+  }
+
+  List<String> _ancestorsTo(String targetPath) {
+    if (!path.equals(targetPath, widget.rootPath) &&
+        !path.isWithin(widget.rootPath, targetPath)) {
+      return [widget.rootPath];
+    }
+    final result = <String>[targetPath];
+    var current = targetPath;
+    while (!path.equals(current, widget.rootPath)) {
+      final parent = path.dirname(current);
+      if (path.equals(parent, current)) break;
+      result.add(parent);
+      current = parent;
+    }
+    return result.reversed.toList();
+  }
+
+  Future<void> _loadFolder(String folderPath) async {
+    if (_contentsByPath.containsKey(folderPath) ||
+        _loadingPaths.contains(folderPath)) {
+      while (_loadingPaths.contains(folderPath)) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      return;
+    }
+    _loadingPaths.add(folderPath);
+    if (mounted) setState(() {});
+    final folders = <Directory>[];
+    final media = <MediaItem>[];
     try {
-      final folders = <Directory>[];
-      final media = <MediaItem>[];
-      await for (final entity in widget.directory.list(followLinks: false)) {
+      await for (final entity in Directory(
+        folderPath,
+      ).list(followLinks: false)) {
         if (entity is Directory) {
           folders.add(entity);
           continue;
@@ -183,144 +146,41 @@ class _FolderNodeState extends State<_FolderNode> {
             ),
           );
         } on FileSystemException {
-          // The entry may disappear while the tree is loading.
+          // The entry can disappear while the folder is loading.
         }
       }
-      folders.sort(
-        (a, b) => naturalCompare(path.basename(a.path), path.basename(b.path)),
-      );
-      media.sort((a, b) => _compareMedia(a, b, widget.sort));
-      return _FolderContents(folders: folders, media: media);
     } on FileSystemException {
-      return const _FolderContents();
+      // Keep an empty section for inaccessible folders.
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedFolder = path.equals(
-      widget.directory.path,
-      widget.currentFolderPath,
+    _contentsByPath[folderPath] = _FolderContents(
+      folders: folders,
+      media: media,
     );
-    final title = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(
-        path.basename(widget.directory.path),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: selectedFolder
-            ? TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              )
-            : null,
-      ),
-    );
-    final tile = ExpansionTile(
-      key: PageStorageKey(widget.directory.path),
-      controller: _expansionController,
-      initiallyExpanded: _shouldAutoExpand(widget),
-      tilePadding: const EdgeInsets.only(left: 12, right: 8),
-      childrenPadding: const EdgeInsets.only(left: 14),
-      leading: Icon(
-        selectedFolder ? Icons.folder_open_rounded : Icons.folder_rounded,
-        color: selectedFolder ? Theme.of(context).colorScheme.primary : null,
-      ),
-      title: widget.onFolderSelected == null
-          ? title
-          : Builder(
-              builder: (tileContext) => InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: () {
-                  ExpansibleController.of(tileContext).expand();
-                  widget.onFolderSelected!(widget.directory.path);
-                },
-                child: title,
-              ),
-            ),
-      onExpansionChanged: (expanded) {
-        if (expanded && _contents == null) {
-          _contents = _readContents();
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() {});
-          });
-        }
-      },
-      children: [
-        if (_contents case final contents?)
-          FutureBuilder<_FolderContents>(
-            future: contents,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: LinearProgressIndicator(),
-                );
-              }
-              return Column(
-                children: [
-                  for (final child
-                      in snapshot.data?.folders ?? const <Directory>[])
-                    _FolderNode(
-                      directory: child,
-                      currentFolderPath: widget.currentFolderPath,
-                      activeMediaPath: widget.activeMediaPath,
-                      sort: widget.sort,
-                      onFolderSelected: widget.onFolderSelected,
-                      onMediaSelected: widget.onMediaSelected,
-                    ),
-                  for (final media
-                      in snapshot.data?.media ?? const <MediaItem>[])
-                    _AutoReveal(
-                      active:
-                          widget.activeMediaPath != null &&
-                          path.equals(widget.activeMediaPath!, media.path),
-                      child: _MediaTreeTile(
-                        media: media,
-                        selected:
-                            widget.activeMediaPath != null &&
-                            path.equals(widget.activeMediaPath!, media.path),
-                        onTap: () => widget.onMediaSelected(media),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-      ],
-    );
-    return _AutoReveal(active: selectedFolder, child: tile);
-  }
-}
-
-class _AutoReveal extends StatefulWidget {
-  const _AutoReveal({required this.active, required this.child});
-
-  final bool active;
-  final Widget child;
-
-  @override
-  State<_AutoReveal> createState() => _AutoRevealState();
-}
-
-class _AutoRevealState extends State<_AutoReveal> {
-  @override
-  void initState() {
-    super.initState();
-    if (widget.active) _scheduleReveal();
+    _loadingPaths.remove(folderPath);
+    if (mounted) setState(() {});
   }
 
-  @override
-  void didUpdateWidget(covariant _AutoReveal oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.active && !oldWidget.active) _scheduleReveal();
+  Future<void> _toggleFolder(String folderPath) async {
+    if (_expandedPaths.remove(folderPath)) {
+      setState(() {});
+      return;
+    }
+    _expandedPaths.add(folderPath);
+    await _loadFolder(folderPath);
+    if (mounted) setState(() {});
   }
 
-  void _scheduleReveal() {
+  GlobalKey _revealKeyFor(String itemPath) {
+    return _revealKeys.putIfAbsent(itemPath, GlobalKey.new);
+  }
+
+  void _scheduleReveal(String itemPath) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final targetContext = _revealKeyFor(itemPath).currentContext;
+      if (targetContext == null) return;
       Scrollable.ensureVisible(
-        context,
+        targetContext,
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
         alignment: 0.35,
@@ -328,18 +188,227 @@ class _AutoRevealState extends State<_AutoReveal> {
     });
   }
 
+  List<Widget> _buildFolderSlivers(String folderPath, int depth) {
+    final contents = _contentsByPath[folderPath];
+    final expanded = _expandedPaths.contains(folderPath);
+    final selected = path.equals(folderPath, widget.currentFolderPath);
+    final media = [...?contents?.media]
+      ..sort((a, b) => _compareMedia(a, b, widget.sort));
+    final folders = [...?contents?.folders]
+      ..sort(
+        (a, b) => naturalCompare(path.basename(a.path), path.basename(b.path)),
+      );
+
+    final sectionSlivers = <Widget>[
+      SliverPersistentHeader(
+        pinned: true,
+        delegate: _FolderHeaderDelegate(
+          depth: depth,
+          name: path.basename(folderPath),
+          selected: selected,
+          expanded: expanded,
+          loading: _loadingPaths.contains(folderPath),
+          onToggle: () => _toggleFolder(folderPath),
+          onOpen: widget.onFolderSelected == null
+              ? null
+              : () {
+                  if (!expanded) _toggleFolder(folderPath);
+                  widget.onFolderSelected!(folderPath);
+                },
+        ),
+      ),
+      if (expanded && _loadingPaths.contains(folderPath))
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
+        ),
+      if (expanded && media.isNotEmpty)
+        SliverList.builder(
+          itemCount: media.length,
+          itemBuilder: (context, index) {
+            final item = media[index];
+            final active =
+                widget.activeMediaPath != null &&
+                path.equals(widget.activeMediaPath!, item.path);
+            return KeyedSubtree(
+              key: _revealKeyFor(item.path),
+              child: _MediaTreeTile(
+                media: item,
+                depth: depth + 1,
+                selected: active,
+                onTap: () => widget.onMediaSelected(item),
+              ),
+            );
+          },
+        ),
+    ];
+
+    final slivers = <Widget>[...sectionSlivers];
+    if (expanded && contents != null) {
+      for (final child in folders) {
+        slivers.addAll(_buildFolderSlivers(child.path, depth + 1));
+      }
+    }
+    return slivers;
+  }
+
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 10, 10),
+            child: Row(
+              children: [
+                const Icon(Icons.account_tree_outlined),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Folders & Media',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (widget.onClose != null)
+                  IconButton(
+                    tooltip: 'Close sidebar',
+                    onPressed: widget.onClose,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                ..._buildFolderSlivers(widget.rootPath, 0),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _FolderHeaderDelegate({
+    required this.depth,
+    required this.name,
+    required this.selected,
+    required this.expanded,
+    required this.loading,
+    required this.onToggle,
+    required this.onOpen,
+  });
+
+  final int depth;
+  final String name;
+  final bool selected;
+  final bool expanded;
+  final bool loading;
+  final VoidCallback onToggle;
+  final VoidCallback? onOpen;
+
+  @override
+  double get minExtent => 48;
+
+  @override
+  double get maxExtent => 48;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox.expand(
+      child: Material(
+        color: overlapsContent
+            ? colorScheme.surfaceContainerHighest
+            : colorScheme.surfaceContainerHigh,
+        elevation: overlapsContent ? 2 : 0,
+        child: Padding(
+          padding: EdgeInsets.only(left: 8 + (depth * 14), right: 8),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: expanded ? 'Collapse folder' : 'Expand folder',
+                visualDensity: VisualDensity.compact,
+                onPressed: onToggle,
+                icon: loading
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        expanded
+                            ? Icons.keyboard_arrow_down_rounded
+                            : Icons.keyboard_arrow_right_rounded,
+                      ),
+              ),
+              Icon(
+                expanded ? Icons.folder_open_rounded : Icons.folder_rounded,
+                size: 20,
+                color: selected ? colorScheme.primary : null,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  onTap: onOpen ?? onToggle,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: selected
+                          ? TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _FolderHeaderDelegate oldDelegate) {
+    return depth != oldDelegate.depth ||
+        name != oldDelegate.name ||
+        selected != oldDelegate.selected ||
+        expanded != oldDelegate.expanded ||
+        loading != oldDelegate.loading;
+  }
 }
 
 class _MediaTreeTile extends StatelessWidget {
   const _MediaTreeTile({
     required this.media,
+    required this.depth,
     required this.selected,
     required this.onTap,
   });
 
   final MediaItem media;
+  final int depth;
   final bool selected;
   final VoidCallback onTap;
 
@@ -347,7 +416,7 @@ class _MediaTreeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(left: 18, right: 8, bottom: 2),
+      padding: EdgeInsets.only(left: 18 + (depth * 14), right: 8, bottom: 2),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: selected
