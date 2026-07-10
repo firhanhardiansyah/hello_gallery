@@ -105,12 +105,53 @@ class _FolderNode extends StatefulWidget {
 }
 
 class _FolderNodeState extends State<_FolderNode> {
+  final _expansionController = ExpansibleController();
   Future<_FolderContents>? _contents;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initiallyExpanded) _contents = _readContents();
+    if (_shouldAutoExpand(widget)) _contents = _readContents();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FolderNode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final locationChanged =
+        !_samePath(oldWidget.currentFolderPath, widget.currentFolderPath) ||
+        !_samePath(oldWidget.activeMediaPath, widget.activeMediaPath);
+    if (locationChanged && _shouldAutoExpand(widget)) {
+      _contents ??= _readContents();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_expansionController.isExpanded) {
+          _expansionController.expand();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _expansionController.dispose();
+    super.dispose();
+  }
+
+  bool _shouldAutoExpand(_FolderNode node) {
+    if (node.initiallyExpanded) return true;
+    final directoryPath = node.directory.path;
+    if (path.equals(directoryPath, node.currentFolderPath) ||
+        path.isWithin(directoryPath, node.currentFolderPath)) {
+      return true;
+    }
+    final mediaPath = node.activeMediaPath;
+    return mediaPath != null &&
+        (path.equals(directoryPath, path.dirname(mediaPath)) ||
+            path.isWithin(directoryPath, mediaPath));
+  }
+
+  bool _samePath(String? left, String? right) {
+    if (left == null || right == null) return left == right;
+    return path.equals(left, right);
   }
 
   Future<_FolderContents> _readContents() async {
@@ -175,9 +216,10 @@ class _FolderNodeState extends State<_FolderNode> {
             : null,
       ),
     );
-    return ExpansionTile(
+    final tile = ExpansionTile(
       key: PageStorageKey(widget.directory.path),
-      initiallyExpanded: widget.initiallyExpanded,
+      controller: _expansionController,
+      initiallyExpanded: _shouldAutoExpand(widget),
       tilePadding: const EdgeInsets.only(left: 12, right: 8),
       childrenPadding: const EdgeInsets.only(left: 14),
       leading: Icon(
@@ -229,12 +271,17 @@ class _FolderNodeState extends State<_FolderNode> {
                     ),
                   for (final media
                       in snapshot.data?.media ?? const <MediaItem>[])
-                    _MediaTreeTile(
-                      media: media,
-                      selected:
+                    _AutoReveal(
+                      active:
                           widget.activeMediaPath != null &&
                           path.equals(widget.activeMediaPath!, media.path),
-                      onTap: () => widget.onMediaSelected(media),
+                      child: _MediaTreeTile(
+                        media: media,
+                        selected:
+                            widget.activeMediaPath != null &&
+                            path.equals(widget.activeMediaPath!, media.path),
+                        onTap: () => widget.onMediaSelected(media),
+                      ),
                     ),
                 ],
               );
@@ -242,7 +289,47 @@ class _FolderNodeState extends State<_FolderNode> {
           ),
       ],
     );
+    return _AutoReveal(active: selectedFolder, child: tile);
   }
+}
+
+class _AutoReveal extends StatefulWidget {
+  const _AutoReveal({required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  State<_AutoReveal> createState() => _AutoRevealState();
+}
+
+class _AutoRevealState extends State<_AutoReveal> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) _scheduleReveal();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoReveal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _scheduleReveal();
+  }
+
+  void _scheduleReveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.35,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _MediaTreeTile extends StatelessWidget {
