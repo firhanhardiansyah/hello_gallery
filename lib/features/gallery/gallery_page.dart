@@ -7,6 +7,7 @@ import 'package:path/path.dart' as path;
 
 import '../../shared/models/gallery_item.dart';
 import '../../shared/models/gallery_sort.dart';
+import '../../shared/utils/natural_compare.dart';
 import '../media_detail/media_detail_controller.dart';
 import '../media_detail/media_detail_page.dart';
 import '../settings/settings_controller.dart';
@@ -76,17 +77,13 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   int _compareMedia(MediaItem a, MediaItem b, GallerySort sort) {
     final comparison = switch (sort) {
-      GallerySort.nameAscending => a.name.toLowerCase().compareTo(
-        b.name.toLowerCase(),
-      ),
-      GallerySort.nameDescending => b.name.toLowerCase().compareTo(
-        a.name.toLowerCase(),
-      ),
+      GallerySort.nameAscending => naturalCompare(a.name, b.name),
+      GallerySort.nameDescending => naturalCompare(b.name, a.name),
       GallerySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
       GallerySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
     };
     if (comparison != 0) return comparison;
-    return a.path.toLowerCase().compareTo(b.path.toLowerCase());
+    return naturalCompare(a.path, b.path);
   }
 
   void _toggleSidebar() {
@@ -148,16 +145,18 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                         padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
                         child: SizedBox(
                           width: 300,
-                          child: FolderTreeSidebar(
-                            rootPath: root,
-                            currentFolderPath: gallery.currentPath ?? root,
-                            activeMediaPath: detailState?.activeItem?.path,
-                            sort: gallery.sort,
-                            onClose: () =>
-                                setState(() => _sidebarVisible = false),
-                            onFolderSelected: _openFolder,
-                            onMediaSelected: (item) =>
-                                _openMediaDetail(item, gallery),
+                          child: ExcludeFocus(
+                            child: FolderTreeSidebar(
+                              rootPath: root,
+                              currentFolderPath: gallery.currentPath ?? root,
+                              activeMediaPath: detailState?.activeItem?.path,
+                              sort: gallery.sort,
+                              onClose: () =>
+                                  setState(() => _sidebarVisible = false),
+                              onFolderSelected: _openFolder,
+                              onMediaSelected: (item) =>
+                                  _openMediaDetail(item, gallery),
+                            ),
                           ),
                         ),
                       ),

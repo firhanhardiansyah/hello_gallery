@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 
 import '../../../shared/models/gallery_item.dart';
 import '../../../shared/models/gallery_sort.dart';
+import '../../../shared/utils/natural_compare.dart';
 import '../gallery_service.dart';
 
 class FolderTreeSidebar extends StatelessWidget {
@@ -145,10 +146,7 @@ class _FolderNodeState extends State<_FolderNode> {
         }
       }
       folders.sort(
-        (a, b) => path
-            .basename(a.path)
-            .toLowerCase()
-            .compareTo(path.basename(b.path).toLowerCase()),
+        (a, b) => naturalCompare(path.basename(a.path), path.basename(b.path)),
       );
       media.sort((a, b) => _compareMedia(a, b, widget.sort));
       return _FolderContents(folders: folders, media: media);
@@ -311,17 +309,13 @@ class _MediaTreeTile extends StatelessWidget {
 
 int _compareMedia(MediaItem a, MediaItem b, GallerySort sort) {
   final comparison = switch (sort) {
-    GallerySort.nameAscending => a.name.toLowerCase().compareTo(
-      b.name.toLowerCase(),
-    ),
-    GallerySort.nameDescending => b.name.toLowerCase().compareTo(
-      a.name.toLowerCase(),
-    ),
+    GallerySort.nameAscending => naturalCompare(a.name, b.name),
+    GallerySort.nameDescending => naturalCompare(b.name, a.name),
     GallerySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
     GallerySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
   };
   if (comparison != 0) return comparison;
-  return a.path.toLowerCase().compareTo(b.path.toLowerCase());
+  return naturalCompare(a.path, b.path);
 }
 
 class _FolderContents {

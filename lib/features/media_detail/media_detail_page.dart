@@ -117,8 +117,10 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
     final controller = ref.read(mediaDetailControllerProvider.notifier);
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowUp:
+        _focusNode.requestFocus();
         _navigateWithoutRevealingControls(controller.previous);
       case LogicalKeyboardKey.arrowDown:
+        _focusNode.requestFocus();
         _navigateWithoutRevealingControls(controller.next);
       case LogicalKeyboardKey.arrowLeft:
         _showControls();
@@ -215,6 +217,7 @@ class _Preview extends ConsumerWidget {
       fit: StackFit.expand,
       children: [
         GestureDetector(
+          key: ValueKey(item.path),
           behavior: HitTestBehavior.opaque,
           onTap: item.isVideo ? togglePlayback : null,
           child: ColoredBox(
@@ -223,13 +226,26 @@ class _Preview extends ConsumerWidget {
                 ? controller.videoController == null
                       ? const Center(child: CircularProgressIndicator())
                       : Video(
+                          key: ValueKey('video:${item.path}'),
                           controller: controller.videoController!,
                           controls: NoVideoControls,
                         )
                 : InteractiveViewer(
                     minScale: 0.5,
                     maxScale: 5,
-                    child: Image.file(File(item.path), fit: BoxFit.contain),
+                    child: Image.file(
+                      File(item.path),
+                      key: ValueKey('image:${item.path}'),
+                      fit: BoxFit.contain,
+                      gaplessPlayback: false,
+                      frameBuilder: (context, child, frame, syncLoaded) {
+                        if (syncLoaded || frame != null) return child;
+                        return const ColoredBox(
+                          color: Colors.black,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                    ),
                   ),
           ),
         ),

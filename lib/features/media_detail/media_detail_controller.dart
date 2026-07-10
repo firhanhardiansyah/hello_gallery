@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:path/path.dart' as path;
 
 import '../../shared/models/gallery_item.dart';
 import 'media_detail_state.dart';
@@ -37,15 +38,23 @@ class MediaDetailController extends Notifier<MediaDetailState> {
     await _openActive();
   }
 
-  Future<void> next() async {
-    if (!state.hasNext) return;
-    state = state.copyWith(activeIndex: state.activeIndex + 1);
-    await _openActive();
-  }
+  Future<void> next() => _moveBy(1);
 
-  Future<void> previous() async {
-    if (!state.hasPrevious) return;
-    state = state.copyWith(activeIndex: state.activeIndex - 1);
+  Future<void> previous() => _moveBy(-1);
+
+  Future<void> _moveBy(int offset) async {
+    final activePath = state.activeItem?.path;
+    if (activePath == null) return;
+    final currentIndex = state.items.indexWhere(
+      (item) => path.equals(item.path, activePath),
+    );
+    final targetIndex = currentIndex + offset;
+    if (currentIndex < 0 ||
+        targetIndex < 0 ||
+        targetIndex >= state.items.length) {
+      return;
+    }
+    state = state.copyWith(activeIndex: targetIndex);
     await _openActive();
   }
 
@@ -57,7 +66,7 @@ class MediaDetailController extends Notifier<MediaDetailState> {
 
   Future<void> openMedia(MediaItem item) async {
     final existingIndex = state.items.indexWhere(
-      (entry) => entry.path == item.path,
+      (entry) => path.equals(entry.path, item.path),
     );
     if (existingIndex >= 0) {
       await select(existingIndex);
@@ -90,15 +99,15 @@ class MediaDetailController extends Notifier<MediaDetailState> {
 
   Future<void> _openActive() async {
     final generation = ++_openGeneration;
-    await _disposePlayer();
-    if (generation != _openGeneration) return;
-    final item = state.activeItem;
     state = state.copyWith(
       isPlaying: false,
       isMuted: false,
       position: Duration.zero,
       duration: Duration.zero,
     );
+    await _disposePlayer();
+    if (generation != _openGeneration) return;
+    final item = state.activeItem;
     if (item == null || !item.isVideo) return;
     final player = Player();
     _player = player;

@@ -3,6 +3,7 @@ import 'package:path/path.dart' as path;
 
 import '../../shared/models/gallery_item.dart';
 import '../../shared/models/gallery_sort.dart';
+import '../../shared/utils/natural_compare.dart';
 import 'gallery_repository.dart';
 import 'gallery_state.dart';
 
@@ -70,12 +71,8 @@ class GalleryController extends Notifier<GalleryState> {
       );
       if (folderOrder != 0) return folderOrder;
       return switch (sort) {
-        GallerySort.nameAscending => a.name.toLowerCase().compareTo(
-          b.name.toLowerCase(),
-        ),
-        GallerySort.nameDescending => b.name.toLowerCase().compareTo(
-          a.name.toLowerCase(),
-        ),
+        GallerySort.nameAscending => naturalCompare(a.name, b.name),
+        GallerySort.nameDescending => naturalCompare(b.name, a.name),
         GallerySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
         GallerySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
       };
