@@ -48,7 +48,6 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   final _focusNode = FocusNode();
   Timer? _hideTimer;
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
-  final _engagedGamepadAxes = <GamepadAxis>{};
   bool _controlsVisible = true;
   int _silentNavigationCount = 0;
 
@@ -128,25 +127,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
       return;
     }
 
-    final axis = event.axis;
-    if (axis == null ||
-        (axis != GamepadAxis.leftStickX && axis != GamepadAxis.leftStickY)) {
-      return;
-    }
-    if (event.value.abs() < 0.35) {
-      _engagedGamepadAxes.remove(axis);
-      return;
-    }
-    if (event.value.abs() < 0.75 || !_engagedGamepadAxes.add(axis)) return;
-    final controller = ref.read(mediaDetailControllerProvider.notifier);
-    if (axis == GamepadAxis.leftStickX) {
-      _showControls();
-      controller.seekBy(Duration(seconds: event.value > 0 ? 3 : -3));
-    } else if (event.value > 0) {
-      _navigateWithoutRevealingControls(controller.previous);
-    } else {
-      _navigateWithoutRevealingControls(controller.next);
-    }
+    // Analog axes are handled by the shell-level virtual cursor overlay.
   }
 
   void _handleGamepadButton(GamepadButton button) {

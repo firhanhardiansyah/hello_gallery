@@ -20,6 +20,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
   static const _deviceId = 94721;
   static const _deadZone = 0.18;
   static const _maxSpeed = 900.0;
+  static const _maxScrollSpeed = 700.0;
 
   late final Ticker _ticker;
   StreamSubscription<NormalizedGamepadEvent>? _subscription;
@@ -28,6 +29,8 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
   Size _viewportSize = Size.zero;
   double _rightX = 0;
   double _rightY = 0;
+  double _leftX = 0;
+  double _leftY = 0;
   bool _precisionMode = false;
   bool _primaryPressed = false;
   bool _pointerAdded = false;
@@ -59,6 +62,14 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
 
   void _onGamepadEvent(NormalizedGamepadEvent event) {
     final axis = event.axis;
+    if (axis == GamepadAxis.leftStickX) {
+      _leftX = event.value;
+      return;
+    }
+    if (axis == GamepadAxis.leftStickY) {
+      _leftY = event.value;
+      return;
+    }
     if (axis == GamepadAxis.rightStickX) {
       _rightX = event.value;
       return;
@@ -85,7 +96,9 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     final seconds = (elapsed - previous).inMicroseconds / 1000000;
     final x = _applyCurve(_rightX);
     final y = _applyCurve(_rightY);
-    if (x == 0 && y == 0) {
+    final scrollX = _applyCurve(_leftX);
+    final scrollY = _applyCurve(_leftY);
+    if (x == 0 && y == 0 && scrollX == 0 && scrollY == 0) {
       if (_visible &&
           !_primaryPressed &&
           DateTime.now().difference(_lastActivity) >
@@ -105,7 +118,15 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     _position = next;
     _lastActivity = DateTime.now();
     if (!_visible) setState(() => _visible = true);
-    _dispatchMove(actualDelta);
+    if (actualDelta != Offset.zero) _dispatchMove(actualDelta);
+    if (scrollX != 0 || scrollY != 0) {
+      _dispatchScroll(
+        Offset(
+          scrollX * _maxScrollSpeed * seconds,
+          -scrollY * _maxScrollSpeed * seconds,
+        ),
+      );
+    }
     if (mounted) setState(() {});
   }
 
@@ -168,6 +189,18 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
             kind: PointerDeviceKind.mouse,
           );
     GestureBinding.instance.handlePointerEvent(event);
+  }
+
+  void _dispatchScroll(Offset delta) {
+    _ensurePointerAdded();
+    GestureBinding.instance.handlePointerEvent(
+      PointerScrollEvent(
+        device: _deviceId,
+        position: _globalPosition,
+        scrollDelta: delta,
+        kind: PointerDeviceKind.mouse,
+      ),
+    );
   }
 
   void _ensurePointerAdded() {

@@ -61,8 +61,8 @@ included in parentheses.
 | D-pad Down | Next media |
 | D-pad Left | Seek video backward 3 seconds |
 | D-pad Right | Seek video forward 3 seconds |
-| Left stick Up/Down | Previous/next media |
-| Left stick Left/Right | Seek backward/forward 3 seconds |
+| Left stick Up/Down | Scroll vertically under the virtual cursor |
+| Left stick Left/Right | Scroll horizontally when supported |
 | Right stick | Move the in-app virtual cursor |
 | `RB` (`R1`) | Primary click; hold and move to drag |
 | Hold `LB` (`L1`) | Precision cursor movement at 25% speed |
@@ -73,12 +73,12 @@ included in parentheses.
 | Back/Select/Share or Touchpad | Show or hide the sidebar |
 | `B` (`Circle`) | Leave fullscreen; otherwise return to the gallery |
 
-The left analog stick uses a dead zone and triggers once per directional push.
-Return the stick near its center before triggering the same axis again. The
-right stick uses an acceleration curve: small movement is precise and full
-movement is fast. Its virtual cursor is limited to the app window and hides
-after three idle seconds. Moving a physical mouse hides the virtual cursor.
-Home and trigger buttons are currently unassigned.
+Both analog sticks use a dead zone and acceleration curve. The left stick sends
+continuous scroll events to the widget under the virtual cursor. Small movement
+scrolls precisely and full movement scrolls quickly. The right stick controls a
+virtual cursor limited to the app window, which hides after three idle seconds.
+Moving a physical mouse hides the virtual cursor. Home and trigger buttons are
+currently unassigned.
 
 ## Architecture
 
