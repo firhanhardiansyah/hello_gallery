@@ -42,6 +42,22 @@ class MediaDetailController extends Notifier<MediaDetailState> {
 
   Future<void> previous() => _moveBy(-1);
 
+  Future<void> nextVideo() async {
+    final activePath = state.activeItem?.path;
+    if (activePath == null) return;
+    final currentIndex = state.items.indexWhere(
+      (item) => path.equals(item.path, activePath),
+    );
+    if (currentIndex < 0) return;
+    final relativeIndex = state.items
+        .skip(currentIndex + 1)
+        .toList()
+        .indexWhere((item) => item.isVideo);
+    if (relativeIndex < 0) return;
+    state = state.copyWith(activeIndex: currentIndex + 1 + relativeIndex);
+    await _openActive();
+  }
+
   Future<void> _moveBy(int offset) async {
     final activePath = state.activeItem?.path;
     if (activePath == null) return;
@@ -112,6 +128,8 @@ class MediaDetailController extends Notifier<MediaDetailState> {
     final player = Player();
     _player = player;
     _videoController = VideoController(player);
+    // Notify the UI immediately that a new native video surface is available.
+    state = state.copyWith();
     _subscriptions.addAll([
       player.stream.playing.listen((playing) {
         state = state.copyWith(isPlaying: playing);
@@ -122,8 +140,18 @@ class MediaDetailController extends Notifier<MediaDetailState> {
       player.stream.duration.listen((duration) {
         state = state.copyWith(duration: duration);
       }),
+      player.stream.completed.listen((completed) {
+        if (!completed || generation != _openGeneration) return;
+        final activeItem = state.activeItem;
+        if (activeItem == null || !path.equals(activeItem.path, item.path)) {
+          return;
+        }
+        unawaited(nextVideo());
+      }),
     ]);
-    await player.open(Media(item.path), play: true);
+    await player.open(Media(item.path), play: false);
+    if (generation != _openGeneration) return;
+    await player.play();
   }
 
   Future<void> _disposePlayer() async {
