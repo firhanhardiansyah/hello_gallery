@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gamepads/gamepads.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../shared/models/gallery_item.dart';
@@ -46,6 +47,8 @@ class MediaDetailPage extends ConsumerStatefulWidget {
 class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   final _focusNode = FocusNode();
   Timer? _hideTimer;
+  StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
+  final _engagedGamepadAxes = <GamepadAxis>{};
   bool _controlsVisible = true;
   int _silentNavigationCount = 0;
 
@@ -53,6 +56,9 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_handleGlobalKey);
+    _gamepadSubscription = Gamepads.normalizedEvents.listen(
+      _handleGamepadEvent,
+    );
     Future.microtask(() async {
       await ref
           .read(mediaDetailControllerProvider.notifier)
@@ -64,6 +70,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_handleGlobalKey);
+    unawaited(_gamepadSubscription?.cancel());
     _hideTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
@@ -110,6 +117,78 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
 
   bool _handleGlobalKey(KeyEvent event) {
     return _onKey(event) == KeyEventResult.handled;
+  }
+
+  void _handleGamepadEvent(NormalizedGamepadEvent event) {
+    if (!mounted) return;
+    final button = event.button;
+    if (button != null) {
+      if (event.value < 0.5) return;
+      _handleGamepadButton(button);
+      return;
+    }
+
+    final axis = event.axis;
+    if (axis == null ||
+        (axis != GamepadAxis.leftStickX && axis != GamepadAxis.leftStickY)) {
+      return;
+    }
+    if (event.value.abs() < 0.35) {
+      _engagedGamepadAxes.remove(axis);
+      return;
+    }
+    if (event.value.abs() < 0.75 || !_engagedGamepadAxes.add(axis)) return;
+    final controller = ref.read(mediaDetailControllerProvider.notifier);
+    if (axis == GamepadAxis.leftStickX) {
+      _showControls();
+      controller.seekBy(Duration(seconds: event.value > 0 ? 3 : -3));
+    } else if (event.value > 0) {
+      _navigateWithoutRevealingControls(controller.previous);
+    } else {
+      _navigateWithoutRevealingControls(controller.next);
+    }
+  }
+
+  void _handleGamepadButton(GamepadButton button) {
+    final controller = ref.read(mediaDetailControllerProvider.notifier);
+    switch (button) {
+      case GamepadButton.dpadUp:
+      case GamepadButton.leftBumper:
+        _navigateWithoutRevealingControls(controller.previous);
+      case GamepadButton.dpadDown:
+      case GamepadButton.rightBumper:
+        _navigateWithoutRevealingControls(controller.next);
+      case GamepadButton.dpadLeft:
+        _showControls();
+        controller.seekBy(const Duration(seconds: -3));
+      case GamepadButton.dpadRight:
+        _showControls();
+        controller.seekBy(const Duration(seconds: 3));
+      case GamepadButton.a:
+        _showControls();
+        controller.togglePlay();
+      case GamepadButton.x:
+        _showControls();
+        controller.toggleMute();
+      case GamepadButton.y:
+      case GamepadButton.start:
+        _toggleFullscreen();
+      case GamepadButton.back:
+      case GamepadButton.touchpad:
+        _toggleSidebar();
+      case GamepadButton.b:
+        if (widget.isFullscreen) {
+          _toggleFullscreen();
+        } else {
+          widget.onClose?.call();
+        }
+      case GamepadButton.home:
+      case GamepadButton.leftTrigger:
+      case GamepadButton.rightTrigger:
+      case GamepadButton.leftStick:
+      case GamepadButton.rightStick:
+        return;
+    }
   }
 
   KeyEventResult _onKey(KeyEvent event) {

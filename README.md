@@ -15,12 +15,63 @@ Implemented:
 - A–Z, Z–A, newest, and oldest sorting
 - image detail with pan/zoom
 - on-demand `media_kit` video playback with custom controls
-- previous/next media and basic keyboard controls
+- generated video-card previews with bounded concurrent extraction
+- previous/next media with natural filename ordering
+- keyboard and cross-platform gamepad controls
+- native fullscreen on Windows and macOS
+- persistent macOS folder access through security-scoped bookmarks
+- expandable folder/media sidebar with active-item auto-reveal
 - loading, empty, and error states
 
 Planned after the MVP is validated: recursive indexing, Drift/Isar metadata
-cache, generated thumbnails, debounced `watcher` updates, sidebar auto-scroll,
-fullscreen, and cursor/control auto-hide.
+cache, persistent disk thumbnails, debounced `watcher` updates, and additional
+large-library performance work.
+
+## Controls
+
+Keyboard shortcuts are active in media detail unless a row explicitly mentions
+the gallery.
+
+### Keyboard
+
+| Key | Action |
+| --- | --- |
+| `Arrow Up` | Previous media |
+| `Arrow Down` | Next media |
+| `Arrow Left` | Seek video backward 3 seconds |
+| `Arrow Right` | Seek video forward 3 seconds |
+| `Space` | Play or pause video |
+| `M` | Mute or unmute video |
+| `F` | Enter or leave native fullscreen |
+| `S` | Show or hide the sidebar in gallery and media detail |
+| `Escape` | Leave fullscreen first; otherwise return to the gallery |
+
+Completed videos automatically advance to the next video in the current
+folder. Images between two videos are skipped for automatic advancement, while
+manual previous/next continues to navigate every media item.
+
+### Gamepad
+
+Gamepad input uses normalized Xbox-style names. The PlayStation equivalent is
+included in parentheses.
+
+| Gamepad input | Action |
+| --- | --- |
+| D-pad Up or `LB` (`L1`) | Previous media |
+| D-pad Down or `RB` (`R1`) | Next media |
+| D-pad Left | Seek video backward 3 seconds |
+| D-pad Right | Seek video forward 3 seconds |
+| Left stick Up/Down | Previous/next media |
+| Left stick Left/Right | Seek backward/forward 3 seconds |
+| `A` (`Cross`) | Play or pause video |
+| `X` (`Square`) | Mute or unmute video |
+| `Y` (`Triangle`) or Start | Enter or leave native fullscreen |
+| Back/Select/Share or Touchpad | Show or hide the sidebar |
+| `B` (`Circle`) | Leave fullscreen; otherwise return to the gallery |
+
+The left analog stick uses a dead zone and triggers once per directional push.
+Return the stick near its center before triggering the same axis again. Home,
+triggers, and stick-click buttons are currently unassigned.
 
 ## Architecture
 
@@ -102,9 +153,9 @@ rename pair).
 
 1. **MVP foundation (current):** choose/persist root, browse one directory at a
    time, builder grid, image/video detail, custom basic playback controls.
-2. **MVP hardening:** add controller/service tests, inaccessible-folder handling,
-   macOS security-scoped bookmarks for persisted folder access, fullscreen, and
-   the complete shortcut map.
+2. **MVP hardening (in progress):** expand controller/widget tests, improve
+   inaccessible-folder recovery, and validate keyboard/gamepad behavior across
+   supported controller models.
 3. **Index/cache:** add Drift (preferred for queryable sort/pagination) or Isar,
    store path/type/size/mtime/dimensions/duration, and scan on a worker isolate.
 4. **Realtime updates:** use `watcher` with a 200–400 ms debounce, incrementally

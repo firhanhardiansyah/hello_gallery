@@ -6,6 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import file_picker
+import gamepads_darwin
 import macos_secure_bookmarks
 import media_kit_libs_macos_video
 import media_kit_video
@@ -17,6 +18,7 @@ import window_manager
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
+  GamepadsDarwinPlugin.register(with: registry.registrar(forPlugin: "GamepadsDarwinPlugin"))
   SecureBookmarksPlugin.register(with: registry.registrar(forPlugin: "SecureBookmarksPlugin"))
   MediaKitLibsMacosVideoPlugin.register(with: registry.registrar(forPlugin: "MediaKitLibsMacosVideoPlugin"))
   MediaKitVideoPlugin.register(with: registry.registrar(forPlugin: "MediaKitVideoPlugin"))
