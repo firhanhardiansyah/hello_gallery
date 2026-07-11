@@ -245,7 +245,7 @@ class _FolderTreeSidebarState extends State<FolderTreeSidebar> {
         ),
     ];
 
-    final slivers = <Widget>[...sectionSlivers];
+    final slivers = <Widget>[SliverMainAxisGroup(slivers: sectionSlivers)];
     if (expanded && contents != null) {
       for (final child in folders) {
         slivers.addAll(_buildFolderSlivers(child.path, depth + 1));
