@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
+import 'package:window_manager/window_manager.dart';
 
 import '../../shared/models/gallery_item.dart';
 import '../../shared/models/gallery_sort.dart';
@@ -30,6 +31,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   bool _sidebarVisible = true;
   _DetailSelection? _detail;
   bool _detailFullscreen = false;
+  bool? _sidebarBeforeFullscreen;
 
   @override
   void initState() {
@@ -59,7 +61,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       );
       if (!mounted || initialIndex < 0) return;
       setState(() {
-        _detailFullscreen = false;
+        if (_detail == null) _detailFullscreen = false;
         _detail = _DetailSelection(
           items: media,
           initialIndex: initialIndex,
@@ -91,20 +93,51 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     setState(() => _sidebarVisible = !_sidebarVisible);
   }
 
-  void _openFolder(String folderPath) {
+  Future<void> _openFolder(String folderPath) async {
     if (_detail != null) {
-      setState(() {
-        _detail = null;
-        _detailFullscreen = false;
-      });
+      await _closeDetail();
     }
     ref.read(galleryControllerProvider.notifier).openDirectory(folderPath);
   }
 
-  void _closeDetail() {
+  Future<void> _closeDetail() async {
+    try {
+      if (_detailFullscreen || await windowManager.isFullScreen()) {
+        await windowManager.setFullScreen(false);
+      }
+    } on Object {
+      // Closing the detail should not be blocked by a native window error.
+    }
+    if (!mounted) return;
     setState(() {
       _detail = null;
       _detailFullscreen = false;
+      _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
+      _sidebarBeforeFullscreen = null;
+    });
+  }
+
+  Future<void> _toggleDetailFullscreen() async {
+    final target = !_detailFullscreen;
+    try {
+      await windowManager.setFullScreen(target);
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not change fullscreen mode: $error')),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _detailFullscreen = target;
+      if (target) {
+        _sidebarBeforeFullscreen = _sidebarVisible;
+        _sidebarVisible = false;
+      } else {
+        _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
+        _sidebarBeforeFullscreen = null;
+      }
     });
   }
 
@@ -171,8 +204,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               sidebarVisible: _sidebarVisible,
                               onToggleSidebar: _toggleSidebar,
                               onCloseDetail: _closeDetail,
-                              onToggleFullscreen: () =>
-                                  setState(() => _detailFullscreen = true),
+                              onToggleFullscreen: _toggleDetailFullscreen,
                               onRootChanged: () => _loadedRoot = null,
                             ),
                           Expanded(
@@ -189,10 +221,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     onToggleSidebar: _toggleSidebar,
                                     onClose: _closeDetail,
                                     isFullscreen: _detailFullscreen,
-                                    onToggleFullscreen: () => setState(
-                                      () => _detailFullscreen =
-                                          !_detailFullscreen,
-                                    ),
+                                    onToggleFullscreen: _toggleDetailFullscreen,
                                   )
                                 : Column(
                                     children: [
