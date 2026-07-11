@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gamepads/gamepads.dart';
 import 'package:path/path.dart' as path;
 import 'package:window_manager/window_manager.dart';
 
@@ -33,10 +35,18 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   _DetailSelection? _detail;
   bool _detailFullscreen = false;
   bool? _sidebarBeforeFullscreen;
+  StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
+  int _selectedGridIndex = 0;
+  int _gridColumnCount = 1;
+  bool _galleryFullscreen = false;
 
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_handleGalleryKey);
+    _gamepadSubscription = Gamepads.normalizedEvents.listen(
+      _handleGalleryGamepad,
+    );
     _scrollController.addListener(() {
       if (_scrollController.position.extentAfter < 600) {
         ref.read(galleryControllerProvider.notifier).loadMore();
@@ -46,12 +56,122 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleGalleryKey);
+    unawaited(_gamepadSubscription?.cancel());
     _scrollController.dispose();
     super.dispose();
   }
 
+  bool _handleGalleryKey(KeyEvent event) {
+    if (_detail != null || event is! KeyDownEvent) return false;
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowUp:
+        _moveGridSelection(-_gridColumnCount);
+        return true;
+      case LogicalKeyboardKey.arrowDown:
+        _moveGridSelection(_gridColumnCount);
+        return true;
+      case LogicalKeyboardKey.arrowLeft:
+        _moveGridSelection(-1);
+        return true;
+      case LogicalKeyboardKey.arrowRight:
+        _moveGridSelection(1);
+        return true;
+      case LogicalKeyboardKey.enter:
+      case LogicalKeyboardKey.space:
+        _openSelectedGridItem();
+        return true;
+      case LogicalKeyboardKey.keyS:
+        _toggleSidebar();
+        return true;
+      case LogicalKeyboardKey.keyF:
+        unawaited(_toggleGalleryFullscreen());
+        return true;
+      case LogicalKeyboardKey.escape:
+        if (_galleryFullscreen) {
+          unawaited(_toggleGalleryFullscreen());
+        } else {
+          ref.read(galleryControllerProvider.notifier).goUp();
+        }
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void _handleGalleryGamepad(NormalizedGamepadEvent event) {
+    if (_detail != null || event.button == null || event.value < 0.5) return;
+    switch (event.button!) {
+      case GamepadButton.dpadUp:
+        _moveGridSelection(-_gridColumnCount);
+        return;
+      case GamepadButton.dpadDown:
+        _moveGridSelection(_gridColumnCount);
+        return;
+      case GamepadButton.dpadLeft:
+        _moveGridSelection(-1);
+        return;
+      case GamepadButton.dpadRight:
+        _moveGridSelection(1);
+        return;
+      case GamepadButton.a:
+        _openSelectedGridItem();
+        return;
+      case GamepadButton.b:
+        ref.read(galleryControllerProvider.notifier).goUp();
+        return;
+      case GamepadButton.back:
+      case GamepadButton.touchpad:
+        _toggleSidebar();
+        return;
+      case GamepadButton.y:
+      case GamepadButton.start:
+        unawaited(_toggleGalleryFullscreen());
+        return;
+      case GamepadButton.home:
+      case GamepadButton.x:
+      case GamepadButton.leftBumper:
+      case GamepadButton.rightBumper:
+      case GamepadButton.leftTrigger:
+      case GamepadButton.rightTrigger:
+      case GamepadButton.leftStick:
+      case GamepadButton.rightStick:
+        return;
+    }
+  }
+
+  void _moveGridSelection(int delta) {
+    final items = ref.read(galleryControllerProvider).visibleItems;
+    if (items.isEmpty) return;
+    final next = (_selectedGridIndex + delta).clamp(0, items.length - 1);
+    if (next != _selectedGridIndex) setState(() => _selectedGridIndex = next);
+  }
+
+  void _openSelectedGridItem() {
+    final gallery = ref.read(galleryControllerProvider);
+    if (gallery.visibleItems.isEmpty) return;
+    final index = _selectedGridIndex.clamp(0, gallery.visibleItems.length - 1);
+    final item = gallery.visibleItems[index];
+    if (item is GalleryFolder) {
+      _selectedGridIndex = 0;
+      ref.read(galleryControllerProvider.notifier).openDirectory(item.path);
+    } else if (item is MediaItem) {
+      unawaited(_openMediaDetail(item, gallery));
+    }
+  }
+
+  Future<void> _toggleGalleryFullscreen() async {
+    final target = !_galleryFullscreen;
+    await windowManager.setFullScreen(target);
+    if (mounted) setState(() => _galleryFullscreen = target);
+  }
+
   Future<void> _openMediaDetail(MediaItem item, GalleryState gallery) async {
     try {
+      if (_galleryFullscreen) {
+        await windowManager.setFullScreen(false);
+        _galleryFullscreen = false;
+      }
       final entries = await ref
           .read(galleryServiceProvider)
           .scan(path.dirname(item.path));
@@ -98,6 +218,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (_detail != null) {
       await _closeDetail();
     }
+    if (mounted) setState(() => _selectedGridIndex = 0);
     ref.read(galleryControllerProvider.notifier).openDirectory(folderPath);
   }
 
@@ -157,97 +278,99 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       );
     }
 
-    return CallbackShortcuts(
-      bindings: _detail == null
-          ? {const SingleActivator(LogicalKeyboardKey.keyS): _toggleSidebar}
-          : const <ShortcutActivator, VoidCallback>{},
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
-          body: VirtualCursorOverlay(
-            child: settings.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : root == null
-                ? _ChooseFolder(
-                    onPressed: () => ref
-                        .read(settingsControllerProvider.notifier)
-                        .chooseRootFolder(),
-                  )
-                : Row(
-                    children: [
-                      if (_sidebarVisible)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
-                          child: SizedBox(
-                            width: 300,
-                            child: ExcludeFocus(
-                              child: FolderTreeSidebar(
-                                rootPath: root,
-                                currentFolderPath: gallery.currentPath ?? root,
-                                activeMediaPath: detailState?.activeItem?.path,
-                                sort: gallery.sort,
-                                onClose: () =>
-                                    setState(() => _sidebarVisible = false),
-                                onFolderSelected: _openFolder,
-                                onMediaSelected: (item) =>
-                                    _openMediaDetail(item, gallery),
-                              ),
+    return Focus(
+      autofocus: true,
+      child: Scaffold(
+        body: VirtualCursorOverlay(
+          child: settings.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : root == null
+              ? _ChooseFolder(
+                  onPressed: () => ref
+                      .read(settingsControllerProvider.notifier)
+                      .chooseRootFolder(),
+                )
+              : Row(
+                  children: [
+                    if (_sidebarVisible)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
+                        child: SizedBox(
+                          width: 300,
+                          child: ExcludeFocus(
+                            child: FolderTreeSidebar(
+                              rootPath: root,
+                              currentFolderPath: gallery.currentPath ?? root,
+                              activeMediaPath: detailState?.activeItem?.path,
+                              sort: gallery.sort,
+                              onClose: () =>
+                                  setState(() => _sidebarVisible = false),
+                              onFolderSelected: _openFolder,
+                              onMediaSelected: (item) =>
+                                  _openMediaDetail(item, gallery),
                             ),
                           ),
                         ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            if (!_detailFullscreen)
-                              _ShellTopBar(
-                                gallery: gallery,
-                                isDetail: _detail != null,
-                                detailTitle: detailState?.activeItem?.name,
-                                sidebarVisible: _sidebarVisible,
-                                onToggleSidebar: _toggleSidebar,
-                                onCloseDetail: _closeDetail,
-                                onToggleFullscreen: _toggleDetailFullscreen,
-                                onRootChanged: () => _loadedRoot = null,
-                              ),
-                            Expanded(
-                              child: _detail != null
-                                  ? MediaDetailPage(
-                                      key: ValueKey(
-                                        _detail!.requestedMediaPath,
-                                      ),
-                                      items: _detail!.items,
-                                      initialIndex: _detail!.initialIndex,
-                                      rootPath: root,
-                                      currentFolderPath: _detail!.folderPath,
-                                      sort: gallery.sort,
-                                      embedded: true,
-                                      sidebarVisible: _sidebarVisible,
-                                      onToggleSidebar: _toggleSidebar,
-                                      onClose: _closeDetail,
-                                      isFullscreen: _detailFullscreen,
-                                      onToggleFullscreen:
-                                          _toggleDetailFullscreen,
-                                    )
-                                  : Column(
-                                      children: [
-                                        _PathBar(state: gallery),
-                                        Expanded(
-                                          child: _GalleryBody(
-                                            state: gallery,
-                                            scroll: _scrollController,
-                                            onMediaSelected: (item) =>
-                                                _openMediaDetail(item, gallery),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ],
-                        ),
                       ),
-                    ],
-                  ),
-          ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          if (!_detailFullscreen)
+                            _ShellTopBar(
+                              gallery: gallery,
+                              isDetail: _detail != null,
+                              detailTitle: detailState?.activeItem?.name,
+                              sidebarVisible: _sidebarVisible,
+                              onToggleSidebar: _toggleSidebar,
+                              onCloseDetail: _closeDetail,
+                              onToggleFullscreen: _toggleDetailFullscreen,
+                              onRootChanged: () => _loadedRoot = null,
+                            ),
+                          Expanded(
+                            child: _detail != null
+                                ? MediaDetailPage(
+                                    key: ValueKey(_detail!.requestedMediaPath),
+                                    items: _detail!.items,
+                                    initialIndex: _detail!.initialIndex,
+                                    rootPath: root,
+                                    currentFolderPath: _detail!.folderPath,
+                                    sort: gallery.sort,
+                                    embedded: true,
+                                    sidebarVisible: _sidebarVisible,
+                                    onToggleSidebar: _toggleSidebar,
+                                    onClose: _closeDetail,
+                                    isFullscreen: _detailFullscreen,
+                                    onToggleFullscreen: _toggleDetailFullscreen,
+                                  )
+                                : Column(
+                                    children: [
+                                      _PathBar(state: gallery),
+                                      Expanded(
+                                        child: _GalleryBody(
+                                          state: gallery,
+                                          scroll: _scrollController,
+                                          selectedIndex: _selectedGridIndex,
+                                          onSelectionChanged: (index) {
+                                            setState(
+                                              () => _selectedGridIndex = index,
+                                            );
+                                          },
+                                          onColumnCountChanged: (count) {
+                                            _gridColumnCount = count;
+                                          },
+                                          onFolderSelected: _openFolder,
+                                          onMediaSelected: (item) =>
+                                              _openMediaDetail(item, gallery),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -456,18 +579,61 @@ class _PathBar extends ConsumerWidget {
   }
 }
 
-class _GalleryBody extends ConsumerWidget {
+class _GalleryBody extends ConsumerStatefulWidget {
   const _GalleryBody({
     required this.state,
     required this.scroll,
+    required this.selectedIndex,
+    required this.onSelectionChanged,
+    required this.onColumnCountChanged,
+    required this.onFolderSelected,
     required this.onMediaSelected,
   });
   final GalleryState state;
   final ScrollController scroll;
+  final int selectedIndex;
+  final ValueChanged<int> onSelectionChanged;
+  final ValueChanged<int> onColumnCountChanged;
+  final ValueChanged<String> onFolderSelected;
   final ValueChanged<MediaItem> onMediaSelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GalleryBody> createState() => _GalleryBodyState();
+}
+
+class _GalleryBodyState extends ConsumerState<_GalleryBody> {
+  final Map<String, GlobalKey> _itemKeys = {};
+  int _reportedColumnCount = 1;
+
+  @override
+  void didUpdateWidget(covariant _GalleryBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedIndex != widget.selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
+    }
+  }
+
+  void _revealSelection() {
+    if (!mounted || widget.state.visibleItems.isEmpty) return;
+    final index = widget.selectedIndex.clamp(
+      0,
+      widget.state.visibleItems.length - 1,
+    );
+    final key = _itemKeys[widget.state.visibleItems[index].path];
+    final itemContext = key?.currentContext;
+    if (itemContext != null) {
+      Scrollable.ensureVisible(
+        itemContext,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
     switch (state.status) {
       case GalleryStatus.initial:
       case GalleryStatus.loading:
@@ -482,28 +648,48 @@ class _GalleryBody extends ConsumerWidget {
           ),
         );
       case GalleryStatus.ready:
-        return GridView.builder(
-          controller: scroll,
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 260,
-            mainAxisExtent: 210,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: state.visibleItems.length,
-          itemBuilder: (context, index) {
-            final item = state.visibleItems[index];
-            return GalleryCard(
-              item: item,
-              onTap: () async {
-                if (item is GalleryFolder) {
-                  ref
-                      .read(galleryControllerProvider.notifier)
-                      .openDirectory(item.path);
-                } else if (item is MediaItem) {
-                  onMediaSelected(item);
-                }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = ((constraints.maxWidth - 20) / 272).ceil().clamp(
+              1,
+              1000,
+            );
+            if (columns != _reportedColumnCount) {
+              _reportedColumnCount = columns;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) widget.onColumnCountChanged(columns);
+              });
+            }
+            return GridView.builder(
+              controller: widget.scroll,
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 260,
+                mainAxisExtent: 210,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: state.visibleItems.length,
+              itemBuilder: (context, index) {
+                final item = state.visibleItems[index];
+                final itemKey = _itemKeys.putIfAbsent(item.path, GlobalKey.new);
+                return KeyedSubtree(
+                  key: itemKey,
+                  child: ExcludeFocus(
+                    child: GalleryCard(
+                      item: item,
+                      selected: index == widget.selectedIndex,
+                      onTap: () {
+                        widget.onSelectionChanged(index);
+                        if (item is GalleryFolder) {
+                          widget.onFolderSelected(item.path);
+                        } else if (item is MediaItem) {
+                          widget.onMediaSelected(item);
+                        }
+                      },
+                    ),
+                  ),
+                );
               },
             );
           },

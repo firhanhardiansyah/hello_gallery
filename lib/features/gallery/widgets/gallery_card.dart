@@ -5,15 +5,30 @@ import 'package:flutter/material.dart';
 import '../../../shared/models/gallery_item.dart';
 
 class GalleryCard extends StatelessWidget {
-  const GalleryCard({required this.item, required this.onTap, super.key});
+  const GalleryCard({
+    required this.item,
+    required this.onTap,
+    this.selected = false,
+    super.key,
+  });
 
   final GalleryItem item;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: selected ? colorScheme.primary : Colors.transparent,
+          width: selected ? 3 : 0,
+        ),
+      ),
+      elevation: selected ? 5 : 1,
       child: InkWell(
         onTap: onTap,
         child: Column(

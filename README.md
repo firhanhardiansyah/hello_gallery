@@ -29,22 +29,20 @@ large-library performance work.
 
 ## Controls
 
-Keyboard shortcuts are active in media detail unless a row explicitly mentions
-the gallery.
+Keyboard and gamepad controls are context-aware and work in both the gallery
+and media detail.
 
 ### Keyboard
 
 | Key | Action |
 | --- | --- |
-| `Arrow Up` | Previous media |
-| `Arrow Down` | Next media |
-| `Arrow Left` | Seek video backward 3 seconds |
-| `Arrow Right` | Seek video forward 3 seconds |
-| `Space` | Play or pause video |
+| Arrow keys | Select a gallery item; in detail, navigate or seek video |
+| `Enter` or `Space` | Open the selected gallery item |
+| `Space` in detail | Play or pause video |
 | `M` | Mute or unmute video |
 | `F` | Enter or leave native fullscreen |
 | `S` | Show or hide the sidebar in gallery and media detail |
-| `Escape` | Leave fullscreen first; otherwise return to the gallery |
+| `Escape` | Leave fullscreen first; otherwise go to the parent folder or gallery |
 
 Completed videos automatically advance to the next video in the current
 folder. Images between two videos are skipped for automatic advancement, while
@@ -57,21 +55,18 @@ included in parentheses.
 
 | Gamepad input | Action |
 | --- | --- |
-| D-pad Up | Previous media |
-| D-pad Down | Next media |
-| D-pad Left | Seek video backward 3 seconds |
-| D-pad Right | Seek video forward 3 seconds |
+| D-pad | Select a gallery item; in detail, navigate or seek video |
 | Left stick Up/Down | Scroll vertically under the virtual cursor |
 | Left stick Left/Right | Scroll horizontally when supported |
 | Right stick | Move the in-app virtual cursor |
 | `RB` (`R1`) | Primary click; hold and move to drag |
 | Hold `LB` (`L1`) | Precision cursor movement at 25% speed |
 | Right stick click (`R3`) | Recenter the virtual cursor |
-| `A` (`Cross`) | Play or pause video |
+| `A` (`Cross`) | Open the selected gallery item; in detail, play or pause video |
 | `X` (`Square`) | Mute or unmute video |
 | `Y` (`Triangle`) or Start | Enter or leave native fullscreen |
 | Back/Select/Share or Touchpad | Show or hide the sidebar |
-| `B` (`Circle`) | Leave fullscreen; otherwise return to the gallery |
+| `B` (`Circle`) | Go to the parent folder; in detail, leave fullscreen or return to gallery |
 
 Both analog sticks use a dead zone and acceleration curve. The left stick sends
 continuous scroll events to the widget under the virtual cursor. Small movement
