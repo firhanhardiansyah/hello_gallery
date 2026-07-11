@@ -66,7 +66,7 @@ included in parentheses.
 | `X` (`Square`) | Mute or unmute video |
 | `Y` (`Triangle`) or Start | Enter or leave native fullscreen |
 | Back/Select/Share or Touchpad | Show or hide the sidebar |
-| `B` (`Circle`) | Go to the parent folder; in detail, leave fullscreen or return to gallery |
+| `B` (`Circle`) | Go back while preserving fullscreen |
 
 Both analog sticks use a dead zone and acceleration curve. The left stick sends
 continuous scroll events to the widget under the virtual cursor. Small movement

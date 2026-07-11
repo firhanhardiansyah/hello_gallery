@@ -156,11 +156,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
       case GamepadButton.touchpad:
         _toggleSidebar();
       case GamepadButton.b:
-        if (widget.isFullscreen) {
-          _toggleFullscreen();
-        } else {
-          widget.onClose?.call();
-        }
+        widget.onClose?.call();
       case GamepadButton.home:
       case GamepadButton.leftBumper:
       case GamepadButton.rightBumper:
