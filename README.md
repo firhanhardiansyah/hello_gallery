@@ -72,8 +72,10 @@ Both analog sticks use a dead zone and acceleration curve. The left stick sends
 continuous scroll events to the widget under the virtual cursor. Small movement
 scrolls precisely and full movement scrolls quickly. The right stick controls a
 virtual cursor limited to the app window, which hides after three idle seconds.
-Moving a physical mouse hides the virtual cursor. Home and trigger buttons are
-currently unassigned.
+Analog activity hides the native cursor while gamepad pointer mode remains
+active, even after the virtual cursor fades from inactivity. Moving a physical
+mouse restores the native cursor and hides the virtual cursor. Home and trigger
+buttons are currently unassigned.
 
 ## Architecture
 

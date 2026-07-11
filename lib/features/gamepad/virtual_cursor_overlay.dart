@@ -35,6 +35,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
   bool _primaryPressed = false;
   bool _pointerAdded = false;
   bool _visible = false;
+  bool _usingGamepadPointer = false;
   DateTime _lastActivity = DateTime.now();
 
   @override
@@ -108,6 +109,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
       return;
     }
 
+    _activateGamepadPointer();
     final speed = _maxSpeed * (_precisionMode ? 0.25 : 1.0);
     final delta = Offset(x * speed * seconds, -y * speed * seconds);
     final next = Offset(
@@ -139,6 +141,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
 
   void _centerCursor() {
     if (_viewportSize.isEmpty) return;
+    _activateGamepadPointer();
     _position = Offset(_viewportSize.width / 2, _viewportSize.height / 2);
     _lastActivity = DateTime.now();
     setState(() => _visible = true);
@@ -147,6 +150,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
 
   void _setPrimaryPressed(bool pressed) {
     if (_primaryPressed == pressed || _viewportSize.isEmpty) return;
+    _activateGamepadPointer();
     _ensurePointerAdded();
     _primaryPressed = pressed;
     _lastActivity = DateTime.now();
@@ -216,6 +220,19 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     );
   }
 
+  void _activateGamepadPointer() {
+    if (_usingGamepadPointer) return;
+    if (mounted) setState(() => _usingGamepadPointer = true);
+  }
+
+  void _activateNativePointer() {
+    if (!_usingGamepadPointer && !_visible) return;
+    setState(() {
+      _usingGamepadPointer = false;
+      _visible = false;
+    });
+  }
+
   Offset get _globalPosition {
     final renderObject = context.findRenderObject();
     return renderObject is RenderBox
@@ -240,10 +257,12 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
           }
         }
         return MouseRegion(
-          cursor: _visible ? SystemMouseCursors.none : MouseCursor.defer,
+          cursor: _usingGamepadPointer
+              ? SystemMouseCursors.none
+              : MouseCursor.defer,
           onHover: (event) {
-            if (event.device != _deviceId && _visible && mounted) {
-              setState(() => _visible = false);
+            if (event.device != _deviceId && mounted) {
+              _activateNativePointer();
             }
           },
           child: Stack(
