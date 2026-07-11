@@ -57,12 +57,16 @@ included in parentheses.
 
 | Gamepad input | Action |
 | --- | --- |
-| D-pad Up or `LB` (`L1`) | Previous media |
-| D-pad Down or `RB` (`R1`) | Next media |
+| D-pad Up | Previous media |
+| D-pad Down | Next media |
 | D-pad Left | Seek video backward 3 seconds |
 | D-pad Right | Seek video forward 3 seconds |
 | Left stick Up/Down | Previous/next media |
 | Left stick Left/Right | Seek backward/forward 3 seconds |
+| Right stick | Move the in-app virtual cursor |
+| `RB` (`R1`) | Primary click; hold and move to drag |
+| Hold `LB` (`L1`) | Precision cursor movement at 25% speed |
+| Right stick click (`R3`) | Recenter the virtual cursor |
 | `A` (`Cross`) | Play or pause video |
 | `X` (`Square`) | Mute or unmute video |
 | `Y` (`Triangle`) or Start | Enter or leave native fullscreen |
@@ -70,8 +74,11 @@ included in parentheses.
 | `B` (`Circle`) | Leave fullscreen; otherwise return to the gallery |
 
 The left analog stick uses a dead zone and triggers once per directional push.
-Return the stick near its center before triggering the same axis again. Home,
-triggers, and stick-click buttons are currently unassigned.
+Return the stick near its center before triggering the same axis again. The
+right stick uses an acceleration curve: small movement is precise and full
+movement is fast. Its virtual cursor is limited to the app window and hides
+after three idle seconds. Moving a physical mouse hides the virtual cursor.
+Home and trigger buttons are currently unassigned.
 
 ## Architecture
 

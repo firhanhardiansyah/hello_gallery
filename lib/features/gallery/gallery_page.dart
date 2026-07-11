@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../shared/models/gallery_item.dart';
 import '../../shared/models/gallery_sort.dart';
 import '../../shared/utils/natural_compare.dart';
+import '../gamepad/virtual_cursor_overlay.dart';
 import '../media_detail/media_detail_controller.dart';
 import '../media_detail/media_detail_page.dart';
 import '../settings/settings_controller.dart';
@@ -163,85 +164,90 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       child: Focus(
         autofocus: true,
         child: Scaffold(
-          body: settings.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : root == null
-              ? _ChooseFolder(
-                  onPressed: () => ref
-                      .read(settingsControllerProvider.notifier)
-                      .chooseRootFolder(),
-                )
-              : Row(
-                  children: [
-                    if (_sidebarVisible)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
-                        child: SizedBox(
-                          width: 300,
-                          child: ExcludeFocus(
-                            child: FolderTreeSidebar(
-                              rootPath: root,
-                              currentFolderPath: gallery.currentPath ?? root,
-                              activeMediaPath: detailState?.activeItem?.path,
-                              sort: gallery.sort,
-                              onClose: () =>
-                                  setState(() => _sidebarVisible = false),
-                              onFolderSelected: _openFolder,
-                              onMediaSelected: (item) =>
-                                  _openMediaDetail(item, gallery),
+          body: VirtualCursorOverlay(
+            child: settings.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : root == null
+                ? _ChooseFolder(
+                    onPressed: () => ref
+                        .read(settingsControllerProvider.notifier)
+                        .chooseRootFolder(),
+                  )
+                : Row(
+                    children: [
+                      if (_sidebarVisible)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
+                          child: SizedBox(
+                            width: 300,
+                            child: ExcludeFocus(
+                              child: FolderTreeSidebar(
+                                rootPath: root,
+                                currentFolderPath: gallery.currentPath ?? root,
+                                activeMediaPath: detailState?.activeItem?.path,
+                                sort: gallery.sort,
+                                onClose: () =>
+                                    setState(() => _sidebarVisible = false),
+                                onFolderSelected: _openFolder,
+                                onMediaSelected: (item) =>
+                                    _openMediaDetail(item, gallery),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          if (!_detailFullscreen)
-                            _ShellTopBar(
-                              gallery: gallery,
-                              isDetail: _detail != null,
-                              detailTitle: detailState?.activeItem?.name,
-                              sidebarVisible: _sidebarVisible,
-                              onToggleSidebar: _toggleSidebar,
-                              onCloseDetail: _closeDetail,
-                              onToggleFullscreen: _toggleDetailFullscreen,
-                              onRootChanged: () => _loadedRoot = null,
-                            ),
-                          Expanded(
-                            child: _detail != null
-                                ? MediaDetailPage(
-                                    key: ValueKey(_detail!.requestedMediaPath),
-                                    items: _detail!.items,
-                                    initialIndex: _detail!.initialIndex,
-                                    rootPath: root,
-                                    currentFolderPath: _detail!.folderPath,
-                                    sort: gallery.sort,
-                                    embedded: true,
-                                    sidebarVisible: _sidebarVisible,
-                                    onToggleSidebar: _toggleSidebar,
-                                    onClose: _closeDetail,
-                                    isFullscreen: _detailFullscreen,
-                                    onToggleFullscreen: _toggleDetailFullscreen,
-                                  )
-                                : Column(
-                                    children: [
-                                      _PathBar(state: gallery),
-                                      Expanded(
-                                        child: _GalleryBody(
-                                          state: gallery,
-                                          scroll: _scrollController,
-                                          onMediaSelected: (item) =>
-                                              _openMediaDetail(item, gallery),
-                                        ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            if (!_detailFullscreen)
+                              _ShellTopBar(
+                                gallery: gallery,
+                                isDetail: _detail != null,
+                                detailTitle: detailState?.activeItem?.name,
+                                sidebarVisible: _sidebarVisible,
+                                onToggleSidebar: _toggleSidebar,
+                                onCloseDetail: _closeDetail,
+                                onToggleFullscreen: _toggleDetailFullscreen,
+                                onRootChanged: () => _loadedRoot = null,
+                              ),
+                            Expanded(
+                              child: _detail != null
+                                  ? MediaDetailPage(
+                                      key: ValueKey(
+                                        _detail!.requestedMediaPath,
                                       ),
-                                    ],
-                                  ),
-                          ),
-                        ],
+                                      items: _detail!.items,
+                                      initialIndex: _detail!.initialIndex,
+                                      rootPath: root,
+                                      currentFolderPath: _detail!.folderPath,
+                                      sort: gallery.sort,
+                                      embedded: true,
+                                      sidebarVisible: _sidebarVisible,
+                                      onToggleSidebar: _toggleSidebar,
+                                      onClose: _closeDetail,
+                                      isFullscreen: _detailFullscreen,
+                                      onToggleFullscreen:
+                                          _toggleDetailFullscreen,
+                                    )
+                                  : Column(
+                                      children: [
+                                        _PathBar(state: gallery),
+                                        Expanded(
+                                          child: _GalleryBody(
+                                            state: gallery,
+                                            scroll: _scrollController,
+                                            onMediaSelected: (item) =>
+                                                _openMediaDetail(item, gallery),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

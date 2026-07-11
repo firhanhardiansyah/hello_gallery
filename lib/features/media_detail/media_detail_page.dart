@@ -153,10 +153,8 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
     final controller = ref.read(mediaDetailControllerProvider.notifier);
     switch (button) {
       case GamepadButton.dpadUp:
-      case GamepadButton.leftBumper:
         _navigateWithoutRevealingControls(controller.previous);
       case GamepadButton.dpadDown:
-      case GamepadButton.rightBumper:
         _navigateWithoutRevealingControls(controller.next);
       case GamepadButton.dpadLeft:
         _showControls();
@@ -183,6 +181,8 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
           widget.onClose?.call();
         }
       case GamepadButton.home:
+      case GamepadButton.leftBumper:
+      case GamepadButton.rightBumper:
       case GamepadButton.leftTrigger:
       case GamepadButton.rightTrigger:
       case GamepadButton.leftStick:
