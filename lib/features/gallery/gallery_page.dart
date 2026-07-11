@@ -33,12 +33,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   String? _loadedRoot;
   bool _sidebarVisible = true;
   _DetailSelection? _detail;
-  bool _detailFullscreen = false;
+  bool _isFullscreen = false;
   bool? _sidebarBeforeFullscreen;
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
   int _selectedGridIndex = 0;
   int _gridColumnCount = 1;
-  bool _galleryFullscreen = false;
 
   @override
   void initState() {
@@ -85,11 +84,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         _toggleSidebar();
         return true;
       case LogicalKeyboardKey.keyF:
-        unawaited(_toggleGalleryFullscreen());
+        unawaited(_toggleFullscreen());
         return true;
       case LogicalKeyboardKey.escape:
-        if (_galleryFullscreen) {
-          unawaited(_toggleGalleryFullscreen());
+        if (_isFullscreen) {
+          unawaited(_toggleFullscreen());
         } else {
           ref.read(galleryControllerProvider.notifier).goUp();
         }
@@ -126,7 +125,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         return;
       case GamepadButton.y:
       case GamepadButton.start:
-        unawaited(_toggleGalleryFullscreen());
+        unawaited(_toggleFullscreen());
         return;
       case GamepadButton.home:
       case GamepadButton.x:
@@ -160,18 +159,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     }
   }
 
-  Future<void> _toggleGalleryFullscreen() async {
-    final target = !_galleryFullscreen;
-    await windowManager.setFullScreen(target);
-    if (mounted) setState(() => _galleryFullscreen = target);
-  }
-
   Future<void> _openMediaDetail(MediaItem item, GalleryState gallery) async {
     try {
-      if (_galleryFullscreen) {
-        await windowManager.setFullScreen(false);
-        _galleryFullscreen = false;
-      }
       final entries = await ref
           .read(galleryServiceProvider)
           .scan(path.dirname(item.path));
@@ -182,7 +171,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       );
       if (!mounted || initialIndex < 0) return;
       setState(() {
-        if (_detail == null) _detailFullscreen = false;
+        if (_detail == null && _isFullscreen) {
+          _sidebarBeforeFullscreen = _sidebarVisible;
+          _sidebarVisible = false;
+        }
         _detail = _DetailSelection(
           items: media,
           initialIndex: initialIndex,
@@ -223,24 +215,18 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   }
 
   Future<void> _closeDetail() async {
-    try {
-      if (_detailFullscreen || await windowManager.isFullScreen()) {
-        await windowManager.setFullScreen(false);
-      }
-    } on Object {
-      // Closing the detail should not be blocked by a native window error.
-    }
     if (!mounted) return;
     setState(() {
       _detail = null;
-      _detailFullscreen = false;
-      _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
+      if (_isFullscreen) {
+        _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
+      }
       _sidebarBeforeFullscreen = null;
     });
   }
 
-  Future<void> _toggleDetailFullscreen() async {
-    final target = !_detailFullscreen;
+  Future<void> _toggleFullscreen() async {
+    final target = !_isFullscreen;
     try {
       await windowManager.setFullScreen(target);
     } on Object catch (error) {
@@ -252,11 +238,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     }
     if (!mounted) return;
     setState(() {
-      _detailFullscreen = target;
-      if (target) {
+      _isFullscreen = target;
+      if (target && _detail != null) {
         _sidebarBeforeFullscreen = _sidebarVisible;
         _sidebarVisible = false;
-      } else {
+      } else if (!target && _detail != null) {
         _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
         _sidebarBeforeFullscreen = null;
       }
@@ -315,7 +301,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                     Expanded(
                       child: Column(
                         children: [
-                          if (!_detailFullscreen)
+                          if (_detail == null || !_isFullscreen)
                             _ShellTopBar(
                               gallery: gallery,
                               isDetail: _detail != null,
@@ -323,7 +309,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               sidebarVisible: _sidebarVisible,
                               onToggleSidebar: _toggleSidebar,
                               onCloseDetail: _closeDetail,
-                              onToggleFullscreen: _toggleDetailFullscreen,
+                              onToggleFullscreen: _toggleFullscreen,
                               onRootChanged: () => _loadedRoot = null,
                             ),
                           Expanded(
@@ -339,8 +325,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     sidebarVisible: _sidebarVisible,
                                     onToggleSidebar: _toggleSidebar,
                                     onClose: _closeDetail,
-                                    isFullscreen: _detailFullscreen,
-                                    onToggleFullscreen: _toggleDetailFullscreen,
+                                    isFullscreen: _isFullscreen,
+                                    onToggleFullscreen: _toggleFullscreen,
                                   )
                                 : Column(
                                     children: [
