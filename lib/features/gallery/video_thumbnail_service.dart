@@ -22,14 +22,29 @@ final videoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
 );
 
 class VideoThumbnailService {
-  static const _maximumConcurrentJobs = 2;
   static const _platformThumbnailChannel = MethodChannel(
     'hello_gallery/platform_thumbnail',
   );
 
   final Queue<_ThumbnailJob> _queue = Queue();
   final Map<String, Future<String?>> _pending = {};
+  Timer? _resumeTimer;
   int _activeJobs = 0;
+  bool _isScrolling = false;
+
+  int get _maximumConcurrentJobs => Platform.isWindows ? 2 : 1;
+
+  void setScrolling(bool value) {
+    _resumeTimer?.cancel();
+    if (value) {
+      _isScrolling = true;
+      return;
+    }
+    _resumeTimer = Timer(const Duration(milliseconds: 150), () {
+      _isScrolling = false;
+      _drainQueue();
+    });
+  }
 
   Future<String?> thumbnailFor(MediaItem item) {
     if (!item.isVideo) return Future.value();
@@ -43,8 +58,10 @@ class VideoThumbnailService {
   }
 
   void _drainQueue() {
+    if (_isScrolling) return;
     while (_activeJobs < _maximumConcurrentJobs && _queue.isNotEmpty) {
-      final job = _queue.removeFirst();
+      // The newest jobs are most likely to still be visible after a scroll.
+      final job = _queue.removeLast();
       _activeJobs++;
       unawaited(
         _run(job).whenComplete(() {

@@ -18,6 +18,7 @@ import '../settings/settings_controller.dart';
 import 'gallery_controller.dart';
 import 'gallery_service.dart';
 import 'gallery_state.dart';
+import 'video_thumbnail_service.dart';
 import 'widgets/folder_tree_sidebar.dart';
 import 'widgets/gallery_card.dart';
 
@@ -589,7 +590,29 @@ class _GalleryBody extends ConsumerStatefulWidget {
 
 class _GalleryBodyState extends ConsumerState<_GalleryBody> {
   final Map<String, GlobalKey> _itemKeys = {};
+  late final VideoThumbnailService _thumbnailService;
   int _reportedColumnCount = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _thumbnailService = ref.read(videoThumbnailServiceProvider);
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      _thumbnailService.setScrolling(true);
+    } else if (notification is ScrollEndNotification) {
+      _thumbnailService.setScrolling(false);
+    }
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _thumbnailService.setScrolling(false);
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant _GalleryBody oldWidget) {
@@ -646,37 +669,43 @@ class _GalleryBodyState extends ConsumerState<_GalleryBody> {
                 if (mounted) widget.onColumnCountChanged(columns);
               });
             }
-            return GridView.builder(
-              controller: widget.scroll,
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 260,
-                mainAxisExtent: 210,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: state.visibleItems.length,
-              itemBuilder: (context, index) {
-                final item = state.visibleItems[index];
-                final itemKey = _itemKeys.putIfAbsent(item.path, GlobalKey.new);
-                return KeyedSubtree(
-                  key: itemKey,
-                  child: ExcludeFocus(
-                    child: GalleryCard(
-                      item: item,
-                      selected: index == widget.selectedIndex,
-                      onTap: () {
-                        widget.onSelectionChanged(index);
-                        if (item is GalleryFolder) {
-                          widget.onFolderSelected(item.path);
-                        } else if (item is MediaItem) {
-                          widget.onMediaSelected(item);
-                        }
-                      },
+            return NotificationListener<ScrollNotification>(
+              onNotification: _handleScrollNotification,
+              child: GridView.builder(
+                controller: widget.scroll,
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 260,
+                  mainAxisExtent: 210,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: state.visibleItems.length,
+                itemBuilder: (context, index) {
+                  final item = state.visibleItems[index];
+                  final itemKey = _itemKeys.putIfAbsent(
+                    item.path,
+                    GlobalKey.new,
+                  );
+                  return KeyedSubtree(
+                    key: itemKey,
+                    child: ExcludeFocus(
+                      child: GalleryCard(
+                        item: item,
+                        selected: index == widget.selectedIndex,
+                        onTap: () {
+                          widget.onSelectionChanged(index);
+                          if (item is GalleryFolder) {
+                            widget.onFolderSelected(item.path);
+                          } else if (item is MediaItem) {
+                            widget.onMediaSelected(item);
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             );
           },
         );
