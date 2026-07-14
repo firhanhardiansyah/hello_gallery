@@ -430,33 +430,38 @@ class _MediaTreeTile extends StatelessWidget {
             ),
           ),
         ),
-        child: ListTile(
-          selected: selected,
-          dense: true,
-          contentPadding: const EdgeInsets.only(left: 10, right: 8),
-          leading: Icon(
-            media.isVideo ? Icons.movie_outlined : Icons.image_outlined,
-            size: 20,
-            color: selected ? colorScheme.primary : null,
-          ),
-          title: Text(
-            media.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: selected
-                ? const TextStyle(fontWeight: FontWeight.w700)
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(9),
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            selected: selected,
+            dense: true,
+            contentPadding: const EdgeInsets.only(left: 10, right: 8),
+            leading: Icon(
+              media.isVideo ? Icons.movie_outlined : Icons.image_outlined,
+              size: 20,
+              color: selected ? colorScheme.primary : null,
+            ),
+            title: Text(
+              media.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: selected
+                  ? const TextStyle(fontWeight: FontWeight.w700)
+                  : null,
+            ),
+            trailing: selected
+                ? Icon(
+                    media.isVideo
+                        ? Icons.play_circle_fill_rounded
+                        : Icons.visibility_rounded,
+                    color: colorScheme.primary,
+                    size: 20,
+                  )
                 : null,
+            onTap: onTap,
           ),
-          trailing: selected
-              ? Icon(
-                  media.isVideo
-                      ? Icons.play_circle_fill_rounded
-                      : Icons.visibility_rounded,
-                  color: colorScheme.primary,
-                  size: 20,
-                )
-              : null,
-          onTap: onTap,
         ),
       ),
     );
