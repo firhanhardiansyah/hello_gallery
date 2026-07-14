@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -21,6 +22,9 @@ final videoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
 
 class VideoThumbnailService {
   static const _maximumConcurrentJobs = 3;
+  static const _platformThumbnailChannel = MethodChannel(
+    'hello_gallery/platform_thumbnail',
+  );
 
   final Queue<_ThumbnailJob> _queue = Queue();
   final Map<String, Future<String?>> _pending = {};
@@ -69,6 +73,22 @@ class VideoThumbnailService {
     final thumbnail = File(path.join(cacheDirectory.path, '$key.jpg'));
     if (await thumbnail.exists()) return thumbnail.path;
 
+    if (Platform.isWindows) {
+      try {
+        final bytes = await _platformThumbnailChannel.invokeMethod<Uint8List>(
+          'getThumbnail',
+          {'path': item.path, 'size': 420},
+        );
+        if (bytes != null && bytes.isNotEmpty) {
+          await cacheDirectory.create(recursive: true);
+          await thumbnail.writeAsBytes(bytes, flush: false);
+          return thumbnail.path;
+        }
+      } on PlatformException catch (error) {
+        debugPrint('Windows Shell thumbnail failed: $error');
+      }
+    }
+
     final player = Player(
       configuration: const PlayerConfiguration(muted: true),
     );
@@ -107,8 +127,9 @@ class VideoThumbnailService {
   }
 
   String _cacheKey(MediaItem item) {
+    final generator = Platform.isWindows ? 'windows-shell-v1' : 'media-kit-v1';
     final source =
-        '${item.path}\u0000${item.sizeBytes}\u0000${item.modifiedAt.microsecondsSinceEpoch}';
+        '$generator\u0000${item.path}\u0000${item.sizeBytes}\u0000${item.modifiedAt.microsecondsSinceEpoch}';
     var hash = 0xcbf29ce484222325;
     for (final byte in source.codeUnits) {
       hash ^= byte;
