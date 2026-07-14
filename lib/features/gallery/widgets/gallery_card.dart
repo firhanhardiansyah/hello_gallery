@@ -111,7 +111,7 @@ class _Preview extends ConsumerWidget {
                 cacheWidth: 420,
                 errorBuilder: (_, _, _) => const _VideoPlaceholder(),
               ),
-        loading: () => const _VideoPlaceholder(showProgress: true),
+        loading: () => const _VideoPlaceholder(),
         error: (_, _) => const _VideoPlaceholder(),
       );
     }
@@ -120,25 +120,11 @@ class _Preview extends ConsumerWidget {
 }
 
 class _VideoPlaceholder extends StatelessWidget {
-  const _VideoPlaceholder({this.showProgress = false});
-
-  final bool showProgress;
+  const _VideoPlaceholder();
 
   @override
   Widget build(BuildContext context) => ColoredBox(
     color: const Color(0xFF24242C),
-    child: Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Icon(Icons.play_circle_fill_rounded, size: 58),
-          if (showProgress)
-            const SizedBox.square(
-              dimension: 72,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-        ],
-      ),
-    ),
+    child: Center(child: const Icon(Icons.play_circle_fill_rounded, size: 58)),
   );
 }

@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
@@ -21,7 +22,7 @@ final videoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
 );
 
 class VideoThumbnailService {
-  static const _maximumConcurrentJobs = 3;
+  static const _maximumConcurrentJobs = 2;
   static const _platformThumbnailChannel = MethodChannel(
     'hello_gallery/platform_thumbnail',
   );
@@ -73,11 +74,14 @@ class VideoThumbnailService {
     final thumbnail = File(path.join(cacheDirectory.path, '$key.jpg'));
     if (await thumbnail.exists()) return thumbnail.path;
 
+    // Let the grid paint its placeholders before starting native decoding.
+    await SchedulerBinding.instance.endOfFrame;
+
     if (Platform.isWindows) {
       try {
         final bytes = await _platformThumbnailChannel.invokeMethod<Uint8List>(
           'getThumbnail',
-          {'path': item.path, 'size': 420},
+          {'path': item.path, 'size': 320},
         );
         if (bytes != null && bytes.isNotEmpty) {
           await cacheDirectory.create(recursive: true);
@@ -95,7 +99,7 @@ class VideoThumbnailService {
     try {
       final videoController = VideoController(
         player,
-        configuration: const VideoControllerConfiguration(width: 420),
+        configuration: const VideoControllerConfiguration(width: 320),
       );
       await videoController.platform.future.timeout(const Duration(seconds: 5));
       final videoReady = player.stream.width.firstWhere(
