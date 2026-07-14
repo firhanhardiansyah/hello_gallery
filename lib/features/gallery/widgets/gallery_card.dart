@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/gallery_item.dart';
+import '../video_thumbnail_service.dart';
 
 class GalleryCard extends StatelessWidget {
   const GalleryCard({
@@ -65,13 +67,13 @@ class GalleryCard extends StatelessWidget {
   }
 }
 
-class _Preview extends StatelessWidget {
+class _Preview extends ConsumerWidget {
   const _Preview({required this.item});
 
   final GalleryItem item;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (item case final GalleryFolder folder) {
       if (folder.previewPaths.isEmpty) {
         return const ColoredBox(
@@ -98,9 +100,45 @@ class _Preview extends StatelessWidget {
             const Center(child: Icon(Icons.broken_image)),
       );
     }
-    return const ColoredBox(
-      color: Color(0xFF24242C),
-      child: Center(child: Icon(Icons.play_circle_fill_rounded, size: 58)),
-    );
+    if (item case final MediaItem media) {
+      final thumbnail = ref.watch(videoThumbnailProvider(media));
+      return thumbnail.when(
+        data: (thumbnailPath) => thumbnailPath == null
+            ? const _VideoPlaceholder()
+            : Image.file(
+                File(thumbnailPath),
+                fit: BoxFit.cover,
+                cacheWidth: 420,
+                errorBuilder: (_, _, _) => const _VideoPlaceholder(),
+              ),
+        loading: () => const _VideoPlaceholder(showProgress: true),
+        error: (_, _) => const _VideoPlaceholder(),
+      );
+    }
+    return const _VideoPlaceholder();
   }
+}
+
+class _VideoPlaceholder extends StatelessWidget {
+  const _VideoPlaceholder({this.showProgress = false});
+
+  final bool showProgress;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFF24242C),
+    child: Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Icon(Icons.play_circle_fill_rounded, size: 58),
+          if (showProgress)
+            const SizedBox.square(
+              dimension: 72,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+        ],
+      ),
+    ),
+  );
 }
