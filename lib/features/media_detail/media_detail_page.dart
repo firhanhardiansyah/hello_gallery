@@ -50,6 +50,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   Timer? _hideTimer;
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
   bool _controlsVisible = true;
+  bool _controlsHiddenByNavigation = false;
   int _silentNavigationCount = 0;
 
   @override
@@ -76,7 +77,9 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
     super.dispose();
   }
 
-  void _showControls({bool restartTimer = true}) {
+  void _showControls({bool restartTimer = true, bool userInitiated = false}) {
+    if (_controlsHiddenByNavigation && !userInitiated) return;
+    if (userInitiated) _controlsHiddenByNavigation = false;
     _hideTimer?.cancel();
     if (!_controlsVisible && mounted) {
       setState(() => _controlsVisible = true);
@@ -97,7 +100,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   }
 
   void _handlePointerActivity() {
-    _showControls();
+    _showControls(userInitiated: true);
   }
 
   void _toggleSidebar() => widget.onToggleSidebar?.call();
@@ -110,6 +113,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   }
 
   void _suppressControlsDuringNavigation() {
+    _controlsHiddenByNavigation = true;
     _hideTimer?.cancel();
     if (_controlsVisible && mounted) {
       setState(() => _controlsVisible = false);
@@ -148,16 +152,16 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
       case GamepadButton.dpadDown:
         _navigateWithoutRevealingControls(controller.next);
       case GamepadButton.dpadLeft:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.seekBy(const Duration(seconds: -3));
       case GamepadButton.dpadRight:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.seekBy(const Duration(seconds: 3));
       case GamepadButton.a:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.togglePlay();
       case GamepadButton.x:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.toggleMute();
       case GamepadButton.y:
       case GamepadButton.start:
@@ -189,16 +193,16 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
         _focusNode.requestFocus();
         _navigateWithoutRevealingControls(controller.next);
       case LogicalKeyboardKey.arrowLeft:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.seekBy(const Duration(seconds: -3));
       case LogicalKeyboardKey.arrowRight:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.seekBy(const Duration(seconds: 3));
       case LogicalKeyboardKey.space:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.togglePlay();
       case LogicalKeyboardKey.keyM:
-        _showControls();
+        _showControls(userInitiated: true);
         controller.toggleMute();
       case LogicalKeyboardKey.keyS:
         _toggleSidebar();
@@ -255,7 +259,7 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
           state: state,
           controlsVisible: _controlsVisible,
           isFullscreen: widget.isFullscreen,
-          onInteraction: _showControls,
+          onInteraction: () => _showControls(userInitiated: true),
           onToggleFullscreen: _toggleFullscreen,
         ),
       ),
