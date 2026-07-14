@@ -117,6 +117,7 @@ class MediaDetailController extends Notifier<MediaDetailState> {
     final generation = ++_openGeneration;
     state = state.copyWith(
       isPlaying: false,
+      isVideoReady: false,
       isMuted: false,
       position: Duration.zero,
       duration: Duration.zero,
@@ -135,7 +136,10 @@ class MediaDetailController extends Notifier<MediaDetailState> {
         state = state.copyWith(isPlaying: playing);
       }),
       player.stream.position.listen((position) {
-        state = state.copyWith(position: position);
+        state = state.copyWith(
+          position: position,
+          isVideoReady: state.isVideoReady || position > Duration.zero,
+        );
       }),
       player.stream.duration.listen((duration) {
         state = state.copyWith(duration: duration);

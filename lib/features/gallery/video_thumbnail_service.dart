@@ -21,6 +21,11 @@ final videoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
   (ref, item) => ref.read(videoThumbnailServiceProvider).thumbnailFor(item),
 );
 
+final cachedVideoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
+  (ref, item) =>
+      ref.read(videoThumbnailServiceProvider).cachedThumbnailFor(item),
+);
+
 class VideoThumbnailService {
   static const _platformThumbnailChannel = MethodChannel(
     'hello_gallery/platform_thumbnail',
@@ -33,6 +38,11 @@ class VideoThumbnailService {
   bool _isScrolling = false;
 
   int get _maximumConcurrentJobs => Platform.isWindows ? 2 : 1;
+
+  Future<String?> cachedThumbnailFor(MediaItem item) async {
+    final thumbnail = await _thumbnailFile(_cacheKey(item));
+    return await thumbnail.exists() ? thumbnail.path : null;
+  }
 
   void setScrolling(bool value) {
     _resumeTimer?.cancel();
@@ -84,11 +94,8 @@ class VideoThumbnailService {
   }
 
   Future<String?> _loadOrCreate(MediaItem item, String key) async {
-    final cacheRoot = await getApplicationCacheDirectory();
-    final cacheDirectory = Directory(
-      path.join(cacheRoot.path, 'video_thumbnails'),
-    );
-    final thumbnail = File(path.join(cacheDirectory.path, '$key.jpg'));
+    final thumbnail = await _thumbnailFile(key);
+    final cacheDirectory = thumbnail.parent;
     if (await thumbnail.exists()) return thumbnail.path;
 
     // Let the grid paint its placeholders before starting native decoding.
@@ -145,6 +152,11 @@ class VideoThumbnailService {
     } finally {
       await player.dispose();
     }
+  }
+
+  Future<File> _thumbnailFile(String key) async {
+    final cacheRoot = await getApplicationCacheDirectory();
+    return File(path.join(cacheRoot.path, 'video_thumbnails', '$key.jpg'));
   }
 
   String _cacheKey(MediaItem item) {

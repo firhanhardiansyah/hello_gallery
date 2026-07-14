@@ -9,6 +9,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../shared/models/gallery_item.dart';
 import '../../shared/models/gallery_sort.dart';
+import '../gallery/video_thumbnail_service.dart';
 import 'media_detail_controller.dart';
 import 'media_detail_state.dart';
 
@@ -281,6 +282,10 @@ class _Preview extends ConsumerWidget {
     final item = state.activeItem;
     final controller = ref.read(mediaDetailControllerProvider.notifier);
     if (item == null) return const Center(child: CircularProgressIndicator());
+    final cachedThumbnail = item.isVideo
+        ? ref.watch(cachedVideoThumbnailProvider(item))
+        : null;
+    final thumbnailPath = cachedThumbnail?.value;
     void togglePlayback() {
       onInteraction();
       controller.togglePlay();
@@ -322,6 +327,28 @@ class _Preview extends ConsumerWidget {
                   ),
           ),
         ),
+        if (item.isVideo)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 120),
+                opacity: state.isVideoReady ? 0 : 1,
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: thumbnailPath != null
+                      ? Image.file(
+                          File(thumbnailPath),
+                          key: ValueKey('thumbnail:${item.path}'),
+                          fit: BoxFit.contain,
+                          cacheWidth: 960,
+                          errorBuilder: (_, _, _) =>
+                              const _VideoLoadingPlaceholder(),
+                        )
+                      : const _VideoLoadingPlaceholder(),
+                ),
+              ),
+            ),
+          ),
         if (item.isVideo)
           Center(
             child: AnimatedOpacity(
@@ -374,6 +401,19 @@ class _Preview extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _VideoLoadingPlaceholder extends StatelessWidget {
+  const _VideoLoadingPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Icon(
+      Icons.play_circle_outline_rounded,
+      size: 72,
+      color: Colors.white54,
+    ),
+  );
 }
 
 class _VideoControls extends ConsumerWidget {
