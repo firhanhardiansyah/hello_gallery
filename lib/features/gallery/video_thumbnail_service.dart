@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -20,27 +21,45 @@ final videoThumbnailProvider = FutureProvider.autoDispose
     );
 
 class VideoThumbnailService {
-  Future<void> _queue = Future.value();
+  static const _maximumConcurrentJobs = 3;
+
+  final Queue<_ThumbnailJob> _queue = Queue();
   final Map<String, Future<String?>> _pending = {};
+  int _activeJobs = 0;
 
   Future<String?> thumbnailFor(MediaItem item) {
     if (!item.isVideo) return Future.value();
     final key = _cacheKey(item);
     return _pending.putIfAbsent(key, () {
       final completer = Completer<String?>();
-      _queue = _queue.catchError((_) {}).then((_) async {
-        try {
-          completer.complete(await _loadOrCreate(item, key));
-        } catch (error, stackTrace) {
-          debugPrint('Could not create thumbnail for ${item.path}: $error');
-          debugPrintStack(stackTrace: stackTrace);
-          completer.complete(null);
-        } finally {
-          _pending.remove(key);
-        }
-      });
+      _queue.add(_ThumbnailJob(item, key, completer));
+      _drainQueue();
       return completer.future;
     });
+  }
+
+  void _drainQueue() {
+    while (_activeJobs < _maximumConcurrentJobs && _queue.isNotEmpty) {
+      final job = _queue.removeFirst();
+      _activeJobs++;
+      unawaited(
+        _run(job).whenComplete(() {
+          _activeJobs--;
+          _pending.remove(job.key);
+          _drainQueue();
+        }),
+      );
+    }
+  }
+
+  Future<void> _run(_ThumbnailJob job) async {
+    try {
+      job.completer.complete(await _loadOrCreate(job.item, job.key));
+    } catch (error, stackTrace) {
+      debugPrint('Could not create thumbnail for ${job.item.path}: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      job.completer.complete(null);
+    }
   }
 
   Future<String?> _loadOrCreate(MediaItem item, String key) async {
@@ -98,4 +117,12 @@ class VideoThumbnailService {
     }
     return hash.toRadixString(16).padLeft(16, '0');
   }
+}
+
+class _ThumbnailJob {
+  const _ThumbnailJob(this.item, this.key, this.completer);
+
+  final MediaItem item;
+  final String key;
+  final Completer<String?> completer;
 }
