@@ -104,9 +104,18 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   void _toggleFullscreen() => widget.onToggleFullscreen?.call();
 
   void _navigateWithoutRevealingControls(Future<void> Function() navigate) {
+    _suppressControlsDuringNavigation();
+    unawaited(navigate());
+  }
+
+  void _suppressControlsDuringNavigation() {
+    _hideTimer?.cancel();
+    if (_controlsVisible && mounted) {
+      setState(() => _controlsVisible = false);
+    }
     _silentNavigationCount++;
     unawaited(
-      navigate().whenComplete(() async {
+      Future<void>(() async {
         // media_kit may emit its final playing event immediately after open.
         await Future<void>.delayed(const Duration(milliseconds: 500));
         _silentNavigationCount--;
@@ -214,6 +223,14 @@ class _MediaDetailPageState extends ConsumerState<MediaDetailPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaDetailControllerProvider);
+    ref.listen(
+      mediaDetailControllerProvider.select((value) => value.activeIndex),
+      (previous, activeIndex) {
+        if (previous != activeIndex) {
+          _suppressControlsDuringNavigation();
+        }
+      },
+    );
     ref.listen(
       mediaDetailControllerProvider.select((value) => value.isPlaying),
       (previous, isPlaying) {
