@@ -15,10 +15,9 @@ final videoThumbnailServiceProvider = Provider(
   (ref) => VideoThumbnailService(),
 );
 
-final videoThumbnailProvider = FutureProvider.autoDispose
-    .family<String?, MediaItem>(
-      (ref, item) => ref.read(videoThumbnailServiceProvider).thumbnailFor(item),
-    );
+final videoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
+  (ref, item) => ref.read(videoThumbnailServiceProvider).thumbnailFor(item),
+);
 
 class VideoThumbnailService {
   static const _maximumConcurrentJobs = 3;
