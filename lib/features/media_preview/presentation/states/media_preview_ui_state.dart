@@ -7,6 +7,7 @@ class MediaPreviewUiState {
     this.isPlaying = false,
     this.isVideoReady = false,
     this.isMuted = false,
+    this.isLooping = false,
     this.controlsVisible = true,
     this.position = Duration.zero,
     this.duration = Duration.zero,
@@ -17,6 +18,7 @@ class MediaPreviewUiState {
   final bool isPlaying;
   final bool isVideoReady;
   final bool isMuted;
+  final bool isLooping;
   final bool controlsVisible;
   final Duration position;
   final Duration duration;
@@ -31,6 +33,7 @@ class MediaPreviewUiState {
     bool? isPlaying,
     bool? isVideoReady,
     bool? isMuted,
+    bool? isLooping,
     bool? controlsVisible,
     Duration? position,
     Duration? duration,
@@ -40,6 +43,7 @@ class MediaPreviewUiState {
     isPlaying: isPlaying ?? this.isPlaying,
     isVideoReady: isVideoReady ?? this.isVideoReady,
     isMuted: isMuted ?? this.isMuted,
+    isLooping: isLooping ?? this.isLooping,
     controlsVisible: controlsVisible ?? this.controlsVisible,
     position: position ?? this.position,
     duration: duration ?? this.duration,

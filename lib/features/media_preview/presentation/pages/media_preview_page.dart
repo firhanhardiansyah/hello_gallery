@@ -489,6 +489,21 @@ class _VideoControls extends ConsumerWidget {
             style: TextStyle(color: appColors.onMedia),
           ),
           IconButton(
+            tooltip: state.isLooping ? 'Disable loop' : 'Loop video',
+            onPressed: () {
+              onInteraction();
+              controller.toggleLoop();
+            },
+            icon: HugeIcon(
+              icon: state.isLooping
+                  ? HugeIcons.strokeRoundedRepeatOne01
+                  : HugeIcons.strokeRoundedRepeatOff,
+              color: state.isLooping
+                  ? Theme.of(context).colorScheme.primary
+                  : appColors.onMedia,
+            ),
+          ),
+          IconButton(
             onPressed: () {
               onInteraction();
               controller.toggleMute();

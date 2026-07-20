@@ -131,6 +131,14 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     state = state.copyWith(isMuted: !state.isMuted);
   }
 
+  Future<void> toggleLoop() async {
+    final isLooping = !state.isLooping;
+    await _player?.setPlaylistMode(
+      isLooping ? PlaylistMode.single : PlaylistMode.none,
+    );
+    state = state.copyWith(isLooping: isLooping);
+  }
+
   Future<void> seekBy(Duration delta) async {
     final player = _player;
     if (player == null) return;
@@ -173,6 +181,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
       }),
       player.stream.completed.listen((completed) {
         if (!completed || generation != _openGeneration) return;
+        if (state.isLooping) return;
         final activeItem = state.activeItem;
         if (activeItem == null || !path.equals(activeItem.path, item.path)) {
           return;
@@ -182,6 +191,9 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     ]);
     await player.open(Media(item.path), play: false);
     if (generation != _openGeneration) return;
+    await player.setPlaylistMode(
+      state.isLooping ? PlaylistMode.single : PlaylistMode.none,
+    );
     await player.play();
   }
 
