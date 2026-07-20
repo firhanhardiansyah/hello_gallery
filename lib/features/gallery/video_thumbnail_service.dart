@@ -101,7 +101,7 @@ class VideoThumbnailService {
     // Let the grid paint its placeholders before starting native decoding.
     await SchedulerBinding.instance.endOfFrame;
 
-    if (Platform.isWindows) {
+    if (Platform.isWindows || Platform.isMacOS) {
       try {
         final bytes = await _platformThumbnailChannel.invokeMethod<Uint8List>(
           'getThumbnail',
@@ -113,7 +113,7 @@ class VideoThumbnailService {
           return thumbnail.path;
         }
       } on PlatformException catch (error) {
-        debugPrint('Windows Shell thumbnail failed: $error');
+        debugPrint('Native platform thumbnail failed: $error');
       }
     }
 
@@ -160,7 +160,11 @@ class VideoThumbnailService {
   }
 
   String _cacheKey(MediaItem item) {
-    final generator = Platform.isWindows ? 'windows-shell-v1' : 'media-kit-v1';
+    final generator = Platform.isWindows
+        ? 'windows-shell-v1'
+        : Platform.isMacOS
+        ? 'macos-quick-look-v1'
+        : 'media-kit-v1';
     final source =
         '$generator\u0000${item.path}\u0000${item.sizeBytes}\u0000${item.modifiedAt.microsecondsSinceEpoch}';
     var hash = 0xcbf29ce484222325;
