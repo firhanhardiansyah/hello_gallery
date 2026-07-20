@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
@@ -39,7 +41,12 @@ class GalleryCard extends StatelessWidget {
           children: [
             Expanded(child: _Preview(item: item)),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
               child: Row(
                 children: [
                   HugeIcon(
@@ -50,7 +57,7 @@ class GalleryCard extends StatelessWidget {
                         : HugeIcons.strokeRoundedImage01,
                     size: 18,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       item.name,
@@ -77,9 +84,9 @@ class _Preview extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (item case final GalleryFolder folder) {
       if (folder.previewPaths.isEmpty) {
-        return const ColoredBox(
-          color: Color(0xFF24242C),
-          child: Center(
+        return ColoredBox(
+          color: context.appColors.mediaPlaceholder,
+          child: const Center(
             child: HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 52),
           ),
         );
@@ -128,9 +135,9 @@ class _VideoPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: const Color(0xFF24242C),
-    child: Center(
-      child: const HugeIcon(icon: HugeIcons.strokeRoundedPlayCircle, size: 58),
+    color: context.appColors.mediaPlaceholder,
+    child: const Center(
+      child: HugeIcon(icon: HugeIcons.strokeRoundedPlayCircle, size: 58),
     ),
   );
 }

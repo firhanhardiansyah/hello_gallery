@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:gamepads/gamepads.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 
 class VirtualCursorOverlay extends StatefulWidget {
   const VirtualCursorOverlay({required this.child, super.key});
@@ -278,9 +279,15 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black54, blurRadius: 5),
+                        border: Border.all(
+                          color: context.appColors.onMedia,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: context.appColors.shadow,
+                            blurRadius: 5,
+                          ),
                         ],
                       ),
                       child: const SizedBox.square(dimension: 18),

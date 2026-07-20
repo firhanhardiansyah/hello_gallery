@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamepads/gamepads.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -286,6 +288,7 @@ class _Preview extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final item = state.activeItem;
     final controller = ref.read(mediaPreviewNotifierProvider.notifier);
+    final appColors = context.appColors;
     if (item == null) return const Center(child: CircularProgressIndicator());
     final cachedThumbnail = item.isVideo
         ? ref.watch(cachedVideoThumbnailProvider(item))
@@ -304,7 +307,7 @@ class _Preview extends ConsumerWidget {
           behavior: HitTestBehavior.opaque,
           onTap: item.isVideo ? togglePlayback : null,
           child: ColoredBox(
-            color: Colors.black,
+            color: appColors.mediaBackground,
             child: item.isVideo
                 ? controller.videoController == null
                       ? const Center(child: CircularProgressIndicator())
@@ -323,9 +326,11 @@ class _Preview extends ConsumerWidget {
                       gaplessPlayback: false,
                       frameBuilder: (context, child, frame, syncLoaded) {
                         if (syncLoaded || frame != null) return child;
-                        return const ColoredBox(
-                          color: Colors.black,
-                          child: Center(child: CircularProgressIndicator()),
+                        return ColoredBox(
+                          color: appColors.mediaBackground,
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
                         );
                       },
                     ),
@@ -339,7 +344,7 @@ class _Preview extends ConsumerWidget {
                 duration: const Duration(milliseconds: 120),
                 opacity: state.isVideoReady ? 0 : 1,
                 child: ColoredBox(
-                  color: Colors.black,
+                  color: appColors.mediaBackground,
                   child: thumbnailPath != null
                       ? Image.file(
                           File(thumbnailPath),
@@ -365,8 +370,8 @@ class _Preview extends ConsumerWidget {
                   tooltip: state.isPlaying ? 'Pause' : 'Play',
                   onPressed: togglePlayback,
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withValues(alpha: 0.58),
-                    foregroundColor: Colors.white,
+                    backgroundColor: appColors.mediaOverlay,
+                    foregroundColor: appColors.onMedia,
                     minimumSize: const Size.square(72),
                     iconSize: 42,
                   ),
@@ -413,11 +418,11 @@ class _VideoLoadingPlaceholder extends StatelessWidget {
   const _VideoLoadingPlaceholder();
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: HugeIcon(
       icon: HugeIcons.strokeRoundedPlayCircle,
       size: 72,
-      color: Colors.white54,
+      color: context.appColors.onMediaMuted,
     ),
   );
 }
@@ -437,14 +442,18 @@ class _VideoControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(mediaPreviewNotifierProvider.notifier);
+    final appColors = context.appColors;
     final max = state.duration.inMilliseconds.toDouble().clamp(
       1.0,
       double.infinity,
     );
     final value = state.position.inMilliseconds.toDouble().clamp(0.0, max);
     return Container(
-      color: Colors.black.withValues(alpha: 0.72),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      color: appColors.mediaControlSurface,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           IconButton(
