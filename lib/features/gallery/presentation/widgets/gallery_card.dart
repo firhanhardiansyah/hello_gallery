@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 
 class GalleryCard extends StatelessWidget {
@@ -24,17 +24,19 @@ class GalleryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      margin: EdgeInsets.zero,
+    const borderRadius = BorderRadius.all(Radius.circular(8));
+    return Material(
+      color: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: borderRadius,
         side: BorderSide(
           color: selected ? colorScheme.primary : Colors.transparent,
-          width: selected ? 3 : 0,
+          width: selected ? 2 : 0,
         ),
       ),
-      elevation: selected ? 5 : 1,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
+        borderRadius: borderRadius,
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,25 +49,11 @@ class GalleryCard extends StatelessWidget {
                 AppSpacing.md,
                 AppSpacing.md,
               ),
-              child: Row(
-                children: [
-                  HugeIcon(
-                    icon: item is GalleryFolder
-                        ? HugeIcons.strokeRoundedFolder01
-                        : item.type == GalleryItemType.video
-                        ? HugeIcons.strokeRoundedVideo01
-                        : HugeIcons.strokeRoundedImage01,
-                    size: 18,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              child: Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
             ),
           ],
