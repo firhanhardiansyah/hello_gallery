@@ -11,7 +11,7 @@ final class FindFolderPreviewMedia {
   const FindFolderPreviewMedia(
     this._repository, {
     this.maximumMedia = 4,
-    this.maximumVisitedFolders = 64,
+    this.maximumVisitedFolders = 256,
   }) : assert(maximumMedia > 0),
        assert(maximumVisitedFolders > 0);
 
