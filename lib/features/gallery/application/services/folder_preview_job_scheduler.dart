@@ -27,7 +27,11 @@ final class FolderPreviewJobScheduler {
     final key = path.normalize(folder.path);
     final cached = _cache.get(key);
     if (cached != null) {
-      return FolderPreviewRequest._(Future.value(cached), () {});
+      return FolderPreviewRequest._(
+        Future.value(cached),
+        () {},
+        isCancelled: () => false,
+      );
     }
 
     var job = _pending[key];
@@ -46,7 +50,7 @@ final class FolderPreviewJobScheduler {
       released = true;
       retainedJob.retainers--;
       if (retainedJob.retainers == 0) _cancel(retainedJob);
-    });
+    }, isCancelled: () => retainedJob.cancelled);
   }
 
   void invalidate(String folderPath) {
@@ -140,8 +144,15 @@ final class _FolderPreviewJob {
 }
 
 final class FolderPreviewRequest {
-  const FolderPreviewRequest._(this.result, this.cancel);
+  const FolderPreviewRequest._(
+    this.result,
+    this.cancel, {
+    required bool Function() isCancelled,
+  }) : _isCancelled = isCancelled;
 
   final Future<List<MediaItem>> result;
   final VoidCallback cancel;
+  final bool Function() _isCancelled;
+
+  bool get wasCancelled => _isCancelled();
 }

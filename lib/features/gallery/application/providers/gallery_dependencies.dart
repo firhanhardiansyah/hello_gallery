@@ -48,10 +48,22 @@ final folderPreviewJobSchedulerProvider = Provider(
 );
 
 final folderPreviewProvider = FutureProvider.autoDispose
-    .family<List<MediaItem>, GalleryFolder>((ref, folder) {
-      final request = ref
-          .read(folderPreviewJobSchedulerProvider)
-          .getPreview(folder);
-      ref.onDispose(request.cancel);
-      return request.result;
+    .family<List<MediaItem>, GalleryFolder>((ref, folder) async {
+      final scheduler = ref.read(folderPreviewJobSchedulerProvider);
+      FolderPreviewRequest? activeRequest;
+      var disposed = false;
+      ref.onDispose(() {
+        disposed = true;
+        activeRequest?.cancel();
+      });
+
+      while (!disposed) {
+        final request = scheduler.getPreview(folder);
+        activeRequest = request;
+        final previews = await request.result;
+        if (!request.wasCancelled) return previews;
+        if (disposed) break;
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+      return const [];
     });
