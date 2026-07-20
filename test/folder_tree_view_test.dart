@@ -186,6 +186,12 @@ void main() {
     );
 
     expect(find.byType(Badge), findsOneWidget);
+    final badge = tester.widget<Badge>(find.byType(Badge));
+    final colorScheme = Theme.of(
+      tester.element(find.byType(FolderTreeView)),
+    ).colorScheme;
+    expect(badge.backgroundColor, colorScheme.primary);
+    expect(badge.textColor, colorScheme.onPrimary);
     expect(
       find.descendant(of: find.byType(Badge), matching: find.text('2')),
       findsOneWidget,

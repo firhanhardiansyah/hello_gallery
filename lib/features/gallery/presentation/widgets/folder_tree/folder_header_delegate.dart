@@ -43,6 +43,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox.expand(
       child: Material(
         color: overlapsContent ? overlappingSurfaceColor : surfaceColor,
@@ -84,7 +85,11 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
                     ),
-                    child: Badge.count(count: count),
+                    child: Badge.count(
+                      count: count,
+                      backgroundColor: colorScheme.primary,
+                      textColor: colorScheme.onPrimary,
+                    ),
                   ),
                 ],
               ],
