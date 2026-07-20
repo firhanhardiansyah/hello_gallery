@@ -1,31 +1,26 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gamepads/gamepads.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hugeicons/hugeicons.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import 'package:hello_gallery/features/gallery/domain/rules/gallery_item_sort_rules.dart';
 import 'package:path/path.dart' as path;
 import 'package:window_manager/window_manager.dart';
 
-import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
-import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
-import 'package:hello_gallery/core/utils/natural_compare.dart';
 import '../../../../app/routing/app_router.dart';
 import '../../../gamepad/presentation/widgets/virtual_cursor_overlay.dart';
 import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
 import '../../../media_preview/presentation/pages/media_preview_page.dart';
 import '../../../settings/presentation/notifiers/settings_notifier.dart';
-import '../../../settings/domain/value_objects/app_appearance_mode.dart';
-import '../../../settings/domain/value_objects/app_color_theme.dart';
-import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
-import '../../../thumbnail/application/services/thumbnail_job_scheduler.dart';
 import '../../application/providers/gallery_dependencies.dart';
+import '../input/gallery_input_handler.dart';
 import '../notifiers/gallery_notifier.dart';
-import '../states/gallery_ui_state.dart';
+import '../states/media_preview_selection.dart';
 import '../widgets/folder_tree_sidebar.dart';
-import '../widgets/gallery_card.dart';
+import '../widgets/gallery_page/choose_folder_prompt.dart';
+import '../widgets/gallery_page/gallery_body.dart';
+import '../widgets/gallery_page/gallery_shell_top_bar.dart';
 
 class GalleryPage extends ConsumerStatefulWidget {
   const GalleryPage({this.previewPath, super.key});
@@ -40,10 +35,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   final _scrollController = ScrollController();
   String? _loadedRoot;
   bool _sidebarVisible = true;
-  _MediaPreviewSelection? _preview;
+  MediaPreviewSelection? _preview;
   bool _isFullscreen = false;
   bool? _sidebarBeforeFullscreen;
-  StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
+  late final GalleryInputHandler _inputHandler;
   int _selectedGridIndex = 0;
   int _gridColumnCount = 1;
   int _previewLoadGeneration = 0;
@@ -51,10 +46,17 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   @override
   void initState() {
     super.initState();
-    HardwareKeyboard.instance.addHandler(_handleGalleryKey);
-    _gamepadSubscription = Gamepads.normalizedEvents.listen(
-      _handleGalleryGamepad,
-    );
+    _inputHandler = GalleryInputHandler(
+      isEnabled: () => _preview == null,
+      onMoveUp: () => _moveGridSelection(-_gridColumnCount),
+      onMoveDown: () => _moveGridSelection(_gridColumnCount),
+      onMoveLeft: () => _moveGridSelection(-1),
+      onMoveRight: () => _moveGridSelection(1),
+      onActivate: _openSelectedGridItem,
+      onBack: _handleBackInput,
+      onToggleSidebar: _toggleSidebar,
+      onToggleFullscreen: () => unawaited(_toggleFullscreen()),
+    )..start();
     _scrollController.addListener(() {
       if (_scrollController.position.extentAfter < 600) {
         ref.read(galleryNotifierProvider.notifier).loadMore();
@@ -75,87 +77,22 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleGalleryKey);
-    unawaited(_gamepadSubscription?.cancel());
+    _inputHandler.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  bool _handleGalleryKey(KeyEvent event) {
-    if (_preview != null || event is! KeyDownEvent) return false;
-    switch (event.logicalKey) {
-      case LogicalKeyboardKey.arrowUp:
-        _moveGridSelection(-_gridColumnCount);
-        return true;
-      case LogicalKeyboardKey.arrowDown:
-        _moveGridSelection(_gridColumnCount);
-        return true;
-      case LogicalKeyboardKey.arrowLeft:
-        _moveGridSelection(-1);
-        return true;
-      case LogicalKeyboardKey.arrowRight:
-        _moveGridSelection(1);
-        return true;
-      case LogicalKeyboardKey.enter:
-      case LogicalKeyboardKey.space:
-        _openSelectedGridItem();
-        return true;
-      case LogicalKeyboardKey.keyS:
-        _toggleSidebar();
-        return true;
-      case LogicalKeyboardKey.keyF:
-        unawaited(_toggleFullscreen());
-        return true;
-      case LogicalKeyboardKey.escape:
-        if (_isFullscreen) {
-          unawaited(_toggleFullscreen());
-        } else {
-          ref.read(galleryNotifierProvider.notifier).goUp();
-        }
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  void _handleGalleryGamepad(NormalizedGamepadEvent event) {
-    if (_preview != null || event.button == null || event.value < 0.5) return;
-    switch (event.button!) {
-      case GamepadButton.dpadUp:
-        _moveGridSelection(-_gridColumnCount);
-        return;
-      case GamepadButton.dpadDown:
-        _moveGridSelection(_gridColumnCount);
-        return;
-      case GamepadButton.dpadLeft:
-        _moveGridSelection(-1);
-        return;
-      case GamepadButton.dpadRight:
-        _moveGridSelection(1);
-        return;
-      case GamepadButton.a:
-        _openSelectedGridItem();
-        return;
-      case GamepadButton.b:
-        ref.read(galleryNotifierProvider.notifier).goUp();
-        return;
-      case GamepadButton.back:
-      case GamepadButton.touchpad:
-        _toggleSidebar();
-        return;
-      case GamepadButton.y:
-      case GamepadButton.start:
-        unawaited(_toggleFullscreen());
-        return;
-      case GamepadButton.home:
-      case GamepadButton.x:
-      case GamepadButton.leftBumper:
-      case GamepadButton.rightBumper:
-      case GamepadButton.leftTrigger:
-      case GamepadButton.rightTrigger:
-      case GamepadButton.leftStick:
-      case GamepadButton.rightStick:
-        return;
+  void _handleBackInput() {
+    if (_isFullscreen) {
+      unawaited(_toggleFullscreen());
+    } else {
+      final gallery = ref.read(galleryNotifierProvider);
+      final notifier = ref.read(galleryNotifierProvider.notifier);
+      if (gallery.canGoBack) {
+        unawaited(notifier.goBack());
+      } else {
+        unawaited(notifier.goUp());
+      }
     }
   }
 
@@ -210,7 +147,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       );
       final media = entries.whereType<MediaItem>().toList()
         ..sort(
-          (a, b) => _compareMedia(a, b, ref.read(galleryNotifierProvider).sort),
+          (a, b) => GalleryItemSortRules.compareMedia(
+            a,
+            b,
+            ref.read(galleryNotifierProvider).sort,
+          ),
         );
       final initialIndex = media.indexWhere(
         (entry) => path.equals(entry.path, mediaPath),
@@ -225,7 +166,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
           _sidebarBeforeFullscreen = _sidebarVisible;
           _sidebarVisible = false;
         }
-        _preview = _MediaPreviewSelection(
+        _preview = MediaPreviewSelection(
           items: media,
           initialIndex: initialIndex,
           folderPath: path.dirname(mediaPath),
@@ -238,17 +179,6 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         SnackBar(content: Text('Could not open media folder: $error')),
       );
     }
-  }
-
-  int _compareMedia(MediaItem a, MediaItem b, GallerySort sort) {
-    final comparison = switch (sort) {
-      GallerySort.nameAscending => naturalCompare(a.name, b.name),
-      GallerySort.nameDescending => naturalCompare(b.name, a.name),
-      GallerySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
-      GallerySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
-    };
-    if (comparison != 0) return comparison;
-    return naturalCompare(a.path, b.path);
   }
 
   void _toggleSidebar() {
@@ -314,7 +244,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
           child: settings.isLoading
               ? const Center(child: CircularProgressIndicator())
               : root == null
-              ? _ChooseFolder(
+              ? ChooseFolderPrompt(
                   onPressed: () => ref
                       .read(settingsNotifierProvider.notifier)
                       .chooseRootFolder(),
@@ -322,21 +252,18 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
               : Row(
                   children: [
                     if (_sidebarVisible)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 0, 12),
-                        child: SizedBox(
-                          width: 300,
-                          child: ExcludeFocus(
-                            child: FolderTreeSidebar(
-                              rootPath: root,
-                              currentFolderPath: gallery.currentPath ?? root,
-                              activeMediaPath: previewState?.activeItem?.path,
-                              sort: gallery.sort,
-                              onClose: () =>
-                                  setState(() => _sidebarVisible = false),
-                              onFolderSelected: _openFolder,
-                              onMediaSelected: _openMediaPreview,
-                            ),
+                      SizedBox(
+                        width: 300,
+                        child: ExcludeFocus(
+                          child: FolderTreeSidebar(
+                            rootPath: root,
+                            currentFolderPath: gallery.currentPath ?? root,
+                            activeMediaPath: previewState?.activeItem?.path,
+                            sort: gallery.sort,
+                            onClose: () =>
+                                setState(() => _sidebarVisible = false),
+                            onFolderSelected: _openFolder,
+                            onMediaSelected: _openMediaPreview,
                           ),
                         ),
                       ),
@@ -344,7 +271,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                       child: Column(
                         children: [
                           if (_preview == null || !_isFullscreen)
-                            _ShellTopBar(
+                            GalleryShellTopBar(
                               gallery: gallery,
                               isPreview: _preview != null,
                               previewTitle: previewState?.activeItem?.name,
@@ -370,27 +297,20 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     isFullscreen: _isFullscreen,
                                     onToggleFullscreen: _toggleFullscreen,
                                   )
-                                : Column(
-                                    children: [
-                                      _PathBar(state: gallery),
-                                      Expanded(
-                                        child: _GalleryBody(
-                                          state: gallery,
-                                          scroll: _scrollController,
-                                          selectedIndex: _selectedGridIndex,
-                                          onSelectionChanged: (index) {
-                                            setState(
-                                              () => _selectedGridIndex = index,
-                                            );
-                                          },
-                                          onColumnCountChanged: (count) {
-                                            _gridColumnCount = count;
-                                          },
-                                          onFolderSelected: _openFolder,
-                                          onMediaSelected: _openMediaPreview,
-                                        ),
-                                      ),
-                                    ],
+                                : GalleryBody(
+                                    state: gallery,
+                                    scrollController: _scrollController,
+                                    selectedIndex: _selectedGridIndex,
+                                    onSelectionChanged: (index) {
+                                      setState(
+                                        () => _selectedGridIndex = index,
+                                      );
+                                    },
+                                    onColumnCountChanged: (count) {
+                                      _gridColumnCount = count;
+                                    },
+                                    onFolderSelected: _openFolder,
+                                    onMediaSelected: _openMediaPreview,
                                   ),
                           ),
                         ],
@@ -402,518 +322,4 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       ),
     );
   }
-}
-
-class _ShellTopBar extends ConsumerWidget {
-  const _ShellTopBar({
-    required this.gallery,
-    required this.isPreview,
-    required this.previewTitle,
-    required this.sidebarVisible,
-    required this.onToggleSidebar,
-    required this.onClosePreview,
-    required this.onToggleFullscreen,
-    required this.onRootChanged,
-  });
-
-  final GalleryUiState gallery;
-  final bool isPreview;
-  final String? previewTitle;
-  final bool sidebarVisible;
-  final VoidCallback onToggleSidebar;
-  final VoidCallback onClosePreview;
-  final VoidCallback onToggleFullscreen;
-  final VoidCallback onRootChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-      child: Material(
-        color: colorScheme.surfaceContainerHigh,
-        elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(18),
-        clipBehavior: Clip.antiAlias,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.45),
-            ),
-          ),
-          child: SizedBox(
-            height: 60,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: isPreview ? 'Back to gallery' : 'Parent folder',
-                    onPressed: isPreview
-                        ? onClosePreview
-                        : _canGoToParent(gallery)
-                        ? ref.read(galleryNotifierProvider.notifier).goUp
-                        : null,
-                    icon: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedArrowLeft02,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: sidebarVisible ? 'Hide sidebar' : 'Show sidebar',
-                    onPressed: onToggleSidebar,
-                    icon: HugeIcon(
-                      icon: sidebarVisible
-                          ? HugeIcons.strokeRoundedSidebarLeft
-                          : HugeIcons.strokeRoundedPanelLeftOpen,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isPreview
-                          ? previewTitle ?? 'Media detail'
-                          : 'Hello Gallery',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  const _ThemeMenu(),
-                  if (isPreview) ...[
-                    IconButton(
-                      tooltip: 'Fullscreen',
-                      onPressed: onToggleFullscreen,
-                      icon: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedMaximizeScreen,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Close detail',
-                      onPressed: onClosePreview,
-                      icon: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedCancel01,
-                      ),
-                    ),
-                  ] else ...[
-                    if (gallery.status == GalleryStatus.ready ||
-                        gallery.status == GalleryStatus.empty)
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<GallerySort>(
-                          value: gallery.sort,
-                          items: [
-                            for (final sort in GallerySort.values)
-                              DropdownMenuItem(
-                                value: sort,
-                                child: Text(sort.label),
-                              ),
-                          ],
-                          onChanged: (sort) {
-                            if (sort != null) {
-                              ref
-                                  .read(galleryNotifierProvider.notifier)
-                                  .setSort(sort);
-                            }
-                          },
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Choose root folder',
-                      onPressed: () async {
-                        final changed = await ref
-                            .read(settingsNotifierProvider.notifier)
-                            .chooseRootFolder();
-                        if (changed) onRootChanged();
-                      },
-                      icon: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedFolderAdd,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  bool _canGoToParent(GalleryUiState state) {
-    final rootPath = state.rootPath;
-    final currentPath = state.currentPath;
-    return rootPath != null &&
-        currentPath != null &&
-        !path.equals(rootPath, currentPath);
-  }
-}
-
-enum _ThemeMenuOption {
-  systemMode,
-  lightMode,
-  darkMode,
-  indigoTheme,
-  pinkTheme,
-  emeraldTheme,
-}
-
-class _ThemeMenu extends ConsumerWidget {
-  const _ThemeMenu();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsNotifierProvider);
-    return PopupMenuButton<_ThemeMenuOption>(
-      tooltip: 'Appearance and theme',
-      icon: const HugeIcon(icon: HugeIcons.strokeRoundedPaintBoard),
-      onSelected: (option) {
-        final notifier = ref.read(settingsNotifierProvider.notifier);
-        switch (option) {
-          case _ThemeMenuOption.systemMode:
-            unawaited(notifier.setAppearanceMode(AppAppearanceMode.system));
-          case _ThemeMenuOption.lightMode:
-            unawaited(notifier.setAppearanceMode(AppAppearanceMode.light));
-          case _ThemeMenuOption.darkMode:
-            unawaited(notifier.setAppearanceMode(AppAppearanceMode.dark));
-          case _ThemeMenuOption.indigoTheme:
-            unawaited(notifier.setColorTheme(AppColorTheme.indigo));
-          case _ThemeMenuOption.pinkTheme:
-            unawaited(notifier.setColorTheme(AppColorTheme.pink));
-          case _ThemeMenuOption.emeraldTheme:
-            unawaited(notifier.setColorTheme(AppColorTheme.emerald));
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem<_ThemeMenuOption>(
-          enabled: false,
-          height: 32,
-          child: Text('Mode'),
-        ),
-        _item(
-          option: _ThemeMenuOption.systemMode,
-          label: 'System',
-          icon: HugeIcons.strokeRoundedComputer,
-          selected: settings.appearanceMode == AppAppearanceMode.system,
-        ),
-        _item(
-          option: _ThemeMenuOption.lightMode,
-          label: 'Light',
-          icon: HugeIcons.strokeRoundedSun01,
-          selected: settings.appearanceMode == AppAppearanceMode.light,
-        ),
-        _item(
-          option: _ThemeMenuOption.darkMode,
-          label: 'Dark',
-          icon: HugeIcons.strokeRoundedMoon02,
-          selected: settings.appearanceMode == AppAppearanceMode.dark,
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<_ThemeMenuOption>(
-          enabled: false,
-          height: 32,
-          child: Text('Color theme'),
-        ),
-        _item(
-          option: _ThemeMenuOption.indigoTheme,
-          label: 'Indigo',
-          icon: HugeIcons.strokeRoundedColors,
-          iconColor: const Color(0xFF6366F1),
-          selected: settings.colorTheme == AppColorTheme.indigo,
-        ),
-        _item(
-          option: _ThemeMenuOption.pinkTheme,
-          label: 'Pink',
-          icon: HugeIcons.strokeRoundedColors,
-          iconColor: const Color(0xFFEC4899),
-          selected: settings.colorTheme == AppColorTheme.pink,
-        ),
-        _item(
-          option: _ThemeMenuOption.emeraldTheme,
-          label: 'Emerald',
-          icon: HugeIcons.strokeRoundedColors,
-          iconColor: const Color(0xFF00897B),
-          selected: settings.colorTheme == AppColorTheme.emerald,
-        ),
-      ],
-    );
-  }
-
-  PopupMenuItem<_ThemeMenuOption> _item({
-    required _ThemeMenuOption option,
-    required String label,
-    required List<List<dynamic>> icon,
-    required bool selected,
-    Color? iconColor,
-  }) {
-    return PopupMenuItem(
-      value: option,
-      child: Row(
-        children: [
-          HugeIcon(icon: icon, size: 20, color: iconColor),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label)),
-          if (selected)
-            const HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 18),
-        ],
-      ),
-    );
-  }
-}
-
-class _MediaPreviewSelection {
-  const _MediaPreviewSelection({
-    required this.items,
-    required this.initialIndex,
-    required this.folderPath,
-    required this.requestedMediaPath,
-  });
-
-  final List<MediaItem> items;
-  final int initialIndex;
-  final String folderPath;
-  final String requestedMediaPath;
-}
-
-class _PathBar extends ConsumerWidget {
-  const _PathBar({required this.state});
-  final GalleryUiState state;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Material(
-        color: colorScheme.surfaceContainer,
-        elevation: 1,
-        shadowColor: Colors.black.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.38),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              children: [
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SelectableText(
-                    state.currentPath ?? state.rootPath ?? '',
-                    maxLines: 1,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Refresh',
-                  onPressed: state.currentPath == null
-                      ? null
-                      : () => ref
-                            .read(galleryNotifierProvider.notifier)
-                            .openDirectory(state.currentPath!),
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedRefresh),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GalleryBody extends ConsumerStatefulWidget {
-  const _GalleryBody({
-    required this.state,
-    required this.scroll,
-    required this.selectedIndex,
-    required this.onSelectionChanged,
-    required this.onColumnCountChanged,
-    required this.onFolderSelected,
-    required this.onMediaSelected,
-  });
-  final GalleryUiState state;
-  final ScrollController scroll;
-  final int selectedIndex;
-  final ValueChanged<int> onSelectionChanged;
-  final ValueChanged<int> onColumnCountChanged;
-  final ValueChanged<String> onFolderSelected;
-  final ValueChanged<MediaItem> onMediaSelected;
-
-  @override
-  ConsumerState<_GalleryBody> createState() => _GalleryBodyState();
-}
-
-class _GalleryBodyState extends ConsumerState<_GalleryBody> {
-  final Map<String, GlobalKey> _itemKeys = {};
-  late final ThumbnailJobScheduler _thumbnailScheduler;
-  int _reportedColumnCount = 1;
-
-  @override
-  void initState() {
-    super.initState();
-    _thumbnailScheduler = ref.read(thumbnailJobSchedulerProvider);
-  }
-
-  bool _handleScrollNotification(ScrollNotification notification) {
-    if (notification is ScrollStartNotification) {
-      _thumbnailScheduler.setScrolling(true);
-    } else if (notification is ScrollEndNotification) {
-      _thumbnailScheduler.setScrolling(false);
-    }
-    return false;
-  }
-
-  @override
-  void dispose() {
-    _thumbnailScheduler.setScrolling(false);
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(covariant _GalleryBody oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedIndex != widget.selectedIndex) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
-    }
-  }
-
-  void _revealSelection() {
-    if (!mounted || widget.state.visibleItems.isEmpty) return;
-    final index = widget.selectedIndex.clamp(
-      0,
-      widget.state.visibleItems.length - 1,
-    );
-    final key = _itemKeys[widget.state.visibleItems[index].path];
-    final itemContext = key?.currentContext;
-    if (itemContext != null) {
-      Scrollable.ensureVisible(
-        itemContext,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = widget.state;
-    switch (state.status) {
-      case GalleryStatus.initial:
-      case GalleryStatus.loading:
-        return const _LoadingGrid();
-      case GalleryStatus.empty:
-        return const Center(child: Text('No supported media in this folder.'));
-      case GalleryStatus.error:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('Could not read this folder.\n${state.errorMessage}'),
-          ),
-        );
-      case GalleryStatus.ready:
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = ((constraints.maxWidth - 20) / 272).ceil().clamp(
-              1,
-              1000,
-            );
-            if (columns != _reportedColumnCount) {
-              _reportedColumnCount = columns;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) widget.onColumnCountChanged(columns);
-              });
-            }
-            return NotificationListener<ScrollNotification>(
-              onNotification: _handleScrollNotification,
-              child: GridView.builder(
-                controller: widget.scroll,
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 260,
-                  mainAxisExtent: 210,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: state.visibleItems.length,
-                itemBuilder: (context, index) {
-                  final item = state.visibleItems[index];
-                  final itemKey = _itemKeys.putIfAbsent(
-                    item.path,
-                    GlobalKey.new,
-                  );
-                  return KeyedSubtree(
-                    key: itemKey,
-                    child: ExcludeFocus(
-                      child: GalleryCard(
-                        item: item,
-                        selected: index == widget.selectedIndex,
-                        onTap: () {
-                          widget.onSelectionChanged(index);
-                          if (item is GalleryFolder) {
-                            widget.onFolderSelected(item.path);
-                          } else if (item is MediaItem) {
-                            widget.onMediaSelected(item);
-                          }
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        );
-    }
-  }
-}
-
-class _ChooseFolder extends StatelessWidget {
-  const _ChooseFolder({required this.onPressed});
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const HugeIcon(icon: HugeIcons.strokeRoundedImageComposition, size: 72),
-        const SizedBox(height: 20),
-        Text(
-          'Choose a folder to start',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: onPressed,
-          icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolderOpen),
-          label: const Text('Choose root folder'),
-        ),
-      ],
-    ),
-  );
-}
-
-class _LoadingGrid extends StatelessWidget {
-  const _LoadingGrid();
-
-  @override
-  Widget build(BuildContext context) => GridView.builder(
-    padding: const EdgeInsets.all(16),
-    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-      maxCrossAxisExtent: 260,
-      mainAxisExtent: 210,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-    ),
-    itemCount: 18,
-    itemBuilder: (_, _) =>
-        const Card(child: ColoredBox(color: Color(0xFF222229))),
-  );
 }

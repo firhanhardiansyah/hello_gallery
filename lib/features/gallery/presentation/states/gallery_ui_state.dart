@@ -12,6 +12,8 @@ class GalleryUiState {
     this.visibleCount = 60,
     this.sort = GallerySort.nameAscending,
     this.errorMessage,
+    this.canGoBack = false,
+    this.canGoForward = false,
   });
 
   final GalleryStatus status;
@@ -21,6 +23,8 @@ class GalleryUiState {
   final int visibleCount;
   final GallerySort sort;
   final String? errorMessage;
+  final bool canGoBack;
+  final bool canGoForward;
 
   List<GalleryItem> get visibleItems => items.take(visibleCount).toList();
   bool get hasMore => visibleCount < items.length;
@@ -33,6 +37,8 @@ class GalleryUiState {
     int? visibleCount,
     GallerySort? sort,
     String? errorMessage,
+    bool? canGoBack,
+    bool? canGoForward,
   }) => GalleryUiState(
     status: status ?? this.status,
     rootPath: rootPath ?? this.rootPath,
@@ -41,5 +47,7 @@ class GalleryUiState {
     visibleCount: visibleCount ?? this.visibleCount,
     sort: sort ?? this.sort,
     errorMessage: errorMessage,
+    canGoBack: canGoBack ?? this.canGoBack,
+    canGoForward: canGoForward ?? this.canGoForward,
   );
 }

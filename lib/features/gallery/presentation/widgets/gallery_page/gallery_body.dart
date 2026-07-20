@@ -1,0 +1,181 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
+
+import '../../../../thumbnail/application/providers/thumbnail_dependencies.dart';
+import '../../../../thumbnail/application/services/thumbnail_job_scheduler.dart';
+import '../../../domain/entities/gallery_item.dart';
+import '../../states/gallery_ui_state.dart';
+import '../gallery_card.dart';
+
+class GalleryBody extends ConsumerStatefulWidget {
+  const GalleryBody({
+    required this.state,
+    required this.scrollController,
+    required this.selectedIndex,
+    required this.onSelectionChanged,
+    required this.onColumnCountChanged,
+    required this.onFolderSelected,
+    required this.onMediaSelected,
+    super.key,
+  });
+
+  final GalleryUiState state;
+  final ScrollController scrollController;
+  final int selectedIndex;
+  final ValueChanged<int> onSelectionChanged;
+  final ValueChanged<int> onColumnCountChanged;
+  final ValueChanged<String> onFolderSelected;
+  final ValueChanged<MediaItem> onMediaSelected;
+
+  @override
+  ConsumerState<GalleryBody> createState() => _GalleryBodyState();
+}
+
+class _GalleryBodyState extends ConsumerState<GalleryBody> {
+  final Map<String, GlobalKey> _itemKeys = {};
+  late final ThumbnailJobScheduler _thumbnailScheduler;
+  int _reportedColumnCount = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _thumbnailScheduler = ref.read(thumbnailJobSchedulerProvider);
+  }
+
+  @override
+  void didUpdateWidget(covariant GalleryBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedIndex != widget.selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
+    }
+  }
+
+  @override
+  void dispose() {
+    _thumbnailScheduler.setScrolling(false);
+    super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification) {
+      _thumbnailScheduler.setScrolling(true);
+    } else if (notification is ScrollEndNotification) {
+      _thumbnailScheduler.setScrolling(false);
+    }
+    return false;
+  }
+
+  void _revealSelection() {
+    if (!mounted || widget.state.visibleItems.isEmpty) return;
+    final index = widget.selectedIndex.clamp(
+      0,
+      widget.state.visibleItems.length - 1,
+    );
+    final itemContext =
+        _itemKeys[widget.state.visibleItems[index].path]?.currentContext;
+    if (itemContext == null) return;
+    Scrollable.ensureVisible(
+      itemContext,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (widget.state.status) {
+      GalleryStatus.initial || GalleryStatus.loading => const _LoadingGrid(),
+      GalleryStatus.empty => const Center(
+        child: Text('No supported media in this folder.'),
+      ),
+      GalleryStatus.error => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Text(
+            'Could not read this folder.\n${widget.state.errorMessage}',
+          ),
+        ),
+      ),
+      GalleryStatus.ready => _buildReadyGrid(),
+    };
+  }
+
+  Widget _buildReadyGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _reportColumnCount(constraints.maxWidth);
+        return NotificationListener<ScrollNotification>(
+          onNotification: _handleScrollNotification,
+          child: GridView.builder(
+            controller: widget.scrollController,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 260,
+              mainAxisExtent: 210,
+              crossAxisSpacing: AppSpacing.md,
+              mainAxisSpacing: AppSpacing.md,
+            ),
+            itemCount: widget.state.visibleItems.length,
+            itemBuilder: _buildItem,
+          ),
+        );
+      },
+    );
+  }
+
+  void _reportColumnCount(double availableWidth) {
+    final columns = ((availableWidth - 20) / 272).ceil().clamp(1, 1000);
+    if (columns == _reportedColumnCount) return;
+    _reportedColumnCount = columns;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onColumnCountChanged(columns);
+    });
+  }
+
+  Widget _buildItem(BuildContext context, int index) {
+    final item = widget.state.visibleItems[index];
+    final itemKey = _itemKeys.putIfAbsent(item.path, GlobalKey.new);
+    return KeyedSubtree(
+      key: itemKey,
+      child: ExcludeFocus(
+        child: GalleryCard(
+          item: item,
+          selected: index == widget.selectedIndex,
+          onTap: () {
+            widget.onSelectionChanged(index);
+            switch (item) {
+              case GalleryFolder():
+                widget.onFolderSelected(item.path);
+              case MediaItem():
+                widget.onMediaSelected(item);
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingGrid extends StatelessWidget {
+  const _LoadingGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    final appColors = context.appColors;
+    return GridView.builder(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
+        mainAxisExtent: 210,
+        crossAxisSpacing: AppSpacing.md,
+        mainAxisSpacing: AppSpacing.md,
+      ),
+      itemCount: 18,
+      itemBuilder: (_, _) =>
+          Card(child: ColoredBox(color: appColors.loadingPlaceholder)),
+    );
+  }
+}
