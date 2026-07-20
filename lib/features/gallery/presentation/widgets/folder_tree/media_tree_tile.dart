@@ -23,7 +23,7 @@ class MediaTreeTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.only(
-        left: AppSpacing.lg + (depth * 14),
+        left: AppSpacing.xxl + (depth * AppSpacing.lg),
         right: AppSpacing.sm,
         bottom: AppSpacing.xs,
       ),
