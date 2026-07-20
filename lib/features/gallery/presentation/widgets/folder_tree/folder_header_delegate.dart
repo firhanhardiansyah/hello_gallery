@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -45,25 +46,13 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         color: overlapsContent ? overlappingSurfaceColor : surfaceColor,
         elevation: overlapsContent ? 2 : 0,
         child: Padding(
-          padding: EdgeInsets.only(left: 8 + (depth * 14), right: 8),
+          padding: EdgeInsets.only(
+            left: AppSpacing.sm + (depth * 14),
+            right: AppSpacing.sm,
+          ),
           child: Row(
             children: [
-              IconButton(
-                tooltip: expanded ? 'Collapse folder' : 'Expand folder',
-                visualDensity: VisualDensity.compact,
-                onPressed: onToggle,
-                icon: loading
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : HugeIcon(
-                        icon: expanded
-                            ? HugeIcons.strokeRoundedArrowDown01
-                            : HugeIcons.strokeRoundedArrowRight01,
-                        color: foregroundColor,
-                      ),
-              ),
+              _buildToggle(),
               HugeIcon(
                 icon: expanded
                     ? HugeIcons.strokeRoundedFolderOpen
@@ -71,13 +60,15 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                 size: 20,
                 color: selected ? primaryColor : foregroundColor,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: InkWell(
                   onTap: onOpen ?? onToggle,
                   borderRadius: BorderRadius.circular(6),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.sm,
+                    ),
                     child: Text(
                       name,
                       maxLines: 1,
@@ -95,6 +86,31 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildToggle() {
+    if (loading) {
+      return const SizedBox.square(
+        dimension: 40,
+        child: Center(
+          child: SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    return IconButton(
+      tooltip: expanded ? 'Collapse folder' : 'Expand folder',
+      visualDensity: VisualDensity.compact,
+      onPressed: onToggle,
+      icon: HugeIcon(
+        icon: expanded
+            ? HugeIcons.strokeRoundedArrowDown01
+            : HugeIcons.strokeRoundedArrowRight01,
+        color: foregroundColor,
       ),
     );
   }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
 import '../../application/providers/gallery_dependencies.dart';
@@ -135,6 +135,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   }
 
   Future<void> _toggleFolder(String folderPath) async {
+    if (path.equals(folderPath, widget.rootPath)) return;
     if (_expandedPaths.remove(folderPath)) {
       setState(() {});
       return;
@@ -166,33 +167,28 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   Widget build(BuildContext context) {
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 10, 10),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
             child: Row(
               children: [
-                const HugeIcon(icon: HugeIcons.strokeRoundedFolderTree),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Folders & Media',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                if (widget.onClose != null)
-                  IconButton(
-                    tooltip: 'Close sidebar',
-                    onPressed: widget.onClose,
-                    icon: const HugeIcon(icon: HugeIcons.strokeRoundedCancel01),
-                  ),
               ],
             ),
           ),
-          const Divider(height: 1),
           Expanded(
             child: FolderTreeView(
               rootPath: widget.rootPath,

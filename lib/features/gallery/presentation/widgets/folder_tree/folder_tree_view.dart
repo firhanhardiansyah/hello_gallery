@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/core/utils/natural_compare.dart';
 import 'package:path/path.dart' as path;
 
 import '../../../domain/entities/gallery_item.dart';
+import '../../../domain/rules/gallery_item_sort_rules.dart';
 import '../../../domain/value_objects/gallery_sort.dart';
 import 'folder_header_delegate.dart';
 import 'folder_tree_contents.dart';
@@ -41,7 +43,7 @@ class FolderTreeView extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         ..._buildFolderSlivers(context, rootPath, 0),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
+        const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
       ],
     );
   }
@@ -53,41 +55,46 @@ class FolderTreeView extends StatelessWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final contents = contentsByPath[folderPath];
-    final expanded = expandedPaths.contains(folderPath);
+    final isRoot = path.equals(folderPath, rootPath);
+    final expanded = isRoot || expandedPaths.contains(folderPath);
     final loading = loadingPaths.contains(folderPath);
     final media = [...?contents?.media]
-      ..sort((a, b) => _compareMedia(a, b, sort));
+      ..sort((a, b) => GalleryItemSortRules.compareMedia(a, b, sort));
     final folders = [...?contents?.folders]
       ..sort(
         (a, b) => naturalCompare(path.basename(a.path), path.basename(b.path)),
       );
 
     final sectionSlivers = <Widget>[
-      SliverPersistentHeader(
-        pinned: true,
-        delegate: FolderHeaderDelegate(
-          depth: depth,
-          name: path.basename(folderPath),
-          selected: path.equals(folderPath, currentFolderPath),
-          expanded: expanded,
-          loading: loading,
-          surfaceColor: colorScheme.surfaceContainerHigh,
-          overlappingSurfaceColor: colorScheme.surfaceContainerHighest,
-          primaryColor: colorScheme.primary,
-          foregroundColor: colorScheme.onSurface,
-          onToggle: () => onToggleFolder(folderPath),
-          onOpen: onFolderSelected == null
-              ? null
-              : () {
-                  if (!expanded) onToggleFolder(folderPath);
-                  onFolderSelected!(folderPath);
-                },
+      if (!isRoot)
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: FolderHeaderDelegate(
+            depth: depth,
+            name: path.basename(folderPath),
+            selected: path.equals(folderPath, currentFolderPath),
+            expanded: expanded,
+            loading: loading,
+            surfaceColor: colorScheme.surfaceContainerHigh,
+            overlappingSurfaceColor: colorScheme.surfaceContainerHighest,
+            primaryColor: colorScheme.primary,
+            foregroundColor: colorScheme.onSurface,
+            onToggle: () => onToggleFolder(folderPath),
+            onOpen: onFolderSelected == null
+                ? null
+                : () {
+                    if (!expanded) onToggleFolder(folderPath);
+                    onFolderSelected!(folderPath);
+                  },
+          ),
         ),
-      ),
       if (expanded && loading)
         const SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
             child: LinearProgressIndicator(),
           ),
         ),
@@ -103,7 +110,7 @@ class FolderTreeView extends StatelessWidget {
               key: revealKeyFor(item.path),
               child: MediaTreeTile(
                 media: item,
-                depth: depth + 1,
+                depth: isRoot ? depth : depth + 1,
                 selected: selected,
                 onTap: () => onMediaSelected(item),
               ),
@@ -112,23 +119,17 @@ class FolderTreeView extends StatelessWidget {
         ),
     ];
 
-    final slivers = <Widget>[SliverMainAxisGroup(slivers: sectionSlivers)];
+    final slivers = <Widget>[
+      if (sectionSlivers.isNotEmpty)
+        SliverMainAxisGroup(slivers: sectionSlivers),
+    ];
     if (expanded && contents != null) {
       for (final child in folders) {
-        slivers.addAll(_buildFolderSlivers(context, child.path, depth + 1));
+        slivers.addAll(
+          _buildFolderSlivers(context, child.path, isRoot ? depth : depth + 1),
+        );
       }
     }
     return slivers;
   }
-}
-
-int _compareMedia(MediaItem a, MediaItem b, GallerySort sort) {
-  final comparison = switch (sort) {
-    GallerySort.nameAscending => naturalCompare(a.name, b.name),
-    GallerySort.nameDescending => naturalCompare(b.name, a.name),
-    GallerySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
-    GallerySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
-  };
-  if (comparison != 0) return comparison;
-  return naturalCompare(a.path, b.path);
 }

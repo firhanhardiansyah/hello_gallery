@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../domain/entities/gallery_item.dart';
@@ -21,7 +22,11 @@ class MediaTreeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: EdgeInsets.only(left: 18 + (depth * 14), right: 8, bottom: 2),
+      padding: EdgeInsets.only(
+        left: AppSpacing.lg + (depth * 14),
+        right: AppSpacing.sm,
+        bottom: AppSpacing.xs,
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: selected
@@ -42,7 +47,10 @@ class MediaTreeTile extends StatelessWidget {
           child: ListTile(
             selected: selected,
             dense: true,
-            contentPadding: const EdgeInsets.only(left: 10, right: 8),
+            contentPadding: const EdgeInsets.only(
+              left: AppSpacing.md,
+              right: AppSpacing.sm,
+            ),
             leading: HugeIcon(
               icon: media.isVideo
                   ? HugeIcons.strokeRoundedVideo01
