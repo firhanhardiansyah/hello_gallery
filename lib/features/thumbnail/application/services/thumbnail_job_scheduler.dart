@@ -28,7 +28,11 @@ final class ThumbnailJobScheduler {
 
   ThumbnailRequest getThumbnail(MediaItem item) {
     if (!item.isVideo) {
-      return ThumbnailRequest._(Future.value(), () {});
+      return ThumbnailRequest._(
+        Future.value(),
+        () {},
+        isCancelled: () => false,
+      );
     }
     final job = _pending.putIfAbsent(item.path, () {
       final created = _ThumbnailJob(item);
@@ -44,7 +48,7 @@ final class ThumbnailJobScheduler {
       released = true;
       job.retainers--;
       if (job.retainers == 0) _cancel(job);
-    });
+    }, isCancelled: () => job.cancelled);
   }
 
   void setScrolling(bool value) {
@@ -126,8 +130,15 @@ final class _ThumbnailJob {
 }
 
 final class ThumbnailRequest {
-  const ThumbnailRequest._(this.result, this.cancel);
+  const ThumbnailRequest._(
+    this.result,
+    this.cancel, {
+    required bool Function() isCancelled,
+  }) : _isCancelled = isCancelled;
 
   final Future<String?> result;
   final VoidCallback cancel;
+  final bool Function() _isCancelled;
+
+  bool get wasCancelled => _isCancelled();
 }

@@ -118,6 +118,30 @@ void main() {
 
     expect(repository.readPaths, contains(folder.path));
   });
+
+  testWidgets('does not persist an empty folder preview in cache', (
+    tester,
+  ) async {
+    final repository = _EmptyPreviewRepository();
+    final scheduler = FolderPreviewJobScheduler(
+      FindFolderPreviewMedia(repository),
+      FolderPreviewCache(),
+    );
+    final folder = GalleryFolder(
+      path: '/gallery/empty',
+      name: 'empty',
+      modifiedAt: DateTime(2026),
+    );
+
+    final first = scheduler.getPreview(folder);
+    await tester.pump();
+    expect(await first.result, isEmpty);
+    final second = scheduler.getPreview(folder);
+    await tester.pump();
+    expect(await second.result, isEmpty);
+
+    expect(repository.readCount, 2);
+  });
 }
 
 final class _PreviewRepository implements GalleryRepository {
@@ -134,6 +158,20 @@ final class _PreviewRepository implements GalleryRepository {
         mediaType: GalleryItemType.image,
       ),
     ];
+  }
+
+  @override
+  Future<List<MediaItem>> readMediaRecursively(String rootPath) async =>
+      const [];
+}
+
+final class _EmptyPreviewRepository implements GalleryRepository {
+  var readCount = 0;
+
+  @override
+  Future<List<GalleryItem>> readDirectory(String directoryPath) async {
+    readCount++;
+    return const [];
   }
 
   @override

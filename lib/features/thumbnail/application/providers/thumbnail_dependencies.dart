@@ -14,12 +14,24 @@ final thumbnailJobSchedulerProvider = Provider(
 );
 
 final videoThumbnailProvider = FutureProvider.autoDispose
-    .family<String?, MediaItem>((ref, item) {
-      final request = ref
-          .read(thumbnailJobSchedulerProvider)
-          .getThumbnail(item);
-      ref.onDispose(request.cancel);
-      return request.result;
+    .family<String?, MediaItem>((ref, item) async {
+      final scheduler = ref.read(thumbnailJobSchedulerProvider);
+      ThumbnailRequest? activeRequest;
+      var disposed = false;
+      ref.onDispose(() {
+        disposed = true;
+        activeRequest?.cancel();
+      });
+
+      while (!disposed) {
+        final request = scheduler.getThumbnail(item);
+        activeRequest = request;
+        final thumbnailPath = await request.result;
+        if (!request.wasCancelled) return thumbnailPath;
+        if (disposed) break;
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+      return null;
     });
 
 final cachedVideoThumbnailProvider = FutureProvider.autoDispose

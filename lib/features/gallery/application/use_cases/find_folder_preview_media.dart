@@ -29,7 +29,7 @@ final class FindFolderPreviewMedia {
 
     while (pendingFolders.isNotEmpty &&
         previews.length < maximumMedia &&
-        visitedFolders < maximumVisitedFolders) {
+        (visitedFolders < maximumVisitedFolders || previews.isEmpty)) {
       if (isCancelled?.call() ?? false) return const [];
       final currentPath = pendingFolders.removeFirst();
       visitedFolders++;

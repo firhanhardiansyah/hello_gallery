@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/application/use_cases/find_folder_preview_media.dart';
 import 'package:hello_gallery/features/gallery/data/data_sources/local_gallery_data_source.dart';
 import 'package:hello_gallery/features/gallery/data/repositories/gallery_repository_impl.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import 'package:hello_gallery/features/gallery/domain/repositories/gallery_repository.dart';
 
 void main() {
   test('finds direct media before media in the nearest subfolders', () async {
@@ -50,4 +52,43 @@ void main() {
       'image-3.jpg',
     ]);
   });
+
+  test('continues past the soft folder limit until media is found', () async {
+    final finder = FindFolderPreviewMedia(
+      _DeepPreviewRepository(),
+      maximumVisitedFolders: 2,
+    );
+
+    final previews = await finder('/folder-0');
+
+    expect(previews.single.name, 'deep-preview.jpg');
+  });
+}
+
+final class _DeepPreviewRepository implements GalleryRepository {
+  @override
+  Future<List<GalleryItem>> readDirectory(String directoryPath) async {
+    final index = int.parse(directoryPath.split('-').last);
+    if (index == 3) {
+      return [
+        MediaItem(
+          path: '$directoryPath/deep-preview.jpg',
+          name: 'deep-preview.jpg',
+          modifiedAt: DateTime(2026),
+          mediaType: GalleryItemType.image,
+        ),
+      ];
+    }
+    return [
+      GalleryFolder(
+        path: '/folder-${index + 1}',
+        name: 'folder-${index + 1}',
+        modifiedAt: DateTime(2026),
+      ),
+    ];
+  }
+
+  @override
+  Future<List<MediaItem>> readMediaRecursively(String rootPath) async =>
+      const [];
 }

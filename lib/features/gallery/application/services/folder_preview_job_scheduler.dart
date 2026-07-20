@@ -110,7 +110,7 @@ final class FolderPreviewJobScheduler {
         job.folder.path,
         isCancelled: () => job.cancelled,
       );
-      if (!job.cancelled) {
+      if (!job.cancelled && previews.isNotEmpty) {
         _cache.put(job.folder.path, previews);
       }
       if (!job.completer.isCompleted) {

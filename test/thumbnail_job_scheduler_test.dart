@@ -1,5 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import 'package:hello_gallery/features/thumbnail/application/providers/thumbnail_dependencies.dart';
 import 'package:hello_gallery/features/thumbnail/application/services/thumbnail_job_scheduler.dart';
 import 'package:hello_gallery/features/thumbnail/domain/repositories/thumbnail_repository.dart';
 
@@ -47,6 +49,39 @@ void main() {
     for (final request in requests.skip(1)) {
       request.cancel();
     }
+  });
+
+  testWidgets('retries a visible video thumbnail after queue eviction', (
+    tester,
+  ) async {
+    final repository = _FakeThumbnailRepository();
+    final scheduler = ThumbnailJobScheduler(repository)..setScrolling(true);
+    final container = ProviderContainer(
+      overrides: [thumbnailJobSchedulerProvider.overrideWithValue(scheduler)],
+    );
+    addTearDown(container.dispose);
+    final items = [
+      for (var index = 0; index <= 40; index++) _video('video-$index.mp4'),
+    ];
+    final subscriptions = [
+      for (final item in items)
+        container.listen(videoThumbnailProvider(item), (_, _) {}),
+    ];
+    addTearDown(() {
+      for (final subscription in subscriptions) {
+        subscription.close();
+      }
+    });
+
+    await tester.pump(const Duration(milliseconds: 130));
+    scheduler.resumeImmediately();
+    for (var frame = 0; frame < 50; frame++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    final firstThumbnail = container.read(videoThumbnailProvider(items.first));
+    expect(firstThumbnail.hasValue, isTrue);
+    expect(firstThumbnail.requireValue, '${items.first.path}.jpg');
   });
 }
 
