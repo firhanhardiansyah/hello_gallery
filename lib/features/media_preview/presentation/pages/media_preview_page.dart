@@ -7,11 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamepads/gamepads.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
-import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
-import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../states/media_preview_ui_state.dart';
@@ -261,9 +261,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
         child: _Preview(
           state: state,
           controlsVisible: _controlsVisible,
-          isFullscreen: widget.isFullscreen,
           onInteraction: () => _showControls(userInitiated: true),
-          onToggleFullscreen: _toggleFullscreen,
         ),
       ),
     );
@@ -274,15 +272,11 @@ class _Preview extends ConsumerWidget {
   const _Preview({
     required this.state,
     required this.controlsVisible,
-    required this.isFullscreen,
     required this.onInteraction,
-    required this.onToggleFullscreen,
   });
   final MediaPreviewUiState state;
   final bool controlsVisible;
-  final bool isFullscreen;
   final VoidCallback onInteraction;
-  final VoidCallback onToggleFullscreen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -401,9 +395,7 @@ class _Preview extends ConsumerWidget {
                   ignoring: !controlsVisible,
                   child: _VideoControls(
                     state: state,
-                    isFullscreen: isFullscreen,
                     onInteraction: onInteraction,
-                    onToggleFullscreen: onToggleFullscreen,
                   ),
                 ),
               ),
@@ -428,16 +420,9 @@ class _VideoLoadingPlaceholder extends StatelessWidget {
 }
 
 class _VideoControls extends ConsumerWidget {
-  const _VideoControls({
-    required this.state,
-    required this.isFullscreen,
-    required this.onInteraction,
-    required this.onToggleFullscreen,
-  });
+  const _VideoControls({required this.state, required this.onInteraction});
   final MediaPreviewUiState state;
-  final bool isFullscreen;
   final VoidCallback onInteraction;
-  final VoidCallback onToggleFullscreen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -465,6 +450,7 @@ class _VideoControls extends ConsumerWidget {
               icon: state.isPlaying
                   ? HugeIcons.strokeRoundedPause
                   : HugeIcons.strokeRoundedPlay,
+              color: appColors.onMedia,
             ),
           ),
           Expanded(
@@ -477,7 +463,10 @@ class _VideoControls extends ConsumerWidget {
               },
             ),
           ),
-          Text('${_format(state.position)} / ${_format(state.duration)}'),
+          Text(
+            '${_format(state.position)} / ${_format(state.duration)}',
+            style: TextStyle(color: appColors.onMedia),
+          ),
           IconButton(
             onPressed: () {
               onInteraction();
@@ -487,15 +476,7 @@ class _VideoControls extends ConsumerWidget {
               icon: state.isMuted
                   ? HugeIcons.strokeRoundedVolumeOff
                   : HugeIcons.strokeRoundedVolumeHigh,
-            ),
-          ),
-          IconButton(
-            tooltip: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
-            onPressed: onToggleFullscreen,
-            icon: HugeIcon(
-              icon: isFullscreen
-                  ? HugeIcons.strokeRoundedMinimizeScreen
-                  : HugeIcons.strokeRoundedMaximizeScreen,
+              color: appColors.onMedia,
             ),
           ),
         ],
