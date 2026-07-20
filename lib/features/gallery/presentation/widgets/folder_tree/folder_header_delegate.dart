@@ -30,10 +30,10 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback? onOpen;
 
   @override
-  double get minExtent => 48;
+  double get minExtent => 36;
 
   @override
-  double get maxExtent => 48;
+  double get maxExtent => 36;
 
   @override
   Widget build(

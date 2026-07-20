@@ -24,21 +24,12 @@ class MediaTreeTile extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(
         left: AppSpacing.xxl + (depth * AppSpacing.lg),
-        right: AppSpacing.sm,
-        bottom: AppSpacing.xs,
+        right: AppSpacing.md,
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primaryContainer.withValues(alpha: 0.72)
-              : Colors.transparent,
+          color: selected ? colorScheme.primaryContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
-          border: Border(
-            left: BorderSide(
-              color: selected ? colorScheme.primary : Colors.transparent,
-              width: 3,
-            ),
-          ),
         ),
         child: Material(
           type: MaterialType.transparency,
@@ -66,15 +57,6 @@ class MediaTreeTile extends StatelessWidget {
                   ? const TextStyle(fontWeight: FontWeight.w700)
                   : null,
             ),
-            trailing: selected
-                ? HugeIcon(
-                    icon: media.isVideo
-                        ? HugeIcons.strokeRoundedPlayCircle
-                        : HugeIcons.strokeRoundedView,
-                    color: colorScheme.primary,
-                    size: 20,
-                  )
-                : null,
             onTap: onTap,
           ),
         ),
