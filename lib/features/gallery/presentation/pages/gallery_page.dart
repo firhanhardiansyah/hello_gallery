@@ -10,6 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:window_manager/window_manager.dart';
 
 import '../../../../app/routing/app_router.dart';
+import '../../../../core/widgets/desktop_window_title_bar.dart';
 import '../../../gamepad/presentation/widgets/virtual_cursor_overlay.dart';
 import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
 import '../../../media_preview/presentation/pages/media_preview_page.dart';
@@ -331,12 +332,16 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       child: Scaffold(
         body: VirtualCursorOverlay(
           child: settings.isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const _StandaloneWindowChrome(
+                  child: Center(child: CircularProgressIndicator()),
+                )
               : root == null
-              ? ChooseFolderPrompt(
-                  onPressed: () => ref
-                      .read(settingsNotifierProvider.notifier)
-                      .chooseRootFolder(),
+              ? _StandaloneWindowChrome(
+                  child: ChooseFolderPrompt(
+                    onPressed: () => ref
+                        .read(settingsNotifierProvider.notifier)
+                        .chooseRootFolder(),
+                  ),
                 )
               : Row(
                   children: [
@@ -423,4 +428,22 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       ),
     );
   }
+}
+
+class _StandaloneWindowChrome extends StatelessWidget {
+  const _StandaloneWindowChrome({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      DesktopWindowTitleBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        reserveMacOSWindowButtons: true,
+        child: const SizedBox.shrink(),
+      ),
+      Expanded(child: child),
+    ],
+  );
 }

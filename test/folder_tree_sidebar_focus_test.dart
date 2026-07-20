@@ -8,6 +8,7 @@ import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart
 import 'package:hello_gallery/features/gallery/domain/repositories/gallery_repository.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree_sidebar.dart';
+import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 
 void main() {
   testWidgets('scrolls to the active folder when navigation changes', (
@@ -57,6 +58,12 @@ void main() {
 
     expect(find.text('Wallpapers'), findsOneWidget);
     expect(find.byTooltip(rootPath), findsOneWidget);
+    expect(
+      tester.getRect(find.text('Wallpapers')).top,
+      greaterThanOrEqualTo(
+        tester.getRect(find.byType(DesktopWindowTitleBar)).bottom,
+      ),
+    );
 
     await tester.tap(find.byTooltip('Refresh'));
     await tester.tap(find.byTooltip('Choose root folder'));

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
+import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -265,13 +266,14 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          DesktopWindowTitleBar(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            reserveMacOSWindowButtons: true,
+            showWindowsCaptionControls: false,
+            child: const SizedBox.shrink(),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.md,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: [
                 Expanded(
