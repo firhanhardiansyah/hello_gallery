@@ -11,6 +11,7 @@ void main() {
   ) async {
     const rootPath = '/gallery/Wallpapers';
     const childPath = '$rootPath/Anime';
+    final childKey = GlobalKey();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -32,7 +33,8 @@ void main() {
               ),
               childPath: const FolderTreeContents(),
             },
-            revealKeyFor: (_) => GlobalKey(),
+            revealKeyFor: (itemPath) =>
+                itemPath == childPath ? childKey : GlobalKey(),
             onToggleFolder: (_) {},
             onMediaSelected: (_) {},
           ),
@@ -42,6 +44,7 @@ void main() {
 
     expect(find.text('Wallpapers'), findsNothing);
     expect(find.text('Anime'), findsOneWidget);
+    expect(childKey.currentContext, isNotNull);
   });
 
   testWidgets('keeps folder toggle separate from the row open action', (

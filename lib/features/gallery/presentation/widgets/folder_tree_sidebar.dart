@@ -34,6 +34,7 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
 }
 
 class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
+  final _scrollController = ScrollController();
   final _expandedPaths = <String>{};
   final _loadingPaths = <String>{};
   final _contentsByPath = <String, FolderTreeContents>{};
@@ -45,6 +46,12 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
     super.initState();
     _expandedPaths.add(widget.rootPath);
     _revealActiveLocation();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -88,7 +95,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
     if (!mounted || generation != _revealGeneration) return;
     setState(() {});
     final activeMediaPath = widget.activeMediaPath;
-    if (activeMediaPath != null) _scheduleReveal(activeMediaPath);
+    _scheduleReveal(activeMediaPath ?? _targetFolderPath);
   }
 
   List<String> _ancestorsTo(String targetPath) {
@@ -152,6 +159,15 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   void _scheduleReveal(String itemPath) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (path.equals(itemPath, widget.rootPath)) {
+        if (!_scrollController.hasClients) return;
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
       final targetContext = _revealKeyFor(itemPath).currentContext;
       if (targetContext == null) return;
       Scrollable.ensureVisible(
@@ -191,6 +207,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
           ),
           Expanded(
             child: FolderTreeView(
+              scrollController: _scrollController,
               rootPath: widget.rootPath,
               currentFolderPath: widget.currentFolderPath,
               activeMediaPath: widget.activeMediaPath,

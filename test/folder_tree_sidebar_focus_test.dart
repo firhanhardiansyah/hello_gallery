@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hello_gallery/features/gallery/application/providers/gallery_dependencies.dart';
+import 'package:hello_gallery/features/gallery/application/services/gallery_directory_cache.dart';
+import 'package:hello_gallery/features/gallery/application/use_cases/read_gallery_directory.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import 'package:hello_gallery/features/gallery/domain/repositories/gallery_repository.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
+import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree_sidebar.dart';
+
+void main() {
+  testWidgets('scrolls to the active folder when navigation changes', (
+    tester,
+  ) async {
+    const rootPath = '/gallery/Wallpapers';
+    const targetPath = '$rootPath/Studio Ghibli';
+    final repository = _FolderTreeRepository(rootPath, targetPath);
+    final container = ProviderContainer(
+      overrides: [
+        readGalleryDirectoryProvider.overrideWithValue(
+          ReadGalleryDirectory(repository, GalleryDirectoryCache()),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    const sidebarKey = ValueKey('folder-tree-sidebar');
+
+    Widget buildSidebar(String currentFolderPath) {
+      return UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 300,
+              height: 180,
+              child: FolderTreeSidebar(
+                key: sidebarKey,
+                rootPath: rootPath,
+                currentFolderPath: currentFolderPath,
+                sort: GallerySort.nameAscending,
+                onFolderSelected: (_) {},
+                onMediaSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(buildSidebar(rootPath));
+    await tester.pumpAndSettle();
+
+    final scrollable = tester.state<ScrollableState>(
+      find.byType(Scrollable).first,
+    );
+    expect(scrollable.position.pixels, 0);
+
+    await tester.pumpWidget(buildSidebar(targetPath));
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, greaterThan(0));
+    expect(find.text('Studio Ghibli'), findsOneWidget);
+  });
+}
+
+class _FolderTreeRepository implements GalleryRepository {
+  _FolderTreeRepository(this.rootPath, this.targetPath);
+
+  final String rootPath;
+  final String targetPath;
+
+  @override
+  Future<List<GalleryItem>> readDirectory(String directoryPath) async {
+    if (directoryPath != rootPath) return [];
+    return [
+      for (var index = 1; index <= 24; index++)
+        GalleryFolder(
+          path: '$rootPath/Folder $index',
+          name: 'Folder $index',
+          modifiedAt: DateTime(2026),
+        ),
+      GalleryFolder(
+        path: targetPath,
+        name: 'Studio Ghibli',
+        modifiedAt: DateTime(2026),
+      ),
+    ];
+  }
+
+  @override
+  Future<List<MediaItem>> readMediaRecursively(String rootPath) async => [];
+}

@@ -12,6 +12,7 @@ import 'media_tree_tile.dart';
 
 class FolderTreeView extends StatelessWidget {
   const FolderTreeView({
+    this.scrollController,
     required this.rootPath,
     required this.currentFolderPath,
     required this.sort,
@@ -26,6 +27,7 @@ class FolderTreeView extends StatelessWidget {
     super.key,
   });
 
+  final ScrollController? scrollController;
   final String rootPath;
   final String currentFolderPath;
   final String? activeMediaPath;
@@ -41,6 +43,7 @@ class FolderTreeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
+      controller: scrollController,
       slivers: [
         ..._buildFolderSlivers(context, rootPath, 0),
         const SliverPadding(padding: EdgeInsets.only(bottom: AppSpacing.lg)),
@@ -69,6 +72,7 @@ class FolderTreeView extends StatelessWidget {
     final sectionSlivers = <Widget>[
       if (!isRoot)
         SliverPersistentHeader(
+          key: revealKeyFor(folderPath),
           pinned: true,
           delegate: FolderHeaderDelegate(
             depth: depth,
