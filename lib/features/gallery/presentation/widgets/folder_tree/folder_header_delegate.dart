@@ -48,42 +48,37 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: Padding(
           padding: EdgeInsets.only(
             left: AppSpacing.sm + (depth * 14),
-            right: AppSpacing.sm,
+            right: AppSpacing.md,
           ),
-          child: Row(
-            children: [
-              _buildToggle(),
-              HugeIcon(
-                icon: expanded
-                    ? HugeIcons.strokeRoundedFolderOpen
-                    : HugeIcons.strokeRoundedFolder01,
-                size: 20,
-                color: selected ? primaryColor : foregroundColor,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: InkWell(
-                  onTap: onOpen ?? onToggle,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: selected
-                          ? TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.w700,
-                            )
-                          : null,
-                    ),
+          child: InkWell(
+            onTap: onOpen ?? onToggle,
+            borderRadius: BorderRadius.circular(6),
+            child: Row(
+              children: [
+                _buildToggle(),
+                HugeIcon(
+                  icon: expanded
+                      ? HugeIcons.strokeRoundedFolderOpen
+                      : HugeIcons.strokeRoundedFolder01,
+                  size: 20,
+                  color: selected ? primaryColor : foregroundColor,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: selected
+                        ? TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.w700,
+                          )
+                        : null,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

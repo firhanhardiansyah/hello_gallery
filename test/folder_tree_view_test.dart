@@ -43,4 +43,94 @@ void main() {
     expect(find.text('Wallpapers'), findsNothing);
     expect(find.text('Anime'), findsOneWidget);
   });
+
+  testWidgets('keeps folder toggle separate from the row open action', (
+    tester,
+  ) async {
+    const rootPath = '/gallery/Wallpapers';
+    const childPath = '$rootPath/Anime';
+    String? toggledPath;
+    String? openedPath;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FolderTreeView(
+            rootPath: rootPath,
+            currentFolderPath: rootPath,
+            sort: GallerySort.nameAscending,
+            expandedPaths: const {rootPath},
+            loadingPaths: const {},
+            contentsByPath: {
+              rootPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: childPath,
+                    name: 'Anime',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+              ),
+              childPath: const FolderTreeContents(),
+            },
+            revealKeyFor: (_) => GlobalKey(),
+            onToggleFolder: (path) => toggledPath = path,
+            onFolderSelected: (path) => openedPath = path,
+            onMediaSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Expand folder'));
+
+    expect(toggledPath, childPath);
+    expect(openedPath, isNull);
+
+    await tester.tap(find.text('Anime'));
+
+    expect(openedPath, childPath);
+  });
+
+  testWidgets('toggles an active folder when its row is tapped', (
+    tester,
+  ) async {
+    const rootPath = '/gallery/Wallpapers';
+    const childPath = '$rootPath/One Piece';
+    String? toggledPath;
+    String? openedPath;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FolderTreeView(
+            rootPath: rootPath,
+            currentFolderPath: childPath,
+            sort: GallerySort.nameAscending,
+            expandedPaths: const {rootPath, childPath},
+            loadingPaths: const {},
+            contentsByPath: {
+              rootPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: childPath,
+                    name: 'One Piece',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+              ),
+              childPath: const FolderTreeContents(),
+            },
+            revealKeyFor: (_) => GlobalKey(),
+            onToggleFolder: (path) => toggledPath = path,
+            onFolderSelected: (path) => openedPath = path,
+            onMediaSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('One Piece'));
+
+    expect(toggledPath, childPath);
+    expect(openedPath, isNull);
+  });
 }

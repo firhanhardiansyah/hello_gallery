@@ -56,6 +56,7 @@ class FolderTreeView extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final contents = contentsByPath[folderPath];
     final isRoot = path.equals(folderPath, rootPath);
+    final selectedFolder = path.equals(folderPath, currentFolderPath);
     final expanded = isRoot || expandedPaths.contains(folderPath);
     final loading = loadingPaths.contains(folderPath);
     final media = [...?contents?.media]
@@ -72,7 +73,7 @@ class FolderTreeView extends StatelessWidget {
           delegate: FolderHeaderDelegate(
             depth: depth,
             name: path.basename(folderPath),
-            selected: path.equals(folderPath, currentFolderPath),
+            selected: selectedFolder,
             expanded: expanded,
             loading: loading,
             surfaceColor: colorScheme.surfaceContainerHigh,
@@ -83,6 +84,10 @@ class FolderTreeView extends StatelessWidget {
             onOpen: onFolderSelected == null
                 ? null
                 : () {
+                    if (selectedFolder) {
+                      onToggleFolder(folderPath);
+                      return;
+                    }
                     if (!expanded) onToggleFolder(folderPath);
                     onFolderSelected!(folderPath);
                   },
