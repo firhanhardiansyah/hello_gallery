@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +14,10 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
+import '../input/media_preview_scroll_input.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../states/media_preview_ui_state.dart';
+import '../widgets/media_preview_interaction_surface.dart';
 
 class MediaPreviewPage extends ConsumerStatefulWidget {
   const MediaPreviewPage({
@@ -50,6 +53,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
 
 class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   final _focusNode = FocusNode();
+  final _scrollInput = MediaPreviewScrollInput();
   Timer? _hideTimer;
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
   bool _controlsVisible = true;
@@ -76,6 +80,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     HardwareKeyboard.instance.removeHandler(_handleGlobalKey);
     unawaited(_gamepadSubscription?.cancel());
     _hideTimer?.cancel();
+    _scrollInput.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -113,6 +118,16 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void _navigateWithoutRevealingControls(Future<void> Function() navigate) {
     _suppressControlsDuringNavigation();
     unawaited(navigate());
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final direction = _scrollInput.handle(event.scrollDelta);
+    if (direction == 0) return;
+    final controller = ref.read(mediaPreviewNotifierProvider.notifier);
+    _navigateWithoutRevealingControls(
+      direction > 0 ? controller.next : controller.previous,
+    );
   }
 
   void _suppressControlsDuringNavigation() {
@@ -252,16 +267,20 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     );
     return Focus(
       focusNode: _focusNode,
-      child: MouseRegion(
-        cursor: state.isPlaying && !_controlsVisible
-            ? SystemMouseCursors.none
-            : MouseCursor.defer,
-        onEnter: (_) => _handlePointerActivity(),
-        onHover: (_) => _handlePointerActivity(),
-        child: _Preview(
-          state: state,
-          controlsVisible: _controlsVisible,
-          onInteraction: () => _showControls(userInitiated: true),
+      child: Listener(
+        onPointerSignal: _handlePointerSignal,
+        child: MouseRegion(
+          cursor: state.isPlaying && !_controlsVisible
+              ? SystemMouseCursors.none
+              : MouseCursor.defer,
+          onEnter: (_) => _handlePointerActivity(),
+          onHover: (_) => _handlePointerActivity(),
+          child: _Preview(
+            state: state,
+            controlsVisible: _controlsVisible,
+            onInteraction: () => _showControls(userInitiated: true),
+            onToggleFullscreen: _toggleFullscreen,
+          ),
         ),
       ),
     );
@@ -273,10 +292,12 @@ class _Preview extends ConsumerWidget {
     required this.state,
     required this.controlsVisible,
     required this.onInteraction,
+    required this.onToggleFullscreen,
   });
   final MediaPreviewUiState state;
   final bool controlsVisible;
   final VoidCallback onInteraction;
+  final VoidCallback onToggleFullscreen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -296,10 +317,10 @@ class _Preview extends ConsumerWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        GestureDetector(
+        MediaPreviewInteractionSurface(
           key: ValueKey(item.path),
-          behavior: HitTestBehavior.opaque,
           onTap: item.isVideo ? togglePlayback : null,
+          onDoubleTap: onToggleFullscreen,
           child: ColoredBox(
             color: appColors.mediaBackground,
             child: item.isVideo
