@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/gallery/gallery_page.dart';
-import 'theme.dart';
+import 'routing/app_router.dart';
+import 'theme/app_theme.dart';
 
-class LocalGalleryApp extends StatelessWidget {
-  const LocalGalleryApp({super.key});
+class HelloGalleryApp extends ConsumerWidget {
+  const HelloGalleryApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Local Gallery',
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
+      title: 'Hello Gallery',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const GalleryPage(),
+      routerConfig: ref.watch(appRouterProvider),
     );
   }
 }

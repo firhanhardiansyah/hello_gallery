@@ -9,5 +9,5 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   await windowManager.ensureInitialized();
-  runApp(const ProviderScope(child: LocalGalleryApp()));
+  runApp(const ProviderScope(child: HelloGalleryApp()));
 }

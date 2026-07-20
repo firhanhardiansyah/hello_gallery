@@ -21,6 +21,7 @@ dependencies:
   shared_preferences: ^2.5.4
   watcher: ^1.2.1
   window_manager: ^0.5.2
+  go_router: ^17.3.0
 
 dev_dependencies:
   flutter_test:

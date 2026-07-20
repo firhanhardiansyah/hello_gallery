@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hello_gallery/shared/utils/natural_compare.dart';
+import 'package:hello_gallery/core/utils/natural_compare.dart';
 
 void main() {
   test('sorts numbered media names in human order', () {
