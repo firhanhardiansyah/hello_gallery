@@ -136,4 +136,59 @@ void main() {
     expect(toggledPath, childPath);
     expect(openedPath, isNull);
   });
+
+  testWidgets('shows the loaded folder item count in a badge', (tester) async {
+    const rootPath = '/gallery/Wallpapers';
+    const childPath = '$rootPath/Anime';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FolderTreeView(
+            rootPath: rootPath,
+            currentFolderPath: rootPath,
+            sort: GallerySort.nameAscending,
+            expandedPaths: const {rootPath},
+            loadingPaths: const {},
+            contentsByPath: {
+              rootPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: childPath,
+                    name: 'Anime',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+              ),
+              childPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: '$childPath/Movies',
+                    name: 'Movies',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+                media: [
+                  MediaItem(
+                    path: '$childPath/cover.jpg',
+                    name: 'cover.jpg',
+                    modifiedAt: DateTime(2026),
+                    mediaType: GalleryItemType.image,
+                  ),
+                ],
+              ),
+            },
+            revealKeyFor: (_) => GlobalKey(),
+            onToggleFolder: (_) {},
+            onMediaSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(Badge), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(Badge), matching: find.text('2')),
+      findsOneWidget,
+    );
+  });
 }

@@ -80,6 +80,9 @@ class FolderTreeView extends StatelessWidget {
             selected: selectedFolder,
             expanded: expanded,
             loading: loading,
+            itemCount: contents == null
+                ? null
+                : contents.folders.length + contents.media.length,
             surfaceColor: colorScheme.surfaceContainerHigh,
             overlappingSurfaceColor: colorScheme.surfaceContainerHighest,
             primaryColor: colorScheme.primary,

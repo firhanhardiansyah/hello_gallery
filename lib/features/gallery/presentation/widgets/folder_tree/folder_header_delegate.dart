@@ -9,6 +9,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.selected,
     required this.expanded,
     required this.loading,
+    required this.itemCount,
     required this.surfaceColor,
     required this.overlappingSurfaceColor,
     required this.primaryColor,
@@ -22,6 +23,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   final bool selected;
   final bool expanded;
   final bool loading;
+  final int? itemCount;
   final Color surfaceColor;
   final Color overlappingSurfaceColor;
   final Color primaryColor;
@@ -77,6 +79,14 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                         : null,
                   ),
                 ),
+                if (itemCount case final count?) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    child: Badge.count(count: count),
+                  ),
+                ],
               ],
             ),
           ),
@@ -117,6 +127,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         selected != oldDelegate.selected ||
         expanded != oldDelegate.expanded ||
         loading != oldDelegate.loading ||
+        itemCount != oldDelegate.itemCount ||
         surfaceColor != oldDelegate.surfaceColor ||
         overlappingSurfaceColor != oldDelegate.overlappingSurfaceColor ||
         primaryColor != oldDelegate.primaryColor ||
