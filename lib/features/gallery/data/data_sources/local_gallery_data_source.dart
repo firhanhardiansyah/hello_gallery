@@ -25,7 +25,7 @@ class LocalGalleryDataSource {
               path: entity.path,
               name: name,
               modifiedAt: stat.modified,
-              previewPaths: await _folderPreviews(entity),
+              previewItems: await _folderPreviews(entity),
             ),
           );
         } else if (entity is File) {
@@ -81,16 +81,27 @@ class LocalGalleryDataSource {
     return media;
   }
 
-  Future<List<String>> _folderPreviews(Directory directory) async {
-    final previews = <String>[];
+  Future<List<MediaItem>> _folderPreviews(Directory directory) async {
+    final previews = <MediaItem>[];
     try {
       await for (final entity in directory.list(followLinks: false)) {
-        if (entity is File &&
-            MediaTypeRules.imageExtensions.contains(
-              path.extension(entity.path).toLowerCase(),
-            )) {
-          previews.add(entity.path);
+        if (entity is! File) continue;
+        final type = MediaTypeRules.fromPath(entity.path);
+        if (type == null) continue;
+        try {
+          final stat = await entity.stat();
+          previews.add(
+            MediaItem(
+              path: entity.path,
+              name: path.basename(entity.path),
+              modifiedAt: stat.modified,
+              mediaType: type,
+              sizeBytes: stat.size,
+            ),
+          );
           if (previews.length == 4) break;
+        } on FileSystemException {
+          // The preview candidate can disappear while scanning the folder.
         }
       }
     } on FileSystemException {
