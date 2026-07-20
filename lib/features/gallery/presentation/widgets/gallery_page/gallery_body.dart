@@ -34,7 +34,10 @@ class GalleryBody extends ConsumerStatefulWidget {
 }
 
 class _GalleryBodyState extends ConsumerState<GalleryBody> {
-  final Map<String, GlobalKey> _itemKeys = {};
+  static const _gridPadding = AppSpacing.lg;
+  static const _itemMainExtent = 210.0;
+  static const _mainAxisSpacing = AppSpacing.md;
+
   late final ThumbnailJobScheduler _thumbnailScheduler;
   int _reportedColumnCount = 1;
 
@@ -73,14 +76,21 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
       0,
       widget.state.visibleItems.length - 1,
     );
-    final itemContext =
-        _itemKeys[widget.state.visibleItems[index].path]?.currentContext;
-    if (itemContext == null) return;
-    Scrollable.ensureVisible(
-      itemContext,
+    if (!widget.scrollController.hasClients) return;
+    final position = widget.scrollController.position;
+    final row = index ~/ _reportedColumnCount;
+    final itemTop = _gridPadding + row * (_itemMainExtent + _mainAxisSpacing);
+    final itemBottom = itemTop + _itemMainExtent;
+    final viewportTop = position.pixels;
+    final viewportBottom = viewportTop + position.viewportDimension;
+    if (itemTop >= viewportTop && itemBottom <= viewportBottom) return;
+    final target = itemTop < viewportTop
+        ? itemTop - _gridPadding
+        : itemBottom - position.viewportDimension + _gridPadding;
+    widget.scrollController.animateTo(
+      target.clamp(position.minScrollExtent, position.maxScrollExtent),
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
     );
   }
 
@@ -104,6 +114,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   }
 
   Widget _buildReadyGrid() {
+    final visibleItems = widget.state.visibleItems;
     return LayoutBuilder(
       builder: (context, constraints) {
         _reportColumnCount(constraints.maxWidth);
@@ -111,15 +122,18 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           onNotification: _handleScrollNotification,
           child: GridView.builder(
             controller: widget.scrollController,
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(_gridPadding),
+            addAutomaticKeepAlives: false,
+            cacheExtent: 240,
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 260,
-              mainAxisExtent: 210,
+              mainAxisExtent: _itemMainExtent,
               crossAxisSpacing: AppSpacing.md,
-              mainAxisSpacing: AppSpacing.md,
+              mainAxisSpacing: _mainAxisSpacing,
             ),
-            itemCount: widget.state.visibleItems.length,
-            itemBuilder: _buildItem,
+            itemCount: visibleItems.length,
+            itemBuilder: (context, index) =>
+                _buildItem(context, index, visibleItems),
           ),
         );
       },
@@ -135,25 +149,26 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     });
   }
 
-  Widget _buildItem(BuildContext context, int index) {
-    final item = widget.state.visibleItems[index];
-    final itemKey = _itemKeys.putIfAbsent(item.path, GlobalKey.new);
-    return KeyedSubtree(
-      key: itemKey,
-      child: ExcludeFocus(
-        child: GalleryCard(
-          item: item,
-          selected: index == widget.selectedIndex,
-          onTap: () {
-            widget.onSelectionChanged(index);
-            switch (item) {
-              case GalleryFolder():
-                widget.onFolderSelected(item.path);
-              case MediaItem():
-                widget.onMediaSelected(item);
-            }
-          },
-        ),
+  Widget _buildItem(
+    BuildContext context,
+    int index,
+    List<GalleryItem> visibleItems,
+  ) {
+    final item = visibleItems[index];
+    return ExcludeFocus(
+      child: GalleryCard(
+        key: ValueKey(item.path),
+        item: item,
+        selected: index == widget.selectedIndex,
+        onTap: () {
+          widget.onSelectionChanged(index);
+          switch (item) {
+            case GalleryFolder():
+              widget.onFolderSelected(item.path);
+            case MediaItem():
+              widget.onMediaSelected(item);
+          }
+        },
       ),
     );
   }

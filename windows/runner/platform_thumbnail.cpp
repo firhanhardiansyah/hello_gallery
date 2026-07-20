@@ -12,11 +12,19 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
 
 using Microsoft::WRL::ComPtr;
+
+constexpr UINT kThumbnailReadyMessage = WM_APP + 0x51;
+
+struct PendingThumbnailResult {
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
+  std::vector<uint8_t> bytes;
+};
 
 std::wstring Utf8ToWide(const std::string& value) {
   if (value.empty()) {
@@ -118,13 +126,14 @@ std::vector<uint8_t> GetShellThumbnail(const std::string& path, int size) {
 
 }  // namespace
 
-void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger) {
+void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
+                                      HWND window) {
   static auto channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           messenger, "hello_gallery/platform_thumbnail",
           &flutter::StandardMethodCodec::GetInstance());
   channel->SetMethodCallHandler(
-      [](const auto& call, auto result) {
+      [window](const auto& call, auto result) {
         if (call.method_name() != "getThumbnail") {
           result->NotImplemented();
           return;
@@ -147,11 +156,37 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger) {
           result->Error("invalid_arguments", "Invalid path or size");
           return;
         }
-        auto bytes = GetShellThumbnail(*path, std::clamp(*size, 64, 1024));
-        if (bytes.empty()) {
-          result->Success();
-          return;
-        }
-        result->Success(flutter::EncodableValue(bytes));
+        const auto requested_path = *path;
+        const auto requested_size = std::clamp(*size, 64, 1024);
+        std::thread([window, requested_path, requested_size,
+                     result = std::move(result)]() mutable {
+          const HRESULT com_result =
+              CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+          auto bytes = GetShellThumbnail(requested_path, requested_size);
+          if (SUCCEEDED(com_result)) {
+            CoUninitialize();
+          }
+          auto pending = std::make_unique<PendingThumbnailResult>();
+          pending->result = std::move(result);
+          pending->bytes = std::move(bytes);
+          if (PostMessage(window, kThumbnailReadyMessage,
+                          reinterpret_cast<WPARAM>(pending.get()), 0)) {
+            pending.release();
+          }
+        }).detach();
       });
+}
+
+bool HandlePlatformThumbnailMessage(UINT message, WPARAM wparam) {
+  if (message != kThumbnailReadyMessage) {
+    return false;
+  }
+  std::unique_ptr<PendingThumbnailResult> pending(
+      reinterpret_cast<PendingThumbnailResult*>(wparam));
+  if (pending->bytes.empty()) {
+    pending->result->Success();
+  } else {
+    pending->result->Success(flutter::EncodableValue(pending->bytes));
+  }
+  return true;
 }

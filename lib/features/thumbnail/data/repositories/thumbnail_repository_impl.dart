@@ -14,6 +14,7 @@ final class ThumbnailRepositoryImpl implements ThumbnailRepository {
   static const _platformThumbnailChannel = MethodChannel(
     'hello_gallery/platform_thumbnail',
   );
+  Future<Directory>? _cacheDirectory;
 
   @override
   Future<String?> findCachedThumbnail(MediaItem item) async {
@@ -33,7 +34,7 @@ final class ThumbnailRepositoryImpl implements ThumbnailRepository {
       try {
         final bytes = await _platformThumbnailChannel.invokeMethod<Uint8List>(
           'getThumbnail',
-          {'path': item.path, 'size': 320},
+          {'path': item.path, 'size': 256},
         );
         if (bytes != null && bytes.isNotEmpty) {
           await cacheDirectory.create(recursive: true);
@@ -83,7 +84,8 @@ final class ThumbnailRepositoryImpl implements ThumbnailRepository {
   }
 
   Future<File> _thumbnailFile(String key) async {
-    final cacheRoot = await getApplicationCacheDirectory();
+    final cacheRoot = await (_cacheDirectory ??=
+        getApplicationCacheDirectory());
     return File(path.join(cacheRoot.path, 'video_thumbnails', '$key.jpg'));
   }
 

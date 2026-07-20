@@ -26,7 +26,8 @@ class GalleryUiState {
   final bool canGoBack;
   final bool canGoForward;
 
-  List<GalleryItem> get visibleItems => items.take(visibleCount).toList();
+  List<GalleryItem> get visibleItems =>
+      items.length <= visibleCount ? items : items.sublist(0, visibleCount);
   bool get hasMore => visibleCount < items.length;
 
   GalleryUiState copyWith({

@@ -11,9 +11,11 @@ import '../../domain/repositories/thumbnail_repository.dart';
 final class ThumbnailJobScheduler {
   ThumbnailJobScheduler(this._repository);
 
+  static const _maximumQueuedJobs = 40;
+
   final ThumbnailRepository _repository;
   final Queue<_ThumbnailJob> _queue = Queue();
-  final Map<String, Future<String?>> _pending = {};
+  final Map<String, _ThumbnailJob> _pending = {};
   Timer? _resumeTimer;
   int _activeJobs = 0;
   bool _isScrolling = false;
@@ -24,13 +26,24 @@ final class ThumbnailJobScheduler {
     return _repository.findCachedThumbnail(item);
   }
 
-  Future<String?> getThumbnail(MediaItem item) {
-    if (!item.isVideo) return Future.value();
-    return _pending.putIfAbsent(item.path, () {
-      final completer = Completer<String?>();
-      _queue.add(_ThumbnailJob(item, completer));
+  ThumbnailRequest getThumbnail(MediaItem item) {
+    if (!item.isVideo) {
+      return ThumbnailRequest._(Future.value(), () {});
+    }
+    final job = _pending.putIfAbsent(item.path, () {
+      final created = _ThumbnailJob(item);
+      _queue.add(created);
+      _trimQueue();
       _processPendingJobs();
-      return completer.future;
+      return created;
+    });
+    job.retainers++;
+    var released = false;
+    return ThumbnailRequest._(job.completer.future, () {
+      if (released) return;
+      released = true;
+      job.retainers--;
+      if (job.retainers == 0) _cancel(job);
     });
   }
 
@@ -50,11 +63,15 @@ final class ThumbnailJobScheduler {
     if (_isScrolling) return;
     while (_activeJobs < _maximumConcurrentJobs && _queue.isNotEmpty) {
       final job = _queue.removeLast();
+      if (job.cancelled) continue;
+      job.active = true;
       _activeJobs++;
       unawaited(
         _processJob(job).whenComplete(() {
           _activeJobs--;
-          _pending.remove(job.item.path);
+          if (identical(_pending[job.item.path], job)) {
+            _pending.remove(job.item.path);
+          }
           _processPendingJobs();
         }),
       );
@@ -64,18 +81,47 @@ final class ThumbnailJobScheduler {
   Future<void> _processJob(_ThumbnailJob job) async {
     try {
       await SchedulerBinding.instance.endOfFrame;
-      job.completer.complete(await _repository.getThumbnail(job.item));
+      final thumbnail = await _repository.getThumbnail(job.item);
+      if (!job.completer.isCompleted) {
+        job.completer.complete(job.cancelled ? null : thumbnail);
+      }
     } catch (error, stackTrace) {
       debugPrint('Could not create thumbnail for ${job.item.path}: $error');
       debugPrintStack(stackTrace: stackTrace);
-      job.completer.complete(null);
+      if (!job.completer.isCompleted) job.completer.complete(null);
     }
+  }
+
+  void _trimQueue() {
+    while (_queue.length > _maximumQueuedJobs) {
+      _cancel(_queue.first);
+    }
+  }
+
+  void _cancel(_ThumbnailJob job) {
+    if (job.cancelled) return;
+    job.cancelled = true;
+    if (!job.active) _queue.remove(job);
+    if (identical(_pending[job.item.path], job)) {
+      _pending.remove(job.item.path);
+    }
+    if (!job.completer.isCompleted) job.completer.complete(null);
   }
 }
 
 final class _ThumbnailJob {
-  const _ThumbnailJob(this.item, this.completer);
+  _ThumbnailJob(this.item);
 
   final MediaItem item;
-  final Completer<String?> completer;
+  final completer = Completer<String?>();
+  int retainers = 0;
+  bool active = false;
+  bool cancelled = false;
+}
+
+final class ThumbnailRequest {
+  const ThumbnailRequest._(this.result, this.cancel);
+
+  final Future<String?> result;
+  final VoidCallback cancel;
 }

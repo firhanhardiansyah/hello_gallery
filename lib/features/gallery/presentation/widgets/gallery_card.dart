@@ -115,7 +115,7 @@ class _Preview extends ConsumerWidget {
             : Image.file(
                 File(thumbnailPath),
                 fit: BoxFit.cover,
-                cacheWidth: 420,
+                cacheWidth: 320,
                 errorBuilder: (_, _, _) => const _VideoPlaceholder(),
               ),
         loading: () => const _VideoPlaceholder(),

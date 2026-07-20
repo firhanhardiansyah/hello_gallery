@@ -13,11 +13,17 @@ final thumbnailJobSchedulerProvider = Provider(
   (ref) => ThumbnailJobScheduler(ref.watch(thumbnailRepositoryProvider)),
 );
 
-final videoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
-  (ref, item) => ref.read(thumbnailJobSchedulerProvider).getThumbnail(item),
-);
+final videoThumbnailProvider = FutureProvider.autoDispose
+    .family<String?, MediaItem>((ref, item) {
+      final request = ref
+          .read(thumbnailJobSchedulerProvider)
+          .getThumbnail(item);
+      ref.onDispose(request.cancel);
+      return request.result;
+    });
 
-final cachedVideoThumbnailProvider = FutureProvider.family<String?, MediaItem>(
-  (ref, item) =>
-      ref.read(thumbnailJobSchedulerProvider).findCachedThumbnail(item),
-);
+final cachedVideoThumbnailProvider = FutureProvider.autoDispose
+    .family<String?, MediaItem>(
+      (ref, item) =>
+          ref.read(thumbnailJobSchedulerProvider).findCachedThumbnail(item),
+    );

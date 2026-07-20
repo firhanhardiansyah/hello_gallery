@@ -48,7 +48,7 @@ class MainFlutterWindow: NSWindow {
       let request = QLThumbnailGenerator.Request(
         fileAt: URL(fileURLWithPath: filePath),
         size: CGSize(width: requestSize, height: requestSize),
-        scale: NSScreen.main?.backingScaleFactor ?? 2,
+        scale: 1,
         representationTypes: .thumbnail
       )
       QLThumbnailGenerator.shared.generateBestRepresentation(for: request) {
@@ -56,8 +56,8 @@ class MainFlutterWindow: NSWindow {
         error in
         let data = representation.flatMap { thumbnail in
           NSBitmapImageRep(cgImage: thumbnail.cgImage).representation(
-            using: .png,
-            properties: [:]
+            using: .jpeg,
+            properties: [.compressionFactor: 0.82]
           )
         }
         DispatchQueue.main.async {
