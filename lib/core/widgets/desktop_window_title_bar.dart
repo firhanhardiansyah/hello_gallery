@@ -5,6 +5,12 @@ import 'package:window_manager/window_manager.dart';
 
 enum DesktopWindowPlatform { macOS, windows, other }
 
+DesktopWindowPlatform get currentDesktopWindowPlatform => Platform.isMacOS
+    ? DesktopWindowPlatform.macOS
+    : Platform.isWindows
+    ? DesktopWindowPlatform.windows
+    : DesktopWindowPlatform.other;
+
 class DesktopWindowTitleBar extends StatelessWidget {
   const DesktopWindowTitleBar({
     required this.child,
@@ -27,12 +33,7 @@ class DesktopWindowTitleBar extends StatelessWidget {
   final Widget? windowsCaptionControls;
 
   DesktopWindowPlatform get _platform =>
-      platform ??
-      (Platform.isMacOS
-          ? DesktopWindowPlatform.macOS
-          : Platform.isWindows
-          ? DesktopWindowPlatform.windows
-          : DesktopWindowPlatform.other);
+      platform ?? currentDesktopWindowPlatform;
 
   @override
   Widget build(BuildContext context) {

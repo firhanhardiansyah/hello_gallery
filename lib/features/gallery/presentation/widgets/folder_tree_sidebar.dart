@@ -26,6 +26,7 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
     this.onClose,
     this.syncRevision = 0,
     this.syncedDirectoryPaths = const {},
+    this.windowPlatform,
     super.key,
   });
 
@@ -40,6 +41,7 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
   final VoidCallback? onClose;
   final int syncRevision;
   final Set<String> syncedDirectoryPaths;
+  final DesktopWindowPlatform? windowPlatform;
 
   @override
   ConsumerState<FolderTreeSidebar> createState() => _FolderTreeSidebarState();
@@ -260,63 +262,37 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   @override
   Widget build(BuildContext context) {
     final rootFolderName = path.basename(path.normalize(widget.rootPath));
+    final windowPlatform =
+        widget.windowPlatform ?? currentDesktopWindowPlatform;
+    final rootHeader = _buildRootHeader(context, rootFolderName);
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DesktopWindowTitleBar(
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-            reserveMacOSWindowButtons: true,
-            showWindowsCaptionControls: false,
-            child: const SizedBox.shrink(),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Tooltip(
-                    message: widget.rootPath,
-                    child: Text(
-                      rootFolderName.isEmpty ? widget.rootPath : rootFolderName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Choose root folder',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: widget.onChooseRootFolder,
-                  icon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedFolderAdd,
-                    size: 18,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Refresh',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: widget.onRefresh,
-                  icon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedRefresh,
-                    size: 18,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Collapse folders',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _hasExpandedFolders ? _collapseFolders : null,
-                  icon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedMenuCollapse,
-                    size: 20,
-                  ),
-                ),
-              ],
+          if (windowPlatform == DesktopWindowPlatform.macOS) ...[
+            DesktopWindowTitleBar(
+              platform: windowPlatform,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHigh,
+              reserveMacOSWindowButtons: true,
+              showWindowsCaptionControls: false,
+              child: const SizedBox.shrink(),
             ),
-          ),
+            rootHeader,
+          ] else if (windowPlatform == DesktopWindowPlatform.windows)
+            DesktopWindowTitleBar(
+              platform: windowPlatform,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHigh,
+              showWindowsCaptionControls: false,
+              child: rootHeader,
+            )
+          else
+            rootHeader,
           Expanded(
             child: FolderTreeView(
               scrollController: _scrollController,
@@ -331,6 +307,54 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
               onToggleFolder: _toggleFolder,
               onFolderSelected: widget.onFolderSelected,
               onMediaSelected: widget.onMediaSelected,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRootHeader(BuildContext context, String rootFolderName) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: Tooltip(
+              message: widget.rootPath,
+              child: Text(
+                rootFolderName.isEmpty ? widget.rootPath : rootFolderName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Choose root folder',
+            visualDensity: VisualDensity.compact,
+            onPressed: widget.onChooseRootFolder,
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedFolderAdd,
+              size: 18,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
+            visualDensity: VisualDensity.compact,
+            onPressed: widget.onRefresh,
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedRefresh,
+              size: 18,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Collapse folders',
+            visualDensity: VisualDensity.compact,
+            onPressed: _hasExpandedFolders ? _collapseFolders : null,
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedMenuCollapse,
+              size: 20,
             ),
           ),
         ],

@@ -29,7 +29,10 @@ void main() {
     addTearDown(container.dispose);
     const sidebarKey = ValueKey('folder-tree-sidebar');
 
-    Widget buildSidebar(String currentFolderPath) {
+    Widget buildSidebar(
+      String currentFolderPath, {
+      DesktopWindowPlatform? windowPlatform,
+    }) {
       return UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
@@ -41,6 +44,7 @@ void main() {
                 key: sidebarKey,
                 rootPath: rootPath,
                 currentFolderPath: currentFolderPath,
+                windowPlatform: windowPlatform,
                 sort: GallerySort.nameAscending,
                 onRefresh: () => refreshCount++,
                 onChooseRootFolder: () => chooseRootCount++,
@@ -87,6 +91,16 @@ void main() {
     await tester.pump();
 
     expect(find.byTooltip('Collapse folder'), findsNothing);
+
+    await tester.pumpWidget(
+      buildSidebar(rootPath, windowPlatform: DesktopWindowPlatform.windows),
+    );
+    await tester.pumpAndSettle();
+
+    final windowsTitleBar = tester.getRect(find.byType(DesktopWindowTitleBar));
+    final windowsRootTitle = tester.getRect(find.text('Wallpapers'));
+    expect(windowsRootTitle.top, lessThan(windowsTitleBar.bottom));
+    expect(windowsRootTitle.center.dy, windowsTitleBar.center.dy);
   });
 }
 
