@@ -162,6 +162,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   }
 
   List<Widget> _buildFolderSlivers(String folderPath, int depth) {
+    final colorScheme = Theme.of(context).colorScheme;
     final contents = _contentsByPath[folderPath];
     final expanded = _expandedPaths.contains(folderPath);
     final selected = path.equals(folderPath, widget.currentFolderPath);
@@ -181,6 +182,10 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
           selected: selected,
           expanded: expanded,
           loading: _loadingPaths.contains(folderPath),
+          surfaceColor: colorScheme.surfaceContainerHigh,
+          overlappingSurfaceColor: colorScheme.surfaceContainerHighest,
+          primaryColor: colorScheme.primary,
+          foregroundColor: colorScheme.onSurface,
           onToggle: () => _toggleFolder(folderPath),
           onOpen: widget.onFolderSelected == null
               ? null
@@ -279,6 +284,10 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.selected,
     required this.expanded,
     required this.loading,
+    required this.surfaceColor,
+    required this.overlappingSurfaceColor,
+    required this.primaryColor,
+    required this.foregroundColor,
     required this.onToggle,
     required this.onOpen,
   });
@@ -288,6 +297,10 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   final bool selected;
   final bool expanded;
   final bool loading;
+  final Color surfaceColor;
+  final Color overlappingSurfaceColor;
+  final Color primaryColor;
+  final Color foregroundColor;
   final VoidCallback onToggle;
   final VoidCallback? onOpen;
 
@@ -303,12 +316,9 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox.expand(
       child: Material(
-        color: overlapsContent
-            ? colorScheme.surfaceContainerHighest
-            : colorScheme.surfaceContainerHigh,
+        color: overlapsContent ? overlappingSurfaceColor : surfaceColor,
         elevation: overlapsContent ? 2 : 0,
         child: Padding(
           padding: EdgeInsets.only(left: 8 + (depth * 14), right: 8),
@@ -327,6 +337,7 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                         icon: expanded
                             ? HugeIcons.strokeRoundedArrowDown01
                             : HugeIcons.strokeRoundedArrowRight01,
+                        color: foregroundColor,
                       ),
               ),
               HugeIcon(
@@ -334,7 +345,7 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                     ? HugeIcons.strokeRoundedFolderOpen
                     : HugeIcons.strokeRoundedFolder01,
                 size: 20,
-                color: selected ? colorScheme.primary : null,
+                color: selected ? primaryColor : foregroundColor,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -349,7 +360,7 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                       overflow: TextOverflow.ellipsis,
                       style: selected
                           ? TextStyle(
-                              color: colorScheme.primary,
+                              color: primaryColor,
                               fontWeight: FontWeight.w700,
                             )
                           : null,
@@ -370,7 +381,11 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         name != oldDelegate.name ||
         selected != oldDelegate.selected ||
         expanded != oldDelegate.expanded ||
-        loading != oldDelegate.loading;
+        loading != oldDelegate.loading ||
+        surfaceColor != oldDelegate.surfaceColor ||
+        overlappingSurfaceColor != oldDelegate.overlappingSurfaceColor ||
+        primaryColor != oldDelegate.primaryColor ||
+        foregroundColor != oldDelegate.foregroundColor;
   }
 }
 

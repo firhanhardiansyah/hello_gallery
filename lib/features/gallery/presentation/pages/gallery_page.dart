@@ -17,6 +17,8 @@ import '../../../gamepad/presentation/widgets/virtual_cursor_overlay.dart';
 import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
 import '../../../media_preview/presentation/pages/media_preview_page.dart';
 import '../../../settings/presentation/notifiers/settings_notifier.dart';
+import '../../../settings/domain/value_objects/app_appearance_mode.dart';
+import '../../../settings/domain/value_objects/app_color_theme.dart';
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../../thumbnail/application/services/thumbnail_job_scheduler.dart';
 import '../../application/providers/gallery_dependencies.dart';
@@ -478,6 +480,7 @@ class _ShellTopBar extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
+                  const _ThemeMenu(),
                   if (isPreview) ...[
                     IconButton(
                       tooltip: 'Fullscreen',
@@ -544,6 +547,118 @@ class _ShellTopBar extends ConsumerWidget {
     return rootPath != null &&
         currentPath != null &&
         !path.equals(rootPath, currentPath);
+  }
+}
+
+enum _ThemeMenuOption {
+  systemMode,
+  lightMode,
+  darkMode,
+  indigoTheme,
+  pinkTheme,
+  emeraldTheme,
+}
+
+class _ThemeMenu extends ConsumerWidget {
+  const _ThemeMenu();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsNotifierProvider);
+    return PopupMenuButton<_ThemeMenuOption>(
+      tooltip: 'Appearance and theme',
+      icon: const HugeIcon(icon: HugeIcons.strokeRoundedPaintBoard),
+      onSelected: (option) {
+        final notifier = ref.read(settingsNotifierProvider.notifier);
+        switch (option) {
+          case _ThemeMenuOption.systemMode:
+            unawaited(notifier.setAppearanceMode(AppAppearanceMode.system));
+          case _ThemeMenuOption.lightMode:
+            unawaited(notifier.setAppearanceMode(AppAppearanceMode.light));
+          case _ThemeMenuOption.darkMode:
+            unawaited(notifier.setAppearanceMode(AppAppearanceMode.dark));
+          case _ThemeMenuOption.indigoTheme:
+            unawaited(notifier.setColorTheme(AppColorTheme.indigo));
+          case _ThemeMenuOption.pinkTheme:
+            unawaited(notifier.setColorTheme(AppColorTheme.pink));
+          case _ThemeMenuOption.emeraldTheme:
+            unawaited(notifier.setColorTheme(AppColorTheme.emerald));
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<_ThemeMenuOption>(
+          enabled: false,
+          height: 32,
+          child: Text('Mode'),
+        ),
+        _item(
+          option: _ThemeMenuOption.systemMode,
+          label: 'System',
+          icon: HugeIcons.strokeRoundedComputer,
+          selected: settings.appearanceMode == AppAppearanceMode.system,
+        ),
+        _item(
+          option: _ThemeMenuOption.lightMode,
+          label: 'Light',
+          icon: HugeIcons.strokeRoundedSun01,
+          selected: settings.appearanceMode == AppAppearanceMode.light,
+        ),
+        _item(
+          option: _ThemeMenuOption.darkMode,
+          label: 'Dark',
+          icon: HugeIcons.strokeRoundedMoon02,
+          selected: settings.appearanceMode == AppAppearanceMode.dark,
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<_ThemeMenuOption>(
+          enabled: false,
+          height: 32,
+          child: Text('Color theme'),
+        ),
+        _item(
+          option: _ThemeMenuOption.indigoTheme,
+          label: 'Indigo',
+          icon: HugeIcons.strokeRoundedColors,
+          iconColor: const Color(0xFF6366F1),
+          selected: settings.colorTheme == AppColorTheme.indigo,
+        ),
+        _item(
+          option: _ThemeMenuOption.pinkTheme,
+          label: 'Pink',
+          icon: HugeIcons.strokeRoundedColors,
+          iconColor: const Color(0xFFEC4899),
+          selected: settings.colorTheme == AppColorTheme.pink,
+        ),
+        _item(
+          option: _ThemeMenuOption.emeraldTheme,
+          label: 'Emerald',
+          icon: HugeIcons.strokeRoundedColors,
+          iconColor: const Color(0xFF00897B),
+          selected: settings.colorTheme == AppColorTheme.emerald,
+        ),
+      ],
+    );
+  }
+
+  PopupMenuItem<_ThemeMenuOption> _item({
+    required _ThemeMenuOption option,
+    required String label,
+    required List<List<dynamic>> icon,
+    required bool selected,
+    Color? iconColor,
+  }) {
+    return PopupMenuItem(
+      value: option,
+      child: Row(
+        children: [
+          HugeIcon(icon: icon, size: 20, color: iconColor),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label)),
+          if (selected)
+            const HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 18),
+        ],
+      ),
+    );
   }
 }
 

@@ -6,6 +6,8 @@ import '../../domain/repositories/settings_repository.dart';
 import '../../domain/services/root_folder_access.dart';
 import '../use_cases/choose_gallery_root.dart';
 import '../use_cases/load_gallery_root.dart';
+import '../use_cases/load_theme_preferences.dart';
+import '../use_cases/save_theme_preferences.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(
   (ref) => SettingsRepositoryImpl(),
@@ -29,4 +31,12 @@ final chooseGalleryRootProvider = Provider(
     ref.watch(settingsRepositoryProvider),
     ref.watch(rootFolderAccessProvider),
   ),
+);
+
+final loadThemePreferencesProvider = Provider(
+  (ref) => LoadThemePreferences(ref.watch(settingsRepositoryProvider)),
+);
+
+final saveThemePreferencesProvider = Provider(
+  (ref) => SaveThemePreferences(ref.watch(settingsRepositoryProvider)),
 );
