@@ -9,6 +9,8 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 
+const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
+
 class GalleryCard extends StatelessWidget {
   const GalleryCard({
     required this.item,
@@ -24,11 +26,10 @@ class GalleryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const borderRadius = BorderRadius.all(Radius.circular(8));
     return Material(
       color: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: borderRadius,
+        borderRadius: _galleryCardBorderRadius,
         side: BorderSide(
           color: selected ? colorScheme.primary : Colors.transparent,
           width: selected ? 2 : 0,
@@ -36,7 +37,7 @@ class GalleryCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: borderRadius,
+        borderRadius: _galleryCardBorderRadius,
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -70,6 +71,13 @@ class _Preview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return ClipRRect(
+      borderRadius: _galleryCardBorderRadius,
+      child: _buildContent(context, ref),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, WidgetRef ref) {
     if (item case final GalleryFolder folder) {
       if (folder.previewPaths.isEmpty) {
         return ColoredBox(
