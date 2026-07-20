@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hello_gallery/core/utils/natural_compare.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
 import '../../application/providers/gallery_dependencies.dart';
+import 'folder_tree/folder_tree_contents.dart';
+import 'folder_tree/folder_tree_view.dart';
 
 class FolderTreeSidebar extends ConsumerStatefulWidget {
   const FolderTreeSidebar({
@@ -35,7 +36,7 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
 class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   final _expandedPaths = <String>{};
   final _loadingPaths = <String>{};
-  final _contentsByPath = <String, _FolderContents>{};
+  final _contentsByPath = <String, FolderTreeContents>{};
   final _revealKeys = <String, GlobalKey>{};
   int _revealGeneration = 0;
 
@@ -125,7 +126,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
     } on Object {
       // Keep an empty section for inaccessible folders.
     }
-    _contentsByPath[folderPath] = _FolderContents(
+    _contentsByPath[folderPath] = FolderTreeContents(
       folders: folders,
       media: media,
     );
@@ -161,77 +162,6 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
     });
   }
 
-  List<Widget> _buildFolderSlivers(String folderPath, int depth) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final contents = _contentsByPath[folderPath];
-    final expanded = _expandedPaths.contains(folderPath);
-    final selected = path.equals(folderPath, widget.currentFolderPath);
-    final media = [...?contents?.media]
-      ..sort((a, b) => _compareMedia(a, b, widget.sort));
-    final folders = [...?contents?.folders]
-      ..sort(
-        (a, b) => naturalCompare(path.basename(a.path), path.basename(b.path)),
-      );
-
-    final sectionSlivers = <Widget>[
-      SliverPersistentHeader(
-        pinned: true,
-        delegate: _FolderHeaderDelegate(
-          depth: depth,
-          name: path.basename(folderPath),
-          selected: selected,
-          expanded: expanded,
-          loading: _loadingPaths.contains(folderPath),
-          surfaceColor: colorScheme.surfaceContainerHigh,
-          overlappingSurfaceColor: colorScheme.surfaceContainerHighest,
-          primaryColor: colorScheme.primary,
-          foregroundColor: colorScheme.onSurface,
-          onToggle: () => _toggleFolder(folderPath),
-          onOpen: widget.onFolderSelected == null
-              ? null
-              : () {
-                  if (!expanded) _toggleFolder(folderPath);
-                  widget.onFolderSelected!(folderPath);
-                },
-        ),
-      ),
-      if (expanded && _loadingPaths.contains(folderPath))
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: LinearProgressIndicator(),
-          ),
-        ),
-      if (expanded && media.isNotEmpty)
-        SliverList.builder(
-          itemCount: media.length,
-          itemBuilder: (context, index) {
-            final item = media[index];
-            final active =
-                widget.activeMediaPath != null &&
-                path.equals(widget.activeMediaPath!, item.path);
-            return KeyedSubtree(
-              key: _revealKeyFor(item.path),
-              child: _MediaTreeTile(
-                media: item,
-                depth: depth + 1,
-                selected: active,
-                onTap: () => widget.onMediaSelected(item),
-              ),
-            );
-          },
-        ),
-    ];
-
-    final slivers = <Widget>[SliverMainAxisGroup(slivers: sectionSlivers)];
-    if (expanded && contents != null) {
-      for (final child in folders) {
-        slivers.addAll(_buildFolderSlivers(child.path, depth + 1));
-      }
-    }
-    return slivers;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -264,216 +194,22 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: CustomScrollView(
-              slivers: [
-                ..._buildFolderSlivers(widget.rootPath, 0),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
-              ],
+            child: FolderTreeView(
+              rootPath: widget.rootPath,
+              currentFolderPath: widget.currentFolderPath,
+              activeMediaPath: widget.activeMediaPath,
+              sort: widget.sort,
+              expandedPaths: _expandedPaths,
+              loadingPaths: _loadingPaths,
+              contentsByPath: _contentsByPath,
+              revealKeyFor: _revealKeyFor,
+              onToggleFolder: _toggleFolder,
+              onFolderSelected: widget.onFolderSelected,
+              onMediaSelected: widget.onMediaSelected,
             ),
           ),
         ],
       ),
     );
   }
-}
-
-class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _FolderHeaderDelegate({
-    required this.depth,
-    required this.name,
-    required this.selected,
-    required this.expanded,
-    required this.loading,
-    required this.surfaceColor,
-    required this.overlappingSurfaceColor,
-    required this.primaryColor,
-    required this.foregroundColor,
-    required this.onToggle,
-    required this.onOpen,
-  });
-
-  final int depth;
-  final String name;
-  final bool selected;
-  final bool expanded;
-  final bool loading;
-  final Color surfaceColor;
-  final Color overlappingSurfaceColor;
-  final Color primaryColor;
-  final Color foregroundColor;
-  final VoidCallback onToggle;
-  final VoidCallback? onOpen;
-
-  @override
-  double get minExtent => 48;
-
-  @override
-  double get maxExtent => 48;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return SizedBox.expand(
-      child: Material(
-        color: overlapsContent ? overlappingSurfaceColor : surfaceColor,
-        elevation: overlapsContent ? 2 : 0,
-        child: Padding(
-          padding: EdgeInsets.only(left: 8 + (depth * 14), right: 8),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: expanded ? 'Collapse folder' : 'Expand folder',
-                visualDensity: VisualDensity.compact,
-                onPressed: onToggle,
-                icon: loading
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : HugeIcon(
-                        icon: expanded
-                            ? HugeIcons.strokeRoundedArrowDown01
-                            : HugeIcons.strokeRoundedArrowRight01,
-                        color: foregroundColor,
-                      ),
-              ),
-              HugeIcon(
-                icon: expanded
-                    ? HugeIcons.strokeRoundedFolderOpen
-                    : HugeIcons.strokeRoundedFolder01,
-                size: 20,
-                color: selected ? primaryColor : foregroundColor,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: InkWell(
-                  onTap: onOpen ?? onToggle,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: selected
-                          ? TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.w700,
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _FolderHeaderDelegate oldDelegate) {
-    return depth != oldDelegate.depth ||
-        name != oldDelegate.name ||
-        selected != oldDelegate.selected ||
-        expanded != oldDelegate.expanded ||
-        loading != oldDelegate.loading ||
-        surfaceColor != oldDelegate.surfaceColor ||
-        overlappingSurfaceColor != oldDelegate.overlappingSurfaceColor ||
-        primaryColor != oldDelegate.primaryColor ||
-        foregroundColor != oldDelegate.foregroundColor;
-  }
-}
-
-class _MediaTreeTile extends StatelessWidget {
-  const _MediaTreeTile({
-    required this.media,
-    required this.depth,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final MediaItem media;
-  final int depth;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(left: 18 + (depth * 14), right: 8, bottom: 2),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primaryContainer.withValues(alpha: 0.72)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          border: Border(
-            left: BorderSide(
-              color: selected ? colorScheme.primary : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          borderRadius: BorderRadius.circular(9),
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            selected: selected,
-            dense: true,
-            contentPadding: const EdgeInsets.only(left: 10, right: 8),
-            leading: HugeIcon(
-              icon: media.isVideo
-                  ? HugeIcons.strokeRoundedVideo01
-                  : HugeIcons.strokeRoundedImage01,
-              size: 20,
-              color: selected ? colorScheme.primary : null,
-            ),
-            title: Text(
-              media.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: selected
-                  ? const TextStyle(fontWeight: FontWeight.w700)
-                  : null,
-            ),
-            trailing: selected
-                ? HugeIcon(
-                    icon: media.isVideo
-                        ? HugeIcons.strokeRoundedPlayCircle
-                        : HugeIcons.strokeRoundedView,
-                    color: colorScheme.primary,
-                    size: 20,
-                  )
-                : null,
-            onTap: onTap,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-int _compareMedia(MediaItem a, MediaItem b, GallerySort sort) {
-  final comparison = switch (sort) {
-    GallerySort.nameAscending => naturalCompare(a.name, b.name),
-    GallerySort.nameDescending => naturalCompare(b.name, a.name),
-    GallerySort.newest => b.modifiedAt.compareTo(a.modifiedAt),
-    GallerySort.oldest => a.modifiedAt.compareTo(b.modifiedAt),
-  };
-  if (comparison != 0) return comparison;
-  return naturalCompare(a.path, b.path);
-}
-
-class _FolderContents {
-  const _FolderContents({this.folders = const [], this.media = const []});
-
-  final List<GalleryFolder> folders;
-  final List<MediaItem> media;
 }
