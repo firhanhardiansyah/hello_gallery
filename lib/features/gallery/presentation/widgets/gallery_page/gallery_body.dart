@@ -49,6 +49,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     super.initState();
     _thumbnailScheduler = ref.read(thumbnailJobSchedulerProvider);
     _folderPreviewScheduler = ref.read(folderPreviewJobSchedulerProvider);
+    _resumePreviewSchedulersImmediately();
   }
 
   @override
@@ -57,13 +58,21 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     if (oldWidget.selectedIndex != widget.selectedIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
     }
+    if (oldWidget.state.currentPath != widget.state.currentPath ||
+        oldWidget.state.status != widget.state.status) {
+      _resumePreviewSchedulersImmediately();
+    }
   }
 
   @override
   void dispose() {
-    _thumbnailScheduler.setScrolling(false);
-    _folderPreviewScheduler.setScrolling(false);
+    _resumePreviewSchedulersImmediately();
     super.dispose();
+  }
+
+  void _resumePreviewSchedulersImmediately() {
+    _thumbnailScheduler.resumeImmediately();
+    _folderPreviewScheduler.resumeImmediately();
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {

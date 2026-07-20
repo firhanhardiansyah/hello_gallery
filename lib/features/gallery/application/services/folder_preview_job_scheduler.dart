@@ -79,6 +79,12 @@ final class FolderPreviewJobScheduler {
     });
   }
 
+  void resumeImmediately() {
+    _resumeTimer?.cancel();
+    _isScrolling = false;
+    _processPendingJobs();
+  }
+
   void _processPendingJobs() {
     if (_isScrolling) return;
     while (_activeJobs < _maximumConcurrentJobs && _queue.isNotEmpty) {
