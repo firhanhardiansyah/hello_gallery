@@ -258,6 +258,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
 
   @override
   Widget build(BuildContext context) {
+    final rootFolderName = path.basename(path.normalize(widget.rootPath));
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       clipBehavior: Clip.antiAlias,
@@ -274,9 +275,14 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Folders & Media',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  child: Tooltip(
+                    message: widget.rootPath,
+                    child: Text(
+                      rootFolderName.isEmpty ? widget.rootPath : rootFolderName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
                 ),
                 IconButton(

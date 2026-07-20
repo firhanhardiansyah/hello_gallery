@@ -55,6 +55,9 @@ void main() {
     await tester.pumpWidget(buildSidebar(rootPath));
     await tester.pumpAndSettle();
 
+    expect(find.text('Wallpapers'), findsOneWidget);
+    expect(find.byTooltip(rootPath), findsOneWidget);
+
     await tester.tap(find.byTooltip('Refresh'));
     await tester.tap(find.byTooltip('Choose root folder'));
 
