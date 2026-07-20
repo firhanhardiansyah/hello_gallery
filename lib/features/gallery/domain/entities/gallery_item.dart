@@ -20,10 +20,7 @@ class GalleryFolder extends GalleryItem {
     required super.path,
     required super.name,
     required super.modifiedAt,
-    this.previewItems = const [],
   });
-
-  final List<MediaItem> previewItems;
 
   @override
   GalleryItemType get type => GalleryItemType.folder;

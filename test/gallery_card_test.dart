@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hello_gallery/app/theme/app_theme.dart';
+import 'package:hello_gallery/features/gallery/application/providers/gallery_dependencies.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_card.dart';
+import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
 void main() {
   testWidgets('uses one full preview for a folder with one item', (
@@ -53,10 +56,27 @@ void main() {
   });
 }
 
-Future<void> _pumpFolderCard(WidgetTester tester, int previewCount) {
-  return tester.pumpWidget(
+Future<void> _pumpFolderCard(WidgetTester tester, int previewCount) async {
+  await tester.pumpWidget(
     ProviderScope(
+      overrides: [
+        folderPreviewProvider.overrideWith(
+          (ref, folder) => Future.value([
+            for (var index = 0; index < previewCount; index++)
+              MediaItem(
+                path: '/gallery/album/image-$index.jpg',
+                name: 'image-$index.jpg',
+                modifiedAt: DateTime(2026),
+                mediaType: GalleryItemType.image,
+              ),
+          ]),
+        ),
+      ],
       child: MaterialApp(
+        theme: buildAppTheme(
+          colorTheme: AppColorTheme.indigo,
+          brightness: Brightness.light,
+        ),
         home: Scaffold(
           body: Align(
             alignment: Alignment.topLeft,
@@ -68,15 +88,6 @@ Future<void> _pumpFolderCard(WidgetTester tester, int previewCount) {
                   path: '/gallery/album',
                   name: 'Album',
                   modifiedAt: DateTime(2026),
-                  previewItems: [
-                    for (var index = 0; index < previewCount; index++)
-                      MediaItem(
-                        path: '/gallery/album/image-$index.jpg',
-                        name: 'image-$index.jpg',
-                        modifiedAt: DateTime(2026),
-                        mediaType: GalleryItemType.image,
-                      ),
-                  ],
                 ),
                 onTap: () {},
               ),
@@ -86,6 +97,7 @@ Future<void> _pumpFolderCard(WidgetTester tester, int previewCount) {
       ),
     ),
   );
+  await tester.pump();
 }
 
 Finder _previewFinder(int index) =>

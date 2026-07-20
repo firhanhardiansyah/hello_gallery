@@ -39,21 +39,4 @@ void main() {
       containsAll(['a.jpg', 'b.jpg', 'c.mp4']),
     );
   });
-
-  test('folder previews include both images and videos', () async {
-    final root = await Directory.systemTemp.createTemp('folder_previews_');
-    addTearDown(() => root.delete(recursive: true));
-    final album = await Directory('${root.path}/album').create();
-    await File('${album.path}/cover.jpg').writeAsBytes(const [1]);
-    await File('${album.path}/clip.mp4').writeAsBytes(const [1]);
-
-    final items = await const LocalGalleryDataSource().scan(root.path);
-    final folder = items.whereType<GalleryFolder>().single;
-
-    expect(folder.previewItems, hasLength(2));
-    expect(
-      folder.previewItems.map((item) => item.mediaType),
-      containsAll([GalleryItemType.image, GalleryItemType.video]),
-    );
-  });
 }

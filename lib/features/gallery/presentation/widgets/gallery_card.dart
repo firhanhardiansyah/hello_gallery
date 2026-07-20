@@ -8,6 +8,7 @@ import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
+import '../../application/providers/gallery_dependencies.dart';
 
 const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
 
@@ -79,15 +80,15 @@ class _Preview extends ConsumerWidget {
 
   Widget _buildContent(BuildContext context, WidgetRef ref) {
     if (item case final GalleryFolder folder) {
-      if (folder.previewItems.isEmpty) {
-        return ColoredBox(
-          color: context.appColors.mediaPlaceholder,
-          child: const Center(
-            child: HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 52),
-          ),
-        );
-      }
-      return _FolderPreviewLayout(items: folder.previewItems);
+      return ref
+          .watch(folderPreviewProvider(folder))
+          .when(
+            data: (items) => items.isEmpty
+                ? const _FolderPlaceholder()
+                : _FolderPreviewLayout(items: items),
+            loading: () => const _FolderPlaceholder(),
+            error: (_, _) => const _FolderPlaceholder(),
+          );
     }
     if (item case final MediaItem media when !media.isVideo) {
       return Image.file(
@@ -116,6 +117,18 @@ class _Preview extends ConsumerWidget {
     }
     return const _VideoPlaceholder();
   }
+}
+
+class _FolderPlaceholder extends StatelessWidget {
+  const _FolderPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: context.appColors.mediaPlaceholder,
+    child: const Center(
+      child: HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 52),
+    ),
+  );
 }
 
 class _FolderPreviewLayout extends StatelessWidget {

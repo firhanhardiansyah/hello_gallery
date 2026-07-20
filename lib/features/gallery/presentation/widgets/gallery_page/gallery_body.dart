@@ -5,6 +5,8 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 
 import '../../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../../../thumbnail/application/services/thumbnail_job_scheduler.dart';
+import '../../../application/providers/gallery_dependencies.dart';
+import '../../../application/services/folder_preview_job_scheduler.dart';
 import '../../../domain/entities/gallery_item.dart';
 import '../../states/gallery_ui_state.dart';
 import '../gallery_card.dart';
@@ -39,12 +41,14 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   static const _mainAxisSpacing = AppSpacing.md;
 
   late final ThumbnailJobScheduler _thumbnailScheduler;
+  late final FolderPreviewJobScheduler _folderPreviewScheduler;
   int _reportedColumnCount = 1;
 
   @override
   void initState() {
     super.initState();
     _thumbnailScheduler = ref.read(thumbnailJobSchedulerProvider);
+    _folderPreviewScheduler = ref.read(folderPreviewJobSchedulerProvider);
   }
 
   @override
@@ -58,14 +62,17 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   @override
   void dispose() {
     _thumbnailScheduler.setScrolling(false);
+    _folderPreviewScheduler.setScrolling(false);
     super.dispose();
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
     if (notification is ScrollStartNotification) {
       _thumbnailScheduler.setScrolling(true);
+      _folderPreviewScheduler.setScrolling(true);
     } else if (notification is ScrollEndNotification) {
       _thumbnailScheduler.setScrolling(false);
+      _folderPreviewScheduler.setScrolling(false);
     }
     return false;
   }

@@ -21,6 +21,7 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
   Future<void> setRoot(String rootPath) async {
     _backHistory.clear();
     _forwardHistory.clear();
+    ref.read(folderPreviewJobSchedulerProvider).clear();
     state = GalleryUiState(rootPath: rootPath, sort: state.sort);
     await _loadDirectory(rootPath);
   }
@@ -108,6 +109,7 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
   Future<void> refresh() async {
     final current = state.currentPath;
     if (current != null) {
+      ref.read(folderPreviewJobSchedulerProvider).clear();
       await _loadDirectory(current, forceRefresh: true);
     }
   }

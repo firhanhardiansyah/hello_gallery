@@ -190,6 +190,32 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   Future<void> _handleAutoSync(FileChangeBatch batch) async {
     final generation = ++_autoSyncGeneration;
+    final folderPreviewScheduler = ref.read(folderPreviewJobSchedulerProvider);
+    final galleryState = ref.read(galleryNotifierProvider);
+    final rootPath = galleryState.rootPath;
+    if (rootPath != null) {
+      for (final directoryPath in batch.affectedDirectoryPaths) {
+        var ancestorPath = directoryPath;
+        while (path.equals(rootPath, ancestorPath) ||
+            path.isWithin(rootPath, ancestorPath)) {
+          folderPreviewScheduler.invalidate(ancestorPath);
+          if (path.equals(rootPath, ancestorPath)) break;
+          final parentPath = path.dirname(ancestorPath);
+          if (path.equals(parentPath, ancestorPath)) break;
+          ancestorPath = parentPath;
+        }
+      }
+    }
+    for (final folder in galleryState.items.whereType<GalleryFolder>()) {
+      final containsChangedPath = batch.changes.any(
+        (change) =>
+            path.equals(folder.path, change.path) ||
+            path.isWithin(folder.path, change.path),
+      );
+      if (!containsChangedPath) continue;
+      folderPreviewScheduler.invalidate(folder.path);
+      ref.invalidate(folderPreviewProvider(folder));
+    }
     await Future.wait([
       for (final change in batch.changes)
         if (change.type != FileChangeType.added)

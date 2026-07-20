@@ -2,8 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/data_sources/local_gallery_data_source.dart';
 import '../../data/repositories/gallery_repository_impl.dart';
+import '../../domain/entities/gallery_item.dart';
 import '../../domain/repositories/gallery_repository.dart';
+import '../services/folder_preview_cache.dart';
+import '../services/folder_preview_job_scheduler.dart';
 import '../services/gallery_directory_cache.dart';
+import '../use_cases/find_folder_preview_media.dart';
 import '../use_cases/read_gallery_directory.dart';
 import '../use_cases/read_media_recursively.dart';
 
@@ -29,3 +33,25 @@ final readGalleryDirectoryProvider = Provider(
 final readMediaRecursivelyProvider = Provider(
   (ref) => ReadMediaRecursively(ref.watch(galleryRepositoryProvider)),
 );
+
+final findFolderPreviewMediaProvider = Provider(
+  (ref) => FindFolderPreviewMedia(ref.watch(galleryRepositoryProvider)),
+);
+
+final folderPreviewCacheProvider = Provider((ref) => FolderPreviewCache());
+
+final folderPreviewJobSchedulerProvider = Provider(
+  (ref) => FolderPreviewJobScheduler(
+    ref.watch(findFolderPreviewMediaProvider),
+    ref.watch(folderPreviewCacheProvider),
+  ),
+);
+
+final folderPreviewProvider = FutureProvider.autoDispose
+    .family<List<MediaItem>, GalleryFolder>((ref, folder) {
+      final request = ref
+          .read(folderPreviewJobSchedulerProvider)
+          .getPreview(folder);
+      ref.onDispose(request.cancel);
+      return request.result;
+    });
