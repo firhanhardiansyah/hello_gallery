@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamepads/gamepads.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
@@ -369,10 +370,11 @@ class _Preview extends ConsumerWidget {
                     minimumSize: const Size.square(72),
                     iconSize: 42,
                   ),
-                  icon: Icon(
-                    state.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
+                  icon: HugeIcon(
+                    icon: state.isPlaying
+                        ? HugeIcons.strokeRoundedPause
+                        : HugeIcons.strokeRoundedPlay,
+                    size: 42,
                   ),
                 ),
               ),
@@ -412,8 +414,8 @@ class _VideoLoadingPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Center(
-    child: Icon(
-      Icons.play_circle_outline_rounded,
+    child: HugeIcon(
+      icon: HugeIcons.strokeRoundedPlayCircle,
       size: 72,
       color: Colors.white54,
     ),
@@ -450,7 +452,11 @@ class _VideoControls extends ConsumerWidget {
               onInteraction();
               controller.togglePlay();
             },
-            icon: Icon(state.isPlaying ? Icons.pause : Icons.play_arrow),
+            icon: HugeIcon(
+              icon: state.isPlaying
+                  ? HugeIcons.strokeRoundedPause
+                  : HugeIcons.strokeRoundedPlay,
+            ),
           ),
           Expanded(
             child: Slider(
@@ -468,15 +474,19 @@ class _VideoControls extends ConsumerWidget {
               onInteraction();
               controller.toggleMute();
             },
-            icon: Icon(state.isMuted ? Icons.volume_off : Icons.volume_up),
+            icon: HugeIcon(
+              icon: state.isMuted
+                  ? HugeIcons.strokeRoundedVolumeOff
+                  : HugeIcons.strokeRoundedVolumeHigh,
+            ),
           ),
           IconButton(
             tooltip: isFullscreen ? 'Exit fullscreen' : 'Fullscreen',
             onPressed: onToggleFullscreen,
-            icon: Icon(
-              isFullscreen
-                  ? Icons.fullscreen_exit_rounded
-                  : Icons.fullscreen_rounded,
+            icon: HugeIcon(
+              icon: isFullscreen
+                  ? HugeIcons.strokeRoundedMinimizeScreen
+                  : HugeIcons.strokeRoundedMaximizeScreen,
             ),
           ),
         ],

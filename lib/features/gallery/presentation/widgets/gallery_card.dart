@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
@@ -41,12 +42,12 @@ class GalleryCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Row(
                 children: [
-                  Icon(
-                    item is GalleryFolder
-                        ? Icons.folder_rounded
+                  HugeIcon(
+                    icon: item is GalleryFolder
+                        ? HugeIcons.strokeRoundedFolder01
                         : item.type == GalleryItemType.video
-                        ? Icons.movie_rounded
-                        : Icons.image_rounded,
+                        ? HugeIcons.strokeRoundedVideo01
+                        : HugeIcons.strokeRoundedImage01,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
@@ -78,7 +79,9 @@ class _Preview extends ConsumerWidget {
       if (folder.previewPaths.isEmpty) {
         return const ColoredBox(
           color: Color(0xFF24242C),
-          child: Center(child: Icon(Icons.folder_rounded, size: 52)),
+          child: Center(
+            child: HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 52),
+          ),
         );
       }
       return GridView.count(
@@ -96,8 +99,9 @@ class _Preview extends ConsumerWidget {
         File(media.path),
         fit: BoxFit.cover,
         cacheWidth: 420,
-        errorBuilder: (_, _, _) =>
-            const Center(child: Icon(Icons.broken_image)),
+        errorBuilder: (_, _, _) => const Center(
+          child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
+        ),
       );
     }
     if (item case final MediaItem media) {
@@ -125,6 +129,8 @@ class _VideoPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ColoredBox(
     color: const Color(0xFF24242C),
-    child: Center(child: const Icon(Icons.play_circle_fill_rounded, size: 58)),
+    child: Center(
+      child: const HugeIcon(icon: HugeIcons.strokeRoundedPlayCircle, size: 58),
+    ),
   );
 }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as path;
-
+import 'package:hello_gallery/core/utils/natural_compare.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
-import 'package:hello_gallery/core/utils/natural_compare.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:path/path.dart' as path;
+
 import '../../application/providers/gallery_dependencies.dart';
 
 class FolderTreeSidebar extends ConsumerStatefulWidget {
@@ -239,7 +240,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
             padding: const EdgeInsets.fromLTRB(18, 14, 10, 10),
             child: Row(
               children: [
-                const Icon(Icons.account_tree_outlined),
+                const HugeIcon(icon: HugeIcons.strokeRoundedFolderTree),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -251,7 +252,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
                   IconButton(
                     tooltip: 'Close sidebar',
                     onPressed: widget.onClose,
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const HugeIcon(icon: HugeIcons.strokeRoundedCancel01),
                   ),
               ],
             ),
@@ -322,14 +323,16 @@ class _FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(
-                        expanded
-                            ? Icons.keyboard_arrow_down_rounded
-                            : Icons.keyboard_arrow_right_rounded,
+                    : HugeIcon(
+                        icon: expanded
+                            ? HugeIcons.strokeRoundedArrowDown01
+                            : HugeIcons.strokeRoundedArrowRight01,
                       ),
               ),
-              Icon(
-                expanded ? Icons.folder_open_rounded : Icons.folder_rounded,
+              HugeIcon(
+                icon: expanded
+                    ? HugeIcons.strokeRoundedFolderOpen
+                    : HugeIcons.strokeRoundedFolder01,
                 size: 20,
                 color: selected ? colorScheme.primary : null,
               ),
@@ -410,8 +413,10 @@ class _MediaTreeTile extends StatelessWidget {
             selected: selected,
             dense: true,
             contentPadding: const EdgeInsets.only(left: 10, right: 8),
-            leading: Icon(
-              media.isVideo ? Icons.movie_outlined : Icons.image_outlined,
+            leading: HugeIcon(
+              icon: media.isVideo
+                  ? HugeIcons.strokeRoundedVideo01
+                  : HugeIcons.strokeRoundedImage01,
               size: 20,
               color: selected ? colorScheme.primary : null,
             ),
@@ -424,10 +429,10 @@ class _MediaTreeTile extends StatelessWidget {
                   : null,
             ),
             trailing: selected
-                ? Icon(
-                    media.isVideo
-                        ? Icons.play_circle_fill_rounded
-                        : Icons.visibility_rounded,
+                ? HugeIcon(
+                    icon: media.isVideo
+                        ? HugeIcons.strokeRoundedPlayCircle
+                        : HugeIcons.strokeRoundedView,
                     color: colorScheme.primary,
                     size: 20,
                   )

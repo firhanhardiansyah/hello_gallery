@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gamepads/gamepads.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 import 'package:window_manager/window_manager.dart';
 
@@ -453,15 +454,17 @@ class _ShellTopBar extends ConsumerWidget {
                         : _canGoToParent(gallery)
                         ? ref.read(galleryNotifierProvider.notifier).goUp
                         : null,
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const HugeIcon(
+                      icon: HugeIcons.strokeRoundedArrowLeft02,
+                    ),
                   ),
                   IconButton(
                     tooltip: sidebarVisible ? 'Hide sidebar' : 'Show sidebar',
                     onPressed: onToggleSidebar,
-                    icon: Icon(
-                      sidebarVisible
-                          ? Icons.view_sidebar_outlined
-                          : Icons.menu_open_rounded,
+                    icon: HugeIcon(
+                      icon: sidebarVisible
+                          ? HugeIcons.strokeRoundedSidebarLeft
+                          : HugeIcons.strokeRoundedPanelLeftOpen,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -479,12 +482,16 @@ class _ShellTopBar extends ConsumerWidget {
                     IconButton(
                       tooltip: 'Fullscreen',
                       onPressed: onToggleFullscreen,
-                      icon: const Icon(Icons.fullscreen_rounded),
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedMaximizeScreen,
+                      ),
                     ),
                     IconButton(
                       tooltip: 'Close detail',
                       onPressed: onClosePreview,
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedCancel01,
+                      ),
                     ),
                   ] else ...[
                     if (gallery.status == GalleryStatus.ready ||
@@ -517,7 +524,9 @@ class _ShellTopBar extends ConsumerWidget {
                             .chooseRootFolder();
                         if (changed) onRootChanged();
                       },
-                      icon: const Icon(Icons.create_new_folder_outlined),
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedFolderAdd,
+                      ),
                     ),
                   ],
                 ],
@@ -592,7 +601,7 @@ class _PathBar extends ConsumerWidget {
                       : () => ref
                             .read(galleryNotifierProvider.notifier)
                             .openDirectory(state.currentPath!),
-                  icon: const Icon(Icons.refresh_rounded),
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedRefresh),
                 ),
               ],
             ),
@@ -759,7 +768,7 @@ class _ChooseFolder extends StatelessWidget {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.photo_library_outlined, size: 72),
+        const HugeIcon(icon: HugeIcons.strokeRoundedImageComposition, size: 72),
         const SizedBox(height: 20),
         Text(
           'Choose a folder to start',
@@ -768,7 +777,7 @@ class _ChooseFolder extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.folder_open),
+          icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolderOpen),
           label: const Text('Choose root folder'),
         ),
       ],
