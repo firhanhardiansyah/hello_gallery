@@ -23,5 +23,7 @@ final class ReadGalleryDirectory {
     return _cache.get(directoryPath);
   }
 
+  void invalidate(String directoryPath) => _cache.invalidate(directoryPath);
+
   void clearCache() => _cache.clear();
 }

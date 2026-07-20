@@ -1,5 +1,5 @@
-/// Stage-two boundary for debounced, incremental filesystem events.
+import '../entities/file_change.dart';
+
 abstract interface class FileWatcherService {
-  Stream<String> watch(String rootPath);
-  Future<void> dispose();
+  Stream<FileChange> watch(String rootPath);
 }

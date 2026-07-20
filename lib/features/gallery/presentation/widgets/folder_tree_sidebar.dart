@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
@@ -21,6 +23,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
     this.activeMediaPath,
     this.onFolderSelected,
     this.onClose,
+    this.syncRevision = 0,
+    this.syncedDirectoryPaths = const {},
     super.key,
   });
 
@@ -33,6 +37,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
   final ValueChanged<String>? onFolderSelected;
   final ValueChanged<MediaItem> onMediaSelected;
   final VoidCallback? onClose;
+  final int syncRevision;
+  final Set<String> syncedDirectoryPaths;
 
   @override
   ConsumerState<FolderTreeSidebar> createState() => _FolderTreeSidebarState();
@@ -45,6 +51,9 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   final _contentsByPath = <String, FolderTreeContents>{};
   final _revealKeys = <String, GlobalKey>{};
   int _revealGeneration = 0;
+  int _syncGeneration = 0;
+  final _pendingSyncPaths = <String>{};
+  bool _syncInProgress = false;
 
   @override
   void initState() {
@@ -63,12 +72,17 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
   void didUpdateWidget(covariant FolderTreeSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!path.equals(oldWidget.rootPath, widget.rootPath)) {
+      _syncGeneration++;
       _expandedPaths
         ..clear()
         ..add(widget.rootPath);
       _loadingPaths.clear();
       _contentsByPath.clear();
       _revealKeys.clear();
+      _pendingSyncPaths.clear();
+    }
+    if (oldWidget.syncRevision != widget.syncRevision) {
+      _scheduleChangedFolders(widget.syncedDirectoryPaths);
     }
     final locationChanged =
         !_samePath(oldWidget.currentFolderPath, widget.currentFolderPath) ||
@@ -144,6 +158,50 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
     );
     _loadingPaths.remove(folderPath);
     if (mounted) setState(() {});
+  }
+
+  void _scheduleChangedFolders(Set<String> directoryPaths) {
+    _pendingSyncPaths.addAll(directoryPaths);
+    if (!_syncInProgress) unawaited(_drainChangedFolders());
+  }
+
+  Future<void> _drainChangedFolders() async {
+    _syncInProgress = true;
+    final generation = _syncGeneration;
+    final reader = ref.read(readGalleryDirectoryProvider);
+    while (_pendingSyncPaths.isNotEmpty &&
+        mounted &&
+        generation == _syncGeneration) {
+      final changedPaths = {..._pendingSyncPaths};
+      _pendingSyncPaths.clear();
+      final loadedPaths = _contentsByPath.keys
+          .where(
+            (loadedPath) => changedPaths.any(
+              (changedPath) => path.equals(loadedPath, changedPath),
+            ),
+          )
+          .toList();
+      await Future.wait([
+        for (final folderPath in loadedPaths)
+          () async {
+            try {
+              final entries = await reader(folderPath, forceRefresh: true);
+              if (!mounted || generation != _syncGeneration) return;
+              _contentsByPath[folderPath] = FolderTreeContents(
+                folders: entries.whereType<GalleryFolder>().toList(),
+                media: entries.whereType<MediaItem>().toList(),
+              );
+            } on Object {
+              // Keep the last snapshot while a file operation is in flight.
+            }
+          }(),
+      ]);
+      if (mounted && generation == _syncGeneration) setState(() {});
+    }
+    _syncInProgress = false;
+    if (_pendingSyncPaths.isNotEmpty && mounted) {
+      unawaited(_drainChangedFolders());
+    }
   }
 
   Future<void> _toggleFolder(String folderPath) async {

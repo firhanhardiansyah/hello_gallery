@@ -112,6 +112,76 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
     }
   }
 
+  Future<void> syncDirectories(
+    Set<String> directoryPaths, {
+    Set<String> removedPaths = const {},
+  }) async {
+    final reader = ref.read(readGalleryDirectoryProvider);
+    for (final directoryPath in directoryPaths) {
+      reader.invalidate(directoryPath);
+    }
+
+    final current = state.currentPath;
+    final root = state.rootPath;
+    if (current != null && root != null) {
+      String? removedAncestor;
+      for (final removedPath in removedPaths) {
+        if (path.equals(removedPath, current) ||
+            path.isWithin(removedPath, current)) {
+          removedAncestor = removedPath;
+          break;
+        }
+      }
+      if (removedAncestor != null) {
+        final removedDirectory = removedAncestor;
+        if (path.equals(removedDirectory, root) ||
+            path.isWithin(removedDirectory, root)) {
+          state = state.copyWith(
+            status: GalleryStatus.error,
+            items: const [],
+            errorMessage: 'Root folder no longer exists',
+          );
+          return;
+        }
+        final recoveryPath = path.dirname(removedDirectory);
+        _backHistory.removeWhere(
+          (entry) =>
+              path.equals(entry, recoveryPath) ||
+              path.equals(entry, removedDirectory) ||
+              path.isWithin(removedDirectory, entry),
+        );
+        _forwardHistory.removeWhere(
+          (entry) =>
+              path.equals(entry, removedDirectory) ||
+              path.isWithin(removedDirectory, entry),
+        );
+        await _loadDirectory(recoveryPath, forceRefresh: true);
+        return;
+      }
+    }
+    if (current == null ||
+        !directoryPaths.any(
+          (directoryPath) => path.equals(directoryPath, current),
+        )) {
+      return;
+    }
+
+    final generation = ++_loadGeneration;
+    try {
+      final items = await reader(current, forceRefresh: true);
+      if (generation != _loadGeneration) return;
+      final sorted = _sortItems(items, state.sort);
+      state = state.copyWith(
+        status: sorted.isEmpty ? GalleryStatus.empty : GalleryStatus.ready,
+        items: sorted,
+        visibleCount: state.visibleCount,
+      );
+    } on Object {
+      // A transient filesystem event can arrive before a file operation ends.
+      // Keep the current snapshot; the next event or manual refresh reconciles it.
+    }
+  }
+
   void loadMore() {
     if (!state.hasMore) return;
     state = state.copyWith(visibleCount: state.visibleCount + 60);

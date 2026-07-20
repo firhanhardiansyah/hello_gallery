@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,8 @@ import '../../../../app/routing/app_router.dart';
 import '../../../gamepad/presentation/widgets/virtual_cursor_overlay.dart';
 import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
 import '../../../media_preview/presentation/pages/media_preview_page.dart';
+import '../../../media_index/application/providers/media_index_dependencies.dart';
+import '../../../media_index/domain/entities/file_change.dart';
 import '../../../settings/presentation/notifiers/settings_notifier.dart';
 import '../../application/providers/gallery_dependencies.dart';
 import '../input/gallery_input_handler.dart';
@@ -42,6 +45,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   int _selectedGridIndex = 0;
   int _gridColumnCount = 1;
   int _previewLoadGeneration = 0;
+  int _autoSyncGeneration = 0;
+  int _folderTreeSyncRevision = 0;
+  Set<String> _syncedDirectoryPaths = const {};
 
   @override
   void initState() {
@@ -181,6 +187,84 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     }
   }
 
+  Future<void> _handleAutoSync(FileChangeBatch batch) async {
+    final generation = ++_autoSyncGeneration;
+    await Future.wait([
+      for (final change in batch.changes)
+        if (change.type != FileChangeType.added)
+          FileImage(File(change.path)).evict(),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      _folderTreeSyncRevision++;
+      _syncedDirectoryPaths = batch.affectedDirectoryPaths;
+    });
+
+    await ref
+        .read(galleryNotifierProvider.notifier)
+        .syncDirectories(
+          batch.affectedDirectoryPaths,
+          removedPaths: {
+            for (final change in batch.changes)
+              if (change.type == FileChangeType.removed) change.path,
+          },
+        );
+    if (!mounted || generation != _autoSyncGeneration || _preview == null) {
+      return;
+    }
+
+    final preview = _preview!;
+    final previewFolderChanged = batch.affectedDirectoryPaths.any(
+      (directoryPath) => path.equals(directoryPath, preview.folderPath),
+    );
+    if (!previewFolderChanged) return;
+
+    try {
+      final entries = await ref.read(readGalleryDirectoryProvider)(
+        preview.folderPath,
+      );
+      final media = entries.whereType<MediaItem>().toList()
+        ..sort(
+          (a, b) => GalleryItemSortRules.compareMedia(
+            a,
+            b,
+            ref.read(galleryNotifierProvider).sort,
+          ),
+        );
+      if (!mounted || generation != _autoSyncGeneration) return;
+      final hasMedia = await ref
+          .read(mediaPreviewNotifierProvider.notifier)
+          .reconcile(media);
+      if (!mounted || generation != _autoSyncGeneration) return;
+      if (!hasMedia) {
+        await _closePreview();
+        return;
+      }
+
+      final activeItem = ref.read(mediaPreviewNotifierProvider).activeItem!;
+      final activeIndex = media.indexWhere(
+        (item) => path.equals(item.path, activeItem.path),
+      );
+      setState(() {
+        _preview = MediaPreviewSelection(
+          items: media,
+          initialIndex: activeIndex,
+          folderPath: preview.folderPath,
+          requestedMediaPath: activeItem.path,
+        );
+      });
+      if (!path.equals(widget.previewPath ?? '', activeItem.path)) {
+        context.goNamed(
+          AppRoute.gallery.name,
+          queryParameters: {'preview': activeItem.path},
+        );
+      }
+    } on Object {
+      // Keep the current preview while a file operation is still settling.
+    }
+  }
+
   void _toggleSidebar() {
     if (ref.read(settingsNotifierProvider).rootPath == null) return;
     setState(() => _sidebarVisible = !_sidebarVisible);
@@ -230,6 +314,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         ? null
         : ref.watch(mediaPreviewNotifierProvider);
     final root = settings.rootPath;
+    if (root != null) {
+      ref.listen(galleryAutoSyncProvider(root), (previous, next) {
+        next.whenData((batch) => unawaited(_handleAutoSync(batch)));
+      });
+    }
     if (!settings.isLoading && root != null && root != _loadedRoot) {
       _loadedRoot = root;
       Future.microtask(
@@ -273,6 +362,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                             },
                             onClose: () =>
                                 setState(() => _sidebarVisible = false),
+                            syncRevision: _folderTreeSyncRevision,
+                            syncedDirectoryPaths: _syncedDirectoryPaths,
                             onFolderSelected: _openFolder,
                             onMediaSelected: _openMediaPreview,
                           ),

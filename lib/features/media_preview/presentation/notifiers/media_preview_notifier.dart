@@ -95,6 +95,33 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     await _openActive();
   }
 
+  Future<bool> reconcile(List<MediaItem> items) async {
+    final previousItem = state.activeItem;
+    final previousIndex = state.activeIndex;
+    if (items.isEmpty) {
+      state = const MediaPreviewUiState();
+      await _disposePlayer();
+      return false;
+    }
+
+    final matchingIndex = previousItem == null
+        ? -1
+        : items.indexWhere((item) => path.equals(item.path, previousItem.path));
+    final nextIndex = matchingIndex >= 0
+        ? matchingIndex
+        : previousIndex.clamp(0, items.length - 1);
+    final nextItem = items[nextIndex];
+    final sourceChanged =
+        previousItem == null ||
+        !path.equals(previousItem.path, nextItem.path) ||
+        previousItem.modifiedAt != nextItem.modifiedAt ||
+        previousItem.sizeBytes != nextItem.sizeBytes;
+
+    state = state.copyWith(items: items, activeIndex: nextIndex);
+    if (sourceChanged) await _openActive();
+    return true;
+  }
+
   Future<void> togglePlay() async => _player?.playOrPause();
 
   Future<void> toggleMute() async {

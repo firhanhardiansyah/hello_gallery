@@ -65,15 +65,67 @@ void main() {
     expect(container.read(galleryNotifierProvider).canGoForward, isFalse);
     expect(repository.readCount, 2);
   });
+
+  test('auto sync silently reloads only the active affected folder', () async {
+    final notifier = container.read(galleryNotifierProvider.notifier);
+    repository.items = [
+      MediaItem(
+        path: '/gallery/old.jpg',
+        name: 'old.jpg',
+        modifiedAt: DateTime(2026),
+        mediaType: GalleryItemType.image,
+      ),
+    ];
+    await notifier.setRoot('/gallery');
+    repository.items = [
+      MediaItem(
+        path: '/gallery/new.jpg',
+        name: 'new.jpg',
+        modifiedAt: DateTime(2026),
+        mediaType: GalleryItemType.image,
+      ),
+    ];
+
+    await notifier.syncDirectories({'/gallery/other'});
+    expect(repository.readCount, 1);
+
+    await notifier.syncDirectories({'/gallery'});
+
+    final state = container.read(galleryNotifierProvider);
+    expect(repository.readCount, 2);
+    expect(state.status, GalleryStatus.ready);
+    expect(state.items.single.name, 'new.jpg');
+    expect(state.canGoBack, isFalse);
+  });
+
+  test(
+    'auto sync returns to parent when the active folder is removed',
+    () async {
+      final notifier = container.read(galleryNotifierProvider.notifier);
+      await notifier.setRoot('/gallery');
+      await notifier.openDirectory('/gallery/Anime');
+
+      await notifier.syncDirectories(
+        {'/gallery'},
+        removedPaths: {'/gallery/Anime'},
+      );
+
+      final state = container.read(galleryNotifierProvider);
+      expect(state.currentPath, '/gallery');
+      expect(state.canGoBack, isFalse);
+      expect(state.status, GalleryStatus.empty);
+    },
+  );
 }
 
 class _FakeGalleryRepository implements GalleryRepository {
   int readCount = 0;
+  List<GalleryItem> items = const [];
 
   @override
   Future<List<GalleryItem>> readDirectory(String directoryPath) async {
     readCount++;
-    return [];
+    return items;
   }
 
   @override
