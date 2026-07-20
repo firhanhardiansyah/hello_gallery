@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
 import '../../application/providers/gallery_dependencies.dart';
@@ -15,6 +16,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
     required this.currentFolderPath,
     required this.sort,
     required this.onMediaSelected,
+    required this.onRefresh,
+    required this.onChooseRootFolder,
     this.activeMediaPath,
     this.onFolderSelected,
     this.onClose,
@@ -25,6 +28,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
   final String currentFolderPath;
   final String? activeMediaPath;
   final GallerySort sort;
+  final VoidCallback? onRefresh;
+  final VoidCallback onChooseRootFolder;
   final ValueChanged<String>? onFolderSelected;
   final ValueChanged<MediaItem> onMediaSelected;
   final VoidCallback? onClose;
@@ -152,6 +157,20 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
     if (mounted) setState(() {});
   }
 
+  bool get _hasExpandedFolders => _expandedPaths.any(
+    (folderPath) => !path.equals(folderPath, widget.rootPath),
+  );
+
+  void _collapseFolders() {
+    if (!_hasExpandedFolders) return;
+    setState(() {
+      _expandedPaths
+        ..clear()
+        ..add(widget.rootPath);
+    });
+    _scheduleReveal(widget.rootPath);
+  }
+
   GlobalKey _revealKeyFor(String itemPath) {
     return _revealKeys.putIfAbsent(itemPath, GlobalKey.new);
   }
@@ -200,6 +219,33 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
                   child: Text(
                     'Folders & Media',
                     style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Choose root folder',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: widget.onChooseRootFolder,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedFolderAdd,
+                    size: 18,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Refresh',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: widget.onRefresh,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedRefresh,
+                    size: 18,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Collapse folders',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _hasExpandedFolders ? _collapseFolders : null,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedMenuCollapse,
+                    size: 20,
                   ),
                 ),
               ],

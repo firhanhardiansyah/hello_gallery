@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-import '../../../../settings/presentation/notifiers/settings_notifier.dart';
 import '../../../domain/value_objects/gallery_sort.dart';
 import '../../notifiers/gallery_notifier.dart';
 import '../../states/gallery_ui_state.dart';
@@ -19,7 +18,6 @@ class GalleryShellTopBar extends ConsumerWidget {
     required this.onToggleSidebar,
     required this.onClosePreview,
     required this.onToggleFullscreen,
-    required this.onRootChanged,
     super.key,
   });
 
@@ -30,7 +28,6 @@ class GalleryShellTopBar extends ConsumerWidget {
   final VoidCallback onToggleSidebar;
   final VoidCallback onClosePreview;
   final VoidCallback onToggleFullscreen;
-  final VoidCallback onRootChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -123,23 +120,6 @@ class GalleryShellTopBar extends ConsumerWidget {
                   ),
                 const SizedBox(width: AppSpacing.sm),
                 const AppearanceThemeMenu(),
-                IconButton(
-                  tooltip: 'Refresh',
-                  onPressed: gallery.currentPath == null
-                      ? null
-                      : ref.read(galleryNotifierProvider.notifier).refresh,
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedRefresh),
-                ),
-                IconButton(
-                  tooltip: 'Choose root folder',
-                  onPressed: () async {
-                    final changed = await ref
-                        .read(settingsNotifierProvider.notifier)
-                        .chooseRootFolder();
-                    if (changed) onRootChanged();
-                  },
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolderAdd),
-                ),
               ],
             ],
           ),

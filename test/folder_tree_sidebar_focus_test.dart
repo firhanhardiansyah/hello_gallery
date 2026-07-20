@@ -16,6 +16,8 @@ void main() {
     const rootPath = '/gallery/Wallpapers';
     const targetPath = '$rootPath/Studio Ghibli';
     final repository = _FolderTreeRepository(rootPath, targetPath);
+    var refreshCount = 0;
+    var chooseRootCount = 0;
     final container = ProviderContainer(
       overrides: [
         readGalleryDirectoryProvider.overrideWithValue(
@@ -39,6 +41,8 @@ void main() {
                 rootPath: rootPath,
                 currentFolderPath: currentFolderPath,
                 sort: GallerySort.nameAscending,
+                onRefresh: () => refreshCount++,
+                onChooseRootFolder: () => chooseRootCount++,
                 onFolderSelected: (_) {},
                 onMediaSelected: (_) {},
               ),
@@ -51,6 +55,12 @@ void main() {
     await tester.pumpWidget(buildSidebar(rootPath));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('Refresh'));
+    await tester.tap(find.byTooltip('Choose root folder'));
+
+    expect(refreshCount, 1);
+    expect(chooseRootCount, 1);
+
     final scrollable = tester.state<ScrollableState>(
       find.byType(Scrollable).first,
     );
@@ -61,6 +71,12 @@ void main() {
 
     expect(scrollable.position.pixels, greaterThan(0));
     expect(find.text('Studio Ghibli'), findsOneWidget);
+    expect(find.byTooltip('Collapse folder'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Collapse folders'));
+    await tester.pump();
+
+    expect(find.byTooltip('Collapse folder'), findsNothing);
   });
 }
 

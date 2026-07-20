@@ -260,6 +260,17 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                             currentFolderPath: gallery.currentPath ?? root,
                             activeMediaPath: previewState?.activeItem?.path,
                             sort: gallery.sort,
+                            onRefresh: gallery.currentPath == null
+                                ? null
+                                : ref
+                                      .read(galleryNotifierProvider.notifier)
+                                      .refresh,
+                            onChooseRootFolder: () async {
+                              final changed = await ref
+                                  .read(settingsNotifierProvider.notifier)
+                                  .chooseRootFolder();
+                              if (changed) _loadedRoot = null;
+                            },
                             onClose: () =>
                                 setState(() => _sidebarVisible = false),
                             onFolderSelected: _openFolder,
@@ -279,7 +290,6 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               onToggleSidebar: _toggleSidebar,
                               onClosePreview: _closePreview,
                               onToggleFullscreen: _toggleFullscreen,
-                              onRootChanged: () => _loadedRoot = null,
                             ),
                           Expanded(
                             child: _preview != null
