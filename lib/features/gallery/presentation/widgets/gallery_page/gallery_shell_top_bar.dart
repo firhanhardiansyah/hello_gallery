@@ -19,6 +19,7 @@ class GalleryShellTopBar extends ConsumerWidget {
     required this.onToggleSidebar,
     required this.onClosePreview,
     required this.onGroupMedia,
+    required this.onCreateFolder,
     super.key,
   });
 
@@ -29,6 +30,7 @@ class GalleryShellTopBar extends ConsumerWidget {
   final VoidCallback onToggleSidebar;
   final VoidCallback onClosePreview;
   final VoidCallback onGroupMedia;
+  final VoidCallback onCreateFolder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,6 +91,16 @@ class GalleryShellTopBar extends ConsumerWidget {
                 icon: const HugeIcon(icon: HugeIcons.strokeRoundedCancel01),
               ),
             ] else ...[
+              IconButton(
+                tooltip: 'New folder',
+                onPressed:
+                    gallery.currentPath != null &&
+                        (gallery.status == GalleryStatus.ready ||
+                            gallery.status == GalleryStatus.empty)
+                    ? onCreateFolder
+                    : null,
+                icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolderAdd),
+              ),
               IconButton(
                 tooltip: 'Group media',
                 onPressed: gallery.status == GalleryStatus.ready

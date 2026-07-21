@@ -20,6 +20,8 @@ class GalleryBody extends ConsumerStatefulWidget {
     required this.onColumnCountChanged,
     required this.onFolderSelected,
     required this.onMediaSelected,
+    this.onRenameFolder,
+    this.onDeleteFolder,
     super.key,
   });
 
@@ -30,6 +32,8 @@ class GalleryBody extends ConsumerStatefulWidget {
   final ValueChanged<int> onColumnCountChanged;
   final ValueChanged<String> onFolderSelected;
   final ValueChanged<MediaItem> onMediaSelected;
+  final ValueChanged<String>? onRenameFolder;
+  final ValueChanged<String>? onDeleteFolder;
 
   @override
   ConsumerState<GalleryBody> createState() => _GalleryBodyState();
@@ -176,6 +180,12 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         key: ValueKey(item.path),
         item: item,
         selected: index == widget.selectedIndex,
+        onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
+            ? () => widget.onRenameFolder!(item.path)
+            : null,
+        onDeleteFolder: item is GalleryFolder && widget.onDeleteFolder != null
+            ? () => widget.onDeleteFolder!(item.path)
+            : null,
         onTap: () {
           widget.onSelectionChanged(index);
           switch (item) {

@@ -114,6 +114,60 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
     }
   }
 
+  Future<void> reconcileRenamedFolder({
+    required String oldPath,
+    required String newPath,
+  }) async {
+    final current = state.currentPath;
+    if (current == null) return;
+    _replaceHistoryPrefix(_backHistory, oldPath, newPath);
+    _replaceHistoryPrefix(_forwardHistory, oldPath, newPath);
+    ref.read(readGalleryDirectoryProvider).clearCache();
+    ref.read(folderPreviewJobSchedulerProvider).clear();
+    await _loadDirectory(
+      _replacePathPrefix(current, oldPath, newPath),
+      forceRefresh: true,
+    );
+  }
+
+  Future<void> reconcileTrashedFolder(String folderPath) async {
+    final current = state.currentPath;
+    if (current == null) return;
+    final target = _isPathInside(folderPath, current)
+        ? path.dirname(folderPath)
+        : current;
+    _backHistory.removeWhere(
+      (entry) => _isPathInside(folderPath, entry) || path.equals(entry, target),
+    );
+    _forwardHistory.removeWhere(
+      (entry) => _isPathInside(folderPath, entry) || path.equals(entry, target),
+    );
+    ref.read(readGalleryDirectoryProvider).clearCache();
+    ref.read(folderPreviewJobSchedulerProvider).clear();
+    await _loadDirectory(target, forceRefresh: true);
+  }
+
+  void _replaceHistoryPrefix(
+    List<String> history,
+    String oldPath,
+    String newPath,
+  ) {
+    for (var index = 0; index < history.length; index++) {
+      history[index] = _replacePathPrefix(history[index], oldPath, newPath);
+    }
+  }
+
+  String _replacePathPrefix(String candidate, String oldPath, String newPath) {
+    if (path.equals(candidate, oldPath)) return newPath;
+    if (!path.isWithin(oldPath, candidate)) return candidate;
+    return path.join(newPath, path.relative(candidate, from: oldPath));
+  }
+
+  bool _isPathInside(String ancestor, String candidate) {
+    return path.equals(ancestor, candidate) ||
+        path.isWithin(ancestor, candidate);
+  }
+
   Future<void> syncDirectories(
     Set<String> directoryPaths, {
     Set<String> removedPaths = const {},

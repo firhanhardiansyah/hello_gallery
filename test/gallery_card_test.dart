@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/app/theme/app_theme.dart';
@@ -54,9 +55,38 @@ void main() {
     expect(topLeft.right, topRight.left);
     expect(_previewFinder(4), findsNothing);
   });
+
+  testWidgets('offers rename and trash actions on secondary click', (
+    tester,
+  ) async {
+    var renamed = false;
+    var deleted = false;
+    await _pumpFolderCard(
+      tester,
+      0,
+      onRenameFolder: () => renamed = true,
+      onDeleteFolder: () => deleted = true,
+    );
+
+    await tester.tap(find.byType(GalleryCard), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Move to Trash'), findsOneWidget);
+    await tester.tap(find.text('Rename'));
+    await tester.pumpAndSettle();
+
+    expect(renamed, isTrue);
+    expect(deleted, isFalse);
+  });
 }
 
-Future<void> _pumpFolderCard(WidgetTester tester, int previewCount) async {
+Future<void> _pumpFolderCard(
+  WidgetTester tester,
+  int previewCount, {
+  VoidCallback? onRenameFolder,
+  VoidCallback? onDeleteFolder,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -90,6 +120,8 @@ Future<void> _pumpFolderCard(WidgetTester tester, int previewCount) async {
                   modifiedAt: DateTime(2026),
                 ),
                 onTap: () {},
+                onRenameFolder: onRenameFolder,
+                onDeleteFolder: onDeleteFolder,
               ),
             ),
           ),

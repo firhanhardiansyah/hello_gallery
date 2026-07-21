@@ -23,6 +23,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
     required this.onChooseRootFolder,
     this.activeMediaPath,
     this.onFolderSelected,
+    this.onRenameFolder,
+    this.onDeleteFolder,
     this.onClose,
     this.syncRevision = 0,
     this.syncedDirectoryPaths = const {},
@@ -37,6 +39,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
   final VoidCallback? onRefresh;
   final VoidCallback onChooseRootFolder;
   final ValueChanged<String>? onFolderSelected;
+  final ValueChanged<String>? onRenameFolder;
+  final ValueChanged<String>? onDeleteFolder;
   final ValueChanged<MediaItem> onMediaSelected;
   final VoidCallback? onClose;
   final int syncRevision;
@@ -306,6 +310,8 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
               revealKeyFor: _revealKeyFor,
               onToggleFolder: _toggleFolder,
               onFolderSelected: widget.onFolderSelected,
+              onRenameFolder: widget.onRenameFolder,
+              onDeleteFolder: widget.onDeleteFolder,
               onMediaSelected: widget.onMediaSelected,
             ),
           ),

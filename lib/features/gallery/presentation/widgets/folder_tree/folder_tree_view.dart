@@ -24,6 +24,8 @@ class FolderTreeView extends StatelessWidget {
     required this.onMediaSelected,
     this.activeMediaPath,
     this.onFolderSelected,
+    this.onRenameFolder,
+    this.onDeleteFolder,
     super.key,
   });
 
@@ -38,6 +40,8 @@ class FolderTreeView extends StatelessWidget {
   final GlobalKey Function(String itemPath) revealKeyFor;
   final ValueChanged<String> onToggleFolder;
   final ValueChanged<String>? onFolderSelected;
+  final ValueChanged<String>? onRenameFolder;
+  final ValueChanged<String>? onDeleteFolder;
   final ValueChanged<MediaItem> onMediaSelected;
 
   @override
@@ -88,6 +92,12 @@ class FolderTreeView extends StatelessWidget {
             primaryColor: colorScheme.primary,
             foregroundColor: colorScheme.onSurface,
             onToggle: () => onToggleFolder(folderPath),
+            onRename: onRenameFolder == null
+                ? null
+                : () => onRenameFolder!(folderPath),
+            onDelete: onDeleteFolder == null
+                ? null
+                : () => onDeleteFolder!(folderPath),
             onOpen: onFolderSelected == null
                 ? null
                 : () {

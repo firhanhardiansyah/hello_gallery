@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../folder_management/folder_context_menu.dart';
+
 class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   FolderHeaderDelegate({
     required this.depth,
@@ -16,6 +18,8 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.foregroundColor,
     required this.onToggle,
     required this.onOpen,
+    this.onRename,
+    this.onDelete,
   });
 
   final int depth;
@@ -30,6 +34,8 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Color foregroundColor;
   final VoidCallback onToggle;
   final VoidCallback? onOpen;
+  final VoidCallback? onRename;
+  final VoidCallback? onDelete;
 
   @override
   double get minExtent => 36;
@@ -44,7 +50,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    return SizedBox.expand(
+    final header = SizedBox.expand(
       child: Material(
         color: overlapsContent ? overlappingSurfaceColor : surfaceColor,
         elevation: overlapsContent ? 2 : 0,
@@ -97,6 +103,17 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
       ),
+    );
+    if (onRename == null || onDelete == null) return header;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (details) => showFolderContextMenu(
+        context: context,
+        globalPosition: details.globalPosition,
+        onRename: onRename!,
+        onMoveToTrash: onDelete!,
+      ),
+      child: header,
     );
   }
 

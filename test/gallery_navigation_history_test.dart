@@ -116,6 +116,36 @@ void main() {
       expect(state.status, GalleryStatus.empty);
     },
   );
+
+  test('reconciles the current path after an ancestor is renamed', () async {
+    final notifier = container.read(galleryNotifierProvider.notifier);
+    await notifier.setRoot('/gallery');
+    await notifier.openDirectory('/gallery/Anime/Movies');
+
+    await notifier.reconcileRenamedFolder(
+      oldPath: '/gallery/Anime',
+      newPath: '/gallery/Studio Ghibli',
+    );
+
+    expect(
+      container.read(galleryNotifierProvider).currentPath,
+      '/gallery/Studio Ghibli/Movies',
+    );
+    await notifier.goBack();
+    expect(container.read(galleryNotifierProvider).currentPath, '/gallery');
+  });
+
+  test('returns to parent after the current ancestor is trashed', () async {
+    final notifier = container.read(galleryNotifierProvider.notifier);
+    await notifier.setRoot('/gallery');
+    await notifier.openDirectory('/gallery/Anime/Movies');
+
+    await notifier.reconcileTrashedFolder('/gallery/Anime');
+
+    final state = container.read(galleryNotifierProvider);
+    expect(state.currentPath, '/gallery');
+    expect(state.canGoBack, isFalse);
+  });
 }
 
 class _FakeGalleryRepository implements GalleryRepository {

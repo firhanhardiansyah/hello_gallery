@@ -22,6 +22,7 @@ import '../input/gallery_input_handler.dart';
 import '../notifiers/gallery_notifier.dart';
 import '../states/media_preview_selection.dart';
 import '../widgets/folder_tree_sidebar.dart';
+import '../widgets/folder_management/folder_management_dialogs.dart';
 import '../widgets/gallery_page/choose_folder_prompt.dart';
 import '../widgets/gallery_page/gallery_body.dart';
 import '../widgets/gallery_page/group_media_dialog.dart';
@@ -56,7 +57,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   void initState() {
     super.initState();
     _inputHandler = GalleryInputHandler(
-      isEnabled: () => _preview == null && !_isModalOpen,
+      isEnabled: _isGalleryInputEnabled,
       onMoveUp: () => _moveGridSelection(-_gridColumnCount),
       onMoveDown: () => _moveGridSelection(_gridColumnCount),
       onMoveLeft: () => _moveGridSelection(-1),
@@ -103,6 +104,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         unawaited(notifier.goUp());
       }
     }
+  }
+
+  bool _isGalleryInputEnabled() {
+    if (!mounted || _preview != null || _isModalOpen) return false;
+    return ModalRoute.of(context)?.isCurrent ?? true;
   }
 
   void _moveGridSelection(int delta) {
@@ -316,16 +322,129 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     final rootPath = gallery.rootPath;
     final currentPath = gallery.currentPath;
     if (rootPath == null || currentPath == null) return;
-    _isModalOpen = true;
-    try {
+    await _whileModalOpen(() async {
       await showGroupMediaDialog(
         context: context,
         rootPath: rootPath,
         currentDirectoryPath: currentPath,
       );
+    });
+  }
+
+  Future<T?> _whileModalOpen<T>(Future<T?> Function() action) async {
+    if (_isModalOpen) return null;
+    _isModalOpen = true;
+    try {
+      return await action();
     } finally {
       _isModalOpen = false;
     }
+  }
+
+  Future<void> _createFolder() async {
+    final gallery = ref.read(galleryNotifierProvider);
+    final rootPath = gallery.rootPath;
+    final currentPath = gallery.currentPath;
+    if (rootPath == null || currentPath == null) return;
+    await _whileModalOpen(() async {
+      final created = await showFolderNameDialog(
+        context: context,
+        title: 'Create folder',
+        locationPath: currentPath,
+        submitLabel: 'Create folder',
+        onSubmit: (folderName) async {
+          await ref.read(createFolderProvider)(
+            rootPath: rootPath,
+            parentPath: currentPath,
+            folderName: folderName,
+          );
+        },
+      );
+      if (!created || !mounted) return;
+      _notifyFolderTreeChanged({currentPath});
+      await ref.read(galleryNotifierProvider.notifier).refresh();
+    });
+  }
+
+  Future<void> _renameFolder(String folderPath) async {
+    final gallery = ref.read(galleryNotifierProvider);
+    final rootPath = gallery.rootPath;
+    if (rootPath == null || path.equals(rootPath, folderPath)) return;
+    await _whileModalOpen(() async {
+      String? newPath;
+      final renamed = await showFolderNameDialog(
+        context: context,
+        title: 'Rename folder',
+        locationPath: path.dirname(folderPath),
+        initialName: path.basename(folderPath),
+        submitLabel: 'Rename',
+        onSubmit: (newName) async {
+          newPath = await ref.read(renameFolderProvider)(
+            rootPath: rootPath,
+            folderPath: folderPath,
+            newName: newName,
+          );
+        },
+      );
+      final destination = newPath;
+      if (!renamed || destination == null || !mounted) return;
+      if (path.equals(destination, folderPath)) return;
+      if (_previewPathIsInside(folderPath)) await _closePreview();
+      _notifyFolderTreeChanged({path.dirname(folderPath)});
+      await ref
+          .read(galleryNotifierProvider.notifier)
+          .reconcileRenamedFolder(oldPath: folderPath, newPath: destination);
+    });
+  }
+
+  Future<void> _deleteFolder(String folderPath) async {
+    final gallery = ref.read(galleryNotifierProvider);
+    final rootPath = gallery.rootPath;
+    if (rootPath == null || path.equals(rootPath, folderPath)) return;
+    await _whileModalOpen(() async {
+      final confirmed = await showMoveFolderToTrashDialog(
+        context: context,
+        folderName: path.basename(folderPath),
+      );
+      if (!confirmed || !mounted) return;
+      try {
+        await runFolderOperationWithProgress<void>(
+          context: context,
+          message: 'Moving ${path.basename(folderPath)} to Trash...',
+          operation: () => ref.read(moveFolderToTrashProvider)(
+            rootPath: rootPath,
+            folderPath: folderPath,
+          ),
+        );
+      } on Object catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(folderOperationErrorMessage(error))),
+        );
+        return;
+      }
+      if (!mounted) return;
+      if (_previewPathIsInside(folderPath)) await _closePreview();
+      _notifyFolderTreeChanged({path.dirname(folderPath)});
+      await ref
+          .read(galleryNotifierProvider.notifier)
+          .reconcileTrashedFolder(folderPath);
+    });
+  }
+
+  bool _previewPathIsInside(String folderPath) {
+    final previewPath = widget.previewPath;
+    return previewPath != null &&
+        (path.equals(folderPath, previewPath) ||
+            path.isWithin(folderPath, previewPath));
+  }
+
+  void _notifyFolderTreeChanged(Set<String> paths) {
+    if (!mounted) return;
+    setState(() {
+      _folderTreeSyncRevision++;
+      _syncedDirectoryPaths = paths;
+    });
   }
 
   Future<void> _toggleFullscreen() async {
@@ -415,6 +534,12 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                             syncRevision: _folderTreeSyncRevision,
                             syncedDirectoryPaths: _syncedDirectoryPaths,
                             onFolderSelected: _openFolder,
+                            onRenameFolder: _preview == null
+                                ? _renameFolder
+                                : null,
+                            onDeleteFolder: _preview == null
+                                ? _deleteFolder
+                                : null,
                             onMediaSelected: _openMediaPreview,
                           ),
                         ),
@@ -430,6 +555,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               sidebarVisible: _sidebarVisible,
                               onToggleSidebar: _toggleSidebar,
                               onClosePreview: _closePreview,
+                              onCreateFolder: _createFolder,
                               onGroupMedia: _openGroupMedia,
                             ),
                           Expanded(
@@ -461,6 +587,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                       _gridColumnCount = count;
                                     },
                                     onFolderSelected: _openFolder,
+                                    onRenameFolder: _renameFolder,
+                                    onDeleteFolder: _deleteFolder,
                                     onMediaSelected: _openMediaPreview,
                                   ),
                           ),

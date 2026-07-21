@@ -9,6 +9,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../application/providers/gallery_dependencies.dart';
+import 'folder_management/folder_context_menu.dart';
 
 const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
 
@@ -17,17 +18,21 @@ class GalleryCard extends StatelessWidget {
     required this.item,
     required this.onTap,
     this.selected = false,
+    this.onRenameFolder,
+    this.onDeleteFolder,
     super.key,
   });
 
   final GalleryItem item;
   final VoidCallback onTap;
   final bool selected;
+  final VoidCallback? onRenameFolder;
+  final VoidCallback? onDeleteFolder;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Material(
+    final card = Material(
       color: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: _galleryCardBorderRadius,
@@ -61,6 +66,21 @@ class GalleryCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (item is! GalleryFolder ||
+        onRenameFolder == null ||
+        onDeleteFolder == null) {
+      return card;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (details) => showFolderContextMenu(
+        context: context,
+        globalPosition: details.globalPosition,
+        onRename: onRenameFolder!,
+        onMoveToTrash: onDeleteFolder!,
+      ),
+      child: card,
     );
   }
 }

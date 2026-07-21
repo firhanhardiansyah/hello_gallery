@@ -4,6 +4,7 @@ import QuickLookThumbnailing
 
 class MainFlutterWindow: NSWindow {
   private var platformThumbnailChannel: FlutterMethodChannel?
+  private var folderManagementChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -13,8 +14,55 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     registerPlatformThumbnailChannel(flutterViewController)
+    registerFolderManagementChannel(flutterViewController)
 
     super.awakeFromNib()
+  }
+
+  private func registerFolderManagementChannel(
+    _ flutterViewController: FlutterViewController
+  ) {
+    let channel = FlutterMethodChannel(
+      name: "hello_gallery/folder_management",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "moveToTrash" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard
+        let arguments = call.arguments as? [String: Any],
+        let folderPath = arguments["path"] as? String
+      else {
+        result(
+          FlutterError(
+            code: "invalid_arguments",
+            message: "Missing or invalid folder path",
+            details: nil
+          )
+        )
+        return
+      }
+
+      NSWorkspace.shared.recycle([URL(fileURLWithPath: folderPath)]) {
+        _, error in
+        DispatchQueue.main.async {
+          if let error {
+            result(
+              FlutterError(
+                code: "trash_failed",
+                message: error.localizedDescription,
+                details: nil
+              )
+            )
+          } else {
+            result(nil)
+          }
+        }
+      }
+    }
+    folderManagementChannel = channel
   }
 
   private func registerPlatformThumbnailChannel(

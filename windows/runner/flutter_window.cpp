@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "platform_folder_management.h"
 #include "platform_thumbnail.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -26,6 +27,8 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  RegisterPlatformFolderManagementChannel(
+      flutter_controller_->engine()->messenger(), GetHandle());
   RegisterPlatformThumbnailChannel(
       flutter_controller_->engine()->messenger(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
@@ -54,6 +57,9 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (HandlePlatformFolderManagementMessage(message, wparam)) {
+    return 0;
+  }
   if (HandlePlatformThumbnailMessage(message, wparam)) {
     return 0;
   }

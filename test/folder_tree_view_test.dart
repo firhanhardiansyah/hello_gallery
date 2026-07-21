@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
@@ -254,5 +255,50 @@ void main() {
       tester.getTopLeft(find.text('Characters')).dy,
       lessThan(tester.getTopLeft(find.text('cover.jpg')).dy),
     );
+  });
+
+  testWidgets('offers folder actions from the tree context menu', (
+    tester,
+  ) async {
+    const rootPath = '/gallery/Wallpapers';
+    const childPath = '$rootPath/Anime';
+    String? deletedPath;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FolderTreeView(
+            rootPath: rootPath,
+            currentFolderPath: rootPath,
+            sort: GallerySort.nameAscending,
+            expandedPaths: const {rootPath},
+            loadingPaths: const {},
+            contentsByPath: {
+              rootPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: childPath,
+                    name: 'Anime',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+              ),
+              childPath: const FolderTreeContents(),
+            },
+            revealKeyFor: (_) => GlobalKey(),
+            onToggleFolder: (_) {},
+            onRenameFolder: (_) {},
+            onDeleteFolder: (folderPath) => deletedPath = folderPath,
+            onMediaSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Anime'), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move to Trash'));
+    await tester.pumpAndSettle();
+
+    expect(deletedPath, childPath);
   });
 }
