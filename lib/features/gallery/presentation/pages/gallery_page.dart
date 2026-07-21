@@ -411,7 +411,6 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               sidebarVisible: _sidebarVisible,
                               onToggleSidebar: _toggleSidebar,
                               onClosePreview: _closePreview,
-                              onToggleFullscreen: _toggleFullscreen,
                             ),
                           Expanded(
                             child: _preview != null

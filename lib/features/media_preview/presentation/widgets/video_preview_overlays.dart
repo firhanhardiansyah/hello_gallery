@@ -13,7 +13,9 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.thumbnailPath,
     required this.state,
     required this.controlsVisible,
+    required this.isFullscreen,
     required this.onTogglePlayback,
+    required this.onToggleFullscreen,
     required this.onInteraction,
     super.key,
   });
@@ -22,7 +24,9 @@ class VideoPreviewOverlays extends StatelessWidget {
   final String? thumbnailPath;
   final MediaPreviewUiState state;
   final bool controlsVisible;
+  final bool isFullscreen;
   final VoidCallback onTogglePlayback;
+  final VoidCallback onToggleFullscreen;
   final VoidCallback onInteraction;
 
   @override
@@ -43,7 +47,9 @@ class VideoPreviewOverlays extends StatelessWidget {
         _VideoControlsOverlay(
           state: state,
           visible: controlsVisible,
+          isFullscreen: isFullscreen,
           onInteraction: onInteraction,
+          onToggleFullscreen: onToggleFullscreen,
         ),
       ],
     ),
@@ -121,10 +127,16 @@ class _VideoPlaybackButton extends StatelessWidget {
             tooltip: isPlaying ? 'Pause' : 'Play',
             onPressed: onPressed,
             style: IconButton.styleFrom(
-              backgroundColor: appColors.mediaOverlay,
+              backgroundColor: appColors.mediaControlSurface.withValues(
+                alpha: 0.3,
+              ),
               foregroundColor: appColors.onMedia,
               minimumSize: const Size.square(72),
               iconSize: 42,
+              hoverColor: appColors.mediaControlSurface.withValues(alpha: 0.2),
+              highlightColor: appColors.mediaControlSurface.withValues(
+                alpha: 0.3,
+              ),
             ),
             icon: HugeIcon(
               icon: isPlaying
@@ -143,12 +155,16 @@ class _VideoControlsOverlay extends StatelessWidget {
   const _VideoControlsOverlay({
     required this.state,
     required this.visible,
+    required this.isFullscreen,
     required this.onInteraction,
+    required this.onToggleFullscreen,
   });
 
   final MediaPreviewUiState state;
   final bool visible;
+  final bool isFullscreen;
   final VoidCallback onInteraction;
+  final VoidCallback onToggleFullscreen;
 
   @override
   Widget build(BuildContext context) => Positioned(
@@ -164,7 +180,12 @@ class _VideoControlsOverlay extends StatelessWidget {
         opacity: visible ? 1 : 0,
         child: IgnorePointer(
           ignoring: !visible,
-          child: VideoControls(state: state, onInteraction: onInteraction),
+          child: VideoControls(
+            state: state,
+            isFullscreen: isFullscreen,
+            onInteraction: onInteraction,
+            onToggleFullscreen: onToggleFullscreen,
+          ),
         ),
       ),
     ),

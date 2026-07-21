@@ -18,7 +18,6 @@ class GalleryShellTopBar extends ConsumerWidget {
     required this.sidebarVisible,
     required this.onToggleSidebar,
     required this.onClosePreview,
-    required this.onToggleFullscreen,
     super.key,
   });
 
@@ -28,7 +27,6 @@ class GalleryShellTopBar extends ConsumerWidget {
   final bool sidebarVisible;
   final VoidCallback onToggleSidebar;
   final VoidCallback onClosePreview;
-  final VoidCallback onToggleFullscreen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -83,13 +81,6 @@ class GalleryShellTopBar extends ConsumerWidget {
             ),
 
             if (isPreview) ...[
-              IconButton(
-                tooltip: 'Fullscreen',
-                onPressed: onToggleFullscreen,
-                icon: const HugeIcon(
-                  icon: HugeIcons.strokeRoundedMaximizeScreen,
-                ),
-              ),
               IconButton(
                 tooltip: 'Close detail',
                 onPressed: onClosePreview,

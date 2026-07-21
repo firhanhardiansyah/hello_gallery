@@ -12,6 +12,7 @@ class MediaPreviewView extends ConsumerWidget {
   const MediaPreviewView({
     required this.state,
     required this.controlsVisible,
+    required this.isFullscreen,
     required this.onInteraction,
     required this.onToggleFullscreen,
     super.key,
@@ -19,6 +20,7 @@ class MediaPreviewView extends ConsumerWidget {
 
   final MediaPreviewUiState state;
   final bool controlsVisible;
+  final bool isFullscreen;
   final VoidCallback onInteraction;
   final VoidCallback onToggleFullscreen;
 
@@ -55,7 +57,9 @@ class MediaPreviewView extends ConsumerWidget {
             thumbnailPath: thumbnailPath,
             state: state,
             controlsVisible: controlsVisible,
+            isFullscreen: isFullscreen,
             onTogglePlayback: togglePlayback,
+            onToggleFullscreen: onToggleFullscreen,
             onInteraction: onInteraction,
           ),
       ],

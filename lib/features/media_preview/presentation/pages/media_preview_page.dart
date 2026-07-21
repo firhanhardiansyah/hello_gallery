@@ -193,6 +193,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
           child: MediaPreviewView(
             state: state,
             controlsVisible: _controlsVisible,
+            isFullscreen: widget.isFullscreen,
             onInteraction: () => _showControls(userInitiated: true),
             onToggleFullscreen: _toggleFullscreen,
           ),
