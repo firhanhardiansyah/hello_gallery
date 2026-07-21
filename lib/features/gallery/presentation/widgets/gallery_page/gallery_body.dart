@@ -197,8 +197,10 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         ? MediaDragPayload(
             selected
                 ? [
+                    item,
                     for (final candidate in visibleItems.whereType<MediaItem>())
-                      if (widget.selectedPaths.contains(candidate.path))
+                      if (candidate.path != item.path &&
+                          widget.selectedPaths.contains(candidate.path))
                         candidate,
                   ]
                 : [item],

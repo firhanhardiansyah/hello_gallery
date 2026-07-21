@@ -58,6 +58,12 @@ void main() {
     final target = find.text('Target');
     final gesture = await tester.startGesture(tester.getCenter(source));
     await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.byKey(const ValueKey('media-drag-feedback')), findsOneWidget);
+    expect(find.byKey(const ValueKey('media-drag-preview-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('media-drag-preview-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('media-drag-count')), findsOneWidget);
+
     await gesture.moveTo(tester.getCenter(target));
     await gesture.up();
     await tester.pumpAndSettle();

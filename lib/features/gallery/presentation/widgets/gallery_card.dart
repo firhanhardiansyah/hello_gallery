@@ -170,7 +170,10 @@ class GalleryCard extends StatelessWidget {
         rootOverlay: true,
         dragAnchorStrategy: pointerDragAnchorStrategy,
         onDragStarted: onDragStarted,
-        feedback: _MediaDragFeedback(count: payload.count),
+        feedback: Transform.translate(
+          offset: const Offset(AppSpacing.md, AppSpacing.md),
+          child: _MediaDragFeedback(items: payload.items),
+        ),
         childWhenDragging: Opacity(opacity: 0.45, child: result),
         child: result,
       );
@@ -180,30 +183,218 @@ class GalleryCard extends StatelessWidget {
 }
 
 class _MediaDragFeedback extends StatelessWidget {
-  const _MediaDragFeedback({required this.count});
+  const _MediaDragFeedback({required this.items});
+
+  static const _cardWidth = 220.0;
+  static const _cardHeight = 175.0;
+
+  static int get _thumbnailCacheWidth => (_cardWidth * 1.5).round();
+
+  final List<MediaItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final previews = items.take(3).toList();
+    return Material(
+      key: const ValueKey('media-drag-feedback'),
+      type: MaterialType.transparency,
+      child: SizedBox(
+        width: _cardWidth + 28,
+        height: _cardHeight + 26,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (var index = previews.length - 1; index >= 0; index--)
+              Positioned(
+                left: _leftOffset(index),
+                top: _topOffset(index),
+                child: Transform.rotate(
+                  angle: _rotation(index),
+                  child: SizedBox(
+                    width: _cardWidth,
+                    height: _cardHeight,
+                    child: _DragMediaCard(
+                      key: ValueKey('media-drag-preview-$index'),
+                      item: previews[index],
+                      isFront: index == 0,
+                    ),
+                  ),
+                ),
+              ),
+            if (items.length > 1)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: _DragItemCount(count: items.length),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _rotation(int index) => switch (index) {
+    0 => 0,
+    1 => -0.08,
+    _ => 0.07,
+  };
+
+  double _leftOffset(int index) => switch (index) {
+    0 => 12,
+    1 => 3,
+    _ => 15,
+  };
+
+  double _topOffset(int index) => switch (index) {
+    0 => 13,
+    1 => 11,
+    _ => 3,
+  };
+}
+
+class _DragMediaCard extends ConsumerWidget {
+  const _DragMediaCard({required this.item, required this.isFront, super.key});
+
+  final MediaItem item;
+  final bool isFront;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      elevation: isFront ? 10 : 5,
+      shadowColor: Colors.black45,
+      color: colorScheme.surfaceContainerHighest,
+      borderRadius: _galleryCardBorderRadius,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _buildPreview(context, ref),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              color: Colors.black.withValues(alpha: 0.64),
+              child: Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreview(BuildContext context, WidgetRef ref) {
+    if (!item.isVideo) {
+      return Image.file(
+        File(item.path),
+        fit: BoxFit.cover,
+        cacheWidth: _MediaDragFeedback._thumbnailCacheWidth,
+        filterQuality: FilterQuality.low,
+        errorBuilder: (_, _, _) => const _DragMediaPlaceholder(
+          icon: HugeIcons.strokeRoundedImageNotFound01,
+        ),
+      );
+    }
+    return ref
+        .watch(cachedVideoThumbnailProvider(item))
+        .when(
+          data: (thumbnailPath) => thumbnailPath == null
+              ? const _DragMediaPlaceholder(
+                  icon: HugeIcons.strokeRoundedVideo01,
+                )
+              : Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(
+                      File(thumbnailPath),
+                      fit: BoxFit.cover,
+                      cacheWidth: _MediaDragFeedback._thumbnailCacheWidth,
+                      filterQuality: FilterQuality.low,
+                      errorBuilder: (_, _, _) => const _DragMediaPlaceholder(
+                        icon: HugeIcons.strokeRoundedVideo01,
+                      ),
+                    ),
+                    const Center(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Color(0x99000000),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(AppSpacing.xs),
+                          child: HugeIcon(
+                            icon: HugeIcons.strokeRoundedPlay,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          loading: () =>
+              const _DragMediaPlaceholder(icon: HugeIcons.strokeRoundedVideo01),
+          error: (_, _) =>
+              const _DragMediaPlaceholder(icon: HugeIcons.strokeRoundedVideo01),
+        );
+  }
+}
+
+class _DragMediaPlaceholder extends StatelessWidget {
+  const _DragMediaPlaceholder({required this.icon});
+
+  final List<List<dynamic>> icon;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: context.appColors.mediaPlaceholder,
+    child: Center(child: HugeIcon(icon: icon, size: 32)),
+  );
+}
+
+class _DragItemCount extends StatelessWidget {
+  const _DragItemCount({required this.count});
 
   final int count;
 
   @override
-  Widget build(BuildContext context) => Material(
-    elevation: 8,
-    color: Theme.of(context).colorScheme.primaryContainer,
-    borderRadius: BorderRadius.circular(12),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      key: const ValueKey('media-drag-count'),
+      decoration: BoxDecoration(
+        color: colorScheme.primary,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.onPrimary, width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 5)],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const HugeIcon(icon: HugeIcons.strokeRoundedMove, size: 20),
-          const SizedBox(width: AppSpacing.sm),
-          Text(count == 1 ? 'Move media' : 'Move $count media'),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: Text(
+          '$count',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: colorScheme.onPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Preview extends ConsumerWidget {
