@@ -21,12 +21,14 @@ import '../../application/providers/gallery_dependencies.dart';
 import '../input/gallery_input_handler.dart';
 import '../notifiers/gallery_notifier.dart';
 import '../states/media_preview_selection.dart';
+import '../states/media_drag_payload.dart';
 import '../widgets/folder_tree_sidebar.dart';
 import '../widgets/folder_management/folder_management_dialogs.dart';
 import '../widgets/gallery_page/choose_folder_prompt.dart';
 import '../widgets/gallery_page/gallery_body.dart';
 import '../widgets/gallery_page/group_media_dialog.dart';
 import '../widgets/gallery_page/gallery_shell_top_bar.dart';
+import '../widgets/media_move/media_move_progress_dialog.dart';
 
 class GalleryPage extends ConsumerStatefulWidget {
   const GalleryPage({this.previewPath, super.key});
@@ -47,6 +49,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   bool? _sidebarBeforeFullscreen;
   late final GalleryInputHandler _inputHandler;
   int _selectedGridIndex = 0;
+  final _selectedItemPaths = <String>{};
+  int? _selectionAnchorIndex;
+  String? _selectionFolderPath;
   int _gridColumnCount = 1;
   int _previewLoadGeneration = 0;
   int _autoSyncGeneration = 0;
@@ -64,6 +69,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       onMoveRight: () => _moveGridSelection(1),
       onActivate: _openSelectedGridItem,
       onBack: _handleBackInput,
+      onToggleSelectAll: _toggleSelectAllGridItems,
       onToggleSidebar: _toggleSidebar,
       onToggleFullscreen: () => unawaited(_toggleFullscreen()),
     )..start();
@@ -93,7 +99,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   }
 
   void _handleBackInput() {
-    if (_isFullscreen) {
+    if (_preview == null && _selectedItemPaths.isNotEmpty) {
+      _clearGridSelection();
+    } else if (_isFullscreen) {
       unawaited(_toggleFullscreen());
     } else {
       final gallery = ref.read(galleryNotifierProvider);
@@ -115,7 +123,79 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     final items = ref.read(galleryNotifierProvider).visibleItems;
     if (items.isEmpty) return;
     final next = (_selectedGridIndex + delta).clamp(0, items.length - 1);
-    if (next != _selectedGridIndex) setState(() => _selectedGridIndex = next);
+    if (next != _selectedGridIndex || _selectedItemPaths.length != 1) {
+      setState(() {
+        _selectedGridIndex = next;
+        _selectionAnchorIndex = next;
+        _selectedItemPaths
+          ..clear()
+          ..add(items[next].path);
+      });
+    }
+  }
+
+  void _changeGridSelection(
+    int index, {
+    required bool toggle,
+    required bool extend,
+  }) {
+    final items = ref.read(galleryNotifierProvider).visibleItems;
+    if (index < 0 || index >= items.length) return;
+    setState(() {
+      _selectedGridIndex = index;
+      if (extend && _selectionAnchorIndex != null) {
+        final start = _selectionAnchorIndex! < index
+            ? _selectionAnchorIndex!
+            : index;
+        final end = _selectionAnchorIndex! > index
+            ? _selectionAnchorIndex!
+            : index;
+        if (!toggle) _selectedItemPaths.clear();
+        _selectedItemPaths.addAll([
+          for (var itemIndex = start; itemIndex <= end; itemIndex++)
+            items[itemIndex].path,
+        ]);
+        return;
+      }
+      _selectionAnchorIndex = index;
+      if (toggle) {
+        if (!_selectedItemPaths.remove(items[index].path)) {
+          _selectedItemPaths.add(items[index].path);
+        }
+      } else {
+        _selectedItemPaths
+          ..clear()
+          ..add(items[index].path);
+      }
+    });
+  }
+
+  void _clearGridSelection() {
+    if (_selectedItemPaths.isEmpty) return;
+    setState(() {
+      _selectedItemPaths.clear();
+      _selectionAnchorIndex = null;
+    });
+  }
+
+  void _selectAllGridItems() {
+    final items = ref.read(galleryNotifierProvider).visibleItems;
+    if (items.isEmpty) return;
+    setState(() {
+      _selectedItemPaths
+        ..clear()
+        ..addAll(items.map((item) => item.path));
+      _selectedGridIndex = items.length - 1;
+      _selectionAnchorIndex = 0;
+    });
+  }
+
+  void _toggleSelectAllGridItems() {
+    if (_selectedItemPaths.isEmpty) {
+      _selectAllGridItems();
+    } else {
+      _clearGridSelection();
+    }
   }
 
   void _openSelectedGridItem() {
@@ -309,8 +389,69 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (_preview != null) {
       await _closePreview();
     }
-    if (mounted) setState(() => _selectedGridIndex = 0);
+    if (mounted) {
+      setState(() {
+        _selectedGridIndex = 0;
+        _selectedItemPaths.clear();
+        _selectionAnchorIndex = null;
+      });
+    }
     ref.read(galleryNotifierProvider.notifier).openDirectory(folderPath);
+  }
+
+  Future<void> _moveMediaToFolder(
+    MediaDragPayload payload,
+    String destinationPath,
+  ) async {
+    final items = List<MediaItem>.unmodifiable(payload.items);
+    if (items.isEmpty ||
+        items.every(
+          (item) => path.equals(path.dirname(item.path), destinationPath),
+        )) {
+      return;
+    }
+
+    final result = await _whileModalOpen(() async {
+      if (items.length > 1) {
+        return showMediaMoveProgressDialog(
+          context: context,
+          items: items,
+          destinationPath: destinationPath,
+        );
+      }
+      return ref.read(moveMediaItemsProvider)(
+        items: items,
+        destinationPath: destinationPath,
+        onProgress: (_) {},
+      );
+    });
+    if (!mounted || result == null) return;
+
+    await Future.wait([
+      for (final item in items) FileImage(File(item.path)).evict(),
+    ]);
+    ref.read(folderPreviewJobSchedulerProvider).clear();
+    final affectedPaths = {
+      destinationPath,
+      for (final item in items) path.dirname(item.path),
+    };
+    _notifyFolderTreeChanged(affectedPaths);
+    await ref
+        .read(galleryNotifierProvider.notifier)
+        .syncDirectories(affectedPaths);
+    if (!mounted) return;
+    setState(() {
+      _selectedItemPaths.clear();
+      _selectionAnchorIndex = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Moved ${result.moved}, skipped ${result.skipped}, '
+          'failed ${result.failed}',
+        ),
+      ),
+    );
   }
 
   Future<void> _closePreview() async {
@@ -475,6 +616,15 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsNotifierProvider);
     final gallery = ref.watch(galleryNotifierProvider);
+    final selectionFolderPath = gallery.currentPath;
+    if (_selectionFolderPath == null ||
+        selectionFolderPath == null ||
+        !path.equals(_selectionFolderPath!, selectionFolderPath)) {
+      _selectionFolderPath = selectionFolderPath;
+      _selectedGridIndex = 0;
+      _selectionAnchorIndex = null;
+      _selectedItemPaths.clear();
+    }
     final previewState = _preview == null
         ? null
         : ref.watch(mediaPreviewNotifierProvider);
@@ -540,6 +690,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                             onDeleteFolder: _preview == null
                                 ? _deleteFolder
                                 : null,
+                            onMediaDropped: _preview == null
+                                ? _moveMediaToFolder
+                                : null,
                             onMediaSelected: _openMediaPreview,
                           ),
                         ),
@@ -557,6 +710,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               onClosePreview: _closePreview,
                               onCreateFolder: _createFolder,
                               onGroupMedia: _openGroupMedia,
+                              selectedItemCount: _selectedItemPaths.length,
+                              totalItemCount: gallery.visibleItems.length,
+                              onSelectAll: _selectAllGridItems,
+                              onClearSelection: _clearGridSelection,
                             ),
                           Expanded(
                             child: _preview != null
@@ -578,17 +735,16 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     state: gallery,
                                     scrollController: _scrollController,
                                     selectedIndex: _selectedGridIndex,
-                                    onSelectionChanged: (index) {
-                                      setState(
-                                        () => _selectedGridIndex = index,
-                                      );
-                                    },
+                                    selectedPaths: _selectedItemPaths,
+                                    onSelectionChanged: _changeGridSelection,
+                                    onClearSelection: _clearGridSelection,
                                     onColumnCountChanged: (count) {
                                       _gridColumnCount = count;
                                     },
                                     onFolderSelected: _openFolder,
                                     onRenameFolder: _renameFolder,
                                     onDeleteFolder: _deleteFolder,
+                                    onMediaDropped: _moveMediaToFolder,
                                     onMediaSelected: _openMediaPreview,
                                   ),
                           ),

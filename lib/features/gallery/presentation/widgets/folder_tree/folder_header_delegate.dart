@@ -3,6 +3,7 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../folder_management/folder_context_menu.dart';
+import '../../states/media_drag_payload.dart';
 
 class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   FolderHeaderDelegate({
@@ -20,6 +21,8 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.onOpen,
     this.onRename,
     this.onDelete,
+    this.canAcceptMedia,
+    this.onMediaDropped,
   });
 
   final int depth;
@@ -36,6 +39,8 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback? onOpen;
   final VoidCallback? onRename;
   final VoidCallback? onDelete;
+  final bool Function(MediaDragPayload payload)? canAcceptMedia;
+  final ValueChanged<MediaDragPayload>? onMediaDropped;
 
   @override
   double get minExtent => 36;
@@ -104,17 +109,44 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         ),
       ),
     );
-    if (onRename == null || onDelete == null) return header;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onSecondaryTapDown: (details) => showFolderContextMenu(
-        context: context,
-        globalPosition: details.globalPosition,
-        onRename: onRename!,
-        onMoveToTrash: onDelete!,
-      ),
-      child: header,
-    );
+    Widget result = header;
+    if (onRename != null && onDelete != null) {
+      result = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onSecondaryTapDown: (details) => showFolderContextMenu(
+          context: context,
+          globalPosition: details.globalPosition,
+          onRename: onRename!,
+          onMoveToTrash: onDelete!,
+        ),
+        child: result,
+      );
+    }
+    if (onMediaDropped != null) {
+      final folderHeader = result;
+      result = DragTarget<MediaDragPayload>(
+        onWillAcceptWithDetails: (details) =>
+            canAcceptMedia?.call(details.data) ?? true,
+        onAcceptWithDetails: (details) => onMediaDropped!(details.data),
+        builder: (context, candidates, rejected) => Stack(
+          fit: StackFit.expand,
+          children: [
+            folderHeader,
+            if (candidates.isNotEmpty)
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.14),
+                    border: Border.all(color: primaryColor, width: 2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+    return result;
   }
 
   Widget _buildToggle() {

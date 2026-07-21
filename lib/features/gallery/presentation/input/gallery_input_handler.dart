@@ -13,6 +13,7 @@ class GalleryInputHandler {
     required this.onMoveRight,
     required this.onActivate,
     required this.onBack,
+    required this.onToggleSelectAll,
     required this.onToggleSidebar,
     required this.onToggleFullscreen,
   });
@@ -24,6 +25,7 @@ class GalleryInputHandler {
   final VoidCallback onMoveRight;
   final VoidCallback onActivate;
   final VoidCallback onBack;
+  final VoidCallback onToggleSelectAll;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleFullscreen;
 
@@ -46,6 +48,14 @@ class GalleryInputHandler {
   KeyEventResult handleKeyEvent(KeyEvent event) {
     if (!isEnabled() || event is! KeyDownEvent) {
       return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyA) {
+      final keyboard = HardwareKeyboard.instance;
+      if (!keyboard.isControlPressed && !keyboard.isMetaPressed) {
+        return KeyEventResult.ignored;
+      }
+      onToggleSelectAll();
+      return KeyEventResult.handled;
     }
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowUp:

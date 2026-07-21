@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import '../../../domain/entities/gallery_item.dart';
 import '../../../domain/rules/gallery_item_sort_rules.dart';
 import '../../../domain/value_objects/gallery_sort.dart';
+import '../../states/media_drag_payload.dart';
 import 'folder_header_delegate.dart';
 import 'folder_tree_contents.dart';
 import 'media_tree_tile.dart';
@@ -26,6 +27,7 @@ class FolderTreeView extends StatelessWidget {
     this.onFolderSelected,
     this.onRenameFolder,
     this.onDeleteFolder,
+    this.onMediaDropped,
     super.key,
   });
 
@@ -42,6 +44,8 @@ class FolderTreeView extends StatelessWidget {
   final ValueChanged<String>? onFolderSelected;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
+  final void Function(MediaDragPayload payload, String destinationPath)?
+  onMediaDropped;
   final ValueChanged<MediaItem> onMediaSelected;
 
   @override
@@ -98,6 +102,14 @@ class FolderTreeView extends StatelessWidget {
             onDelete: onDeleteFolder == null
                 ? null
                 : () => onDeleteFolder!(folderPath),
+            canAcceptMedia: onMediaDropped == null
+                ? null
+                : (payload) => payload.items.any(
+                    (item) => !path.equals(path.dirname(item.path), folderPath),
+                  ),
+            onMediaDropped: onMediaDropped == null
+                ? null
+                : (payload) => onMediaDropped!(payload, folderPath),
             onOpen: onFolderSelected == null
                 ? null
                 : () {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
@@ -9,17 +10,26 @@ import '../../../application/providers/gallery_dependencies.dart';
 import '../../../application/services/folder_preview_job_scheduler.dart';
 import '../../../domain/entities/gallery_item.dart';
 import '../../states/gallery_ui_state.dart';
+import '../../states/media_drag_payload.dart';
 import '../gallery_card.dart';
+
+typedef GallerySelectionChanged =
+    void Function(int index, {required bool toggle, required bool extend});
+typedef MediaFolderDrop =
+    void Function(MediaDragPayload payload, String destinationPath);
 
 class GalleryBody extends ConsumerStatefulWidget {
   const GalleryBody({
     required this.state,
     required this.scrollController,
     required this.selectedIndex,
+    required this.selectedPaths,
     required this.onSelectionChanged,
+    required this.onClearSelection,
     required this.onColumnCountChanged,
     required this.onFolderSelected,
     required this.onMediaSelected,
+    required this.onMediaDropped,
     this.onRenameFolder,
     this.onDeleteFolder,
     super.key,
@@ -28,10 +38,13 @@ class GalleryBody extends ConsumerStatefulWidget {
   final GalleryUiState state;
   final ScrollController scrollController;
   final int selectedIndex;
-  final ValueChanged<int> onSelectionChanged;
+  final Set<String> selectedPaths;
+  final GallerySelectionChanged onSelectionChanged;
+  final VoidCallback onClearSelection;
   final ValueChanged<int> onColumnCountChanged;
   final ValueChanged<String> onFolderSelected;
   final ValueChanged<MediaItem> onMediaSelected;
+  final MediaFolderDrop onMediaDropped;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
 
@@ -138,22 +151,26 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _reportColumnCount(constraints.maxWidth);
-        return NotificationListener<ScrollNotification>(
-          onNotification: _handleScrollNotification,
-          child: GridView.builder(
-            controller: widget.scrollController,
-            padding: const EdgeInsets.all(_gridPadding),
-            addAutomaticKeepAlives: false,
-            cacheExtent: 240,
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 260,
-              mainAxisExtent: _itemMainExtent,
-              crossAxisSpacing: AppSpacing.md,
-              mainAxisSpacing: _mainAxisSpacing,
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: widget.onClearSelection,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: GridView.builder(
+              controller: widget.scrollController,
+              padding: const EdgeInsets.all(_gridPadding),
+              addAutomaticKeepAlives: false,
+              cacheExtent: 240,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 260,
+                mainAxisExtent: _itemMainExtent,
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisSpacing: _mainAxisSpacing,
+              ),
+              itemCount: visibleItems.length,
+              itemBuilder: (context, index) =>
+                  _buildItem(context, index, visibleItems),
             ),
-            itemCount: visibleItems.length,
-            itemBuilder: (context, index) =>
-                _buildItem(context, index, visibleItems),
           ),
         );
       },
@@ -175,19 +192,51 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     List<GalleryItem> visibleItems,
   ) {
     final item = visibleItems[index];
+    final selected = widget.selectedPaths.contains(item.path);
+    final dragPayload = item is MediaItem
+        ? MediaDragPayload(
+            selected
+                ? [
+                    for (final candidate in visibleItems.whereType<MediaItem>())
+                      if (widget.selectedPaths.contains(candidate.path))
+                        candidate,
+                  ]
+                : [item],
+          )
+        : null;
     return ExcludeFocus(
       child: GalleryCard(
         key: ValueKey(item.path),
         item: item,
-        selected: index == widget.selectedIndex,
+        selected: selected,
         onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
             ? () => widget.onRenameFolder!(item.path)
             : null,
         onDeleteFolder: item is GalleryFolder && widget.onDeleteFolder != null
             ? () => widget.onDeleteFolder!(item.path)
             : null,
+        dragPayload: dragPayload,
+        onDragStarted: () {
+          if (!selected) {
+            widget.onSelectionChanged(index, toggle: false, extend: false);
+          }
+        },
+        onMediaDropped: item is GalleryFolder
+            ? (payload) => widget.onMediaDropped(payload, item.path)
+            : null,
         onTap: () {
-          widget.onSelectionChanged(index);
+          final keyboard = HardwareKeyboard.instance;
+          final toggle = keyboard.isControlPressed || keyboard.isMetaPressed;
+          final extend = keyboard.isShiftPressed;
+          if (toggle || extend) {
+            widget.onSelectionChanged(index, toggle: toggle, extend: extend);
+            return;
+          }
+          if (widget.selectedPaths.isNotEmpty) {
+            widget.onSelectionChanged(index, toggle: true, extend: false);
+            return;
+          }
+          widget.onClearSelection();
           switch (item) {
             case GalleryFolder():
               widget.onFolderSelected(item.path);

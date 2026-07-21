@@ -6,9 +6,11 @@ import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:path/path.dart' as path;
 
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../application/providers/gallery_dependencies.dart';
+import '../states/media_drag_payload.dart';
 import 'folder_management/folder_context_menu.dart';
 
 const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
@@ -17,72 +19,191 @@ class GalleryCard extends StatelessWidget {
   const GalleryCard({
     required this.item,
     required this.onTap,
+    this.onDoubleTap,
     this.selected = false,
     this.onRenameFolder,
     this.onDeleteFolder,
+    this.dragPayload,
+    this.onDragStarted,
+    this.onMediaDropped,
     super.key,
   });
 
   final GalleryItem item;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
   final bool selected;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
+  final MediaDragPayload? dragPayload;
+  final VoidCallback? onDragStarted;
+  final ValueChanged<MediaDragPayload>? onMediaDropped;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final card = Material(
-      color: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: _galleryCardBorderRadius,
-        side: BorderSide(
-          color: selected ? colorScheme.primary : Colors.transparent,
-          width: selected ? 2 : 0,
+    final card = Stack(
+      fit: StackFit.expand,
+      children: [
+        Material(
+          color: selected
+              ? colorScheme.primaryContainer.withValues(alpha: 0.24)
+              : Colors.transparent,
+          shape: const RoundedRectangleBorder(
+            borderRadius: _galleryCardBorderRadius,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: _galleryCardBorderRadius,
+            onTap: onTap,
+            onDoubleTap: onDoubleTap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _Preview(item: item)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: _galleryCardBorderRadius,
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _Preview(item: item)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              child: Text(
-                item.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+        if (selected) ...[
+          IgnorePointer(
+            child: DecoratedBox(
+              key: const ValueKey('gallery-card-selection-border'),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: _galleryCardBorderRadius,
+                border: Border.all(color: colorScheme.primary, width: 2),
               ),
             ),
+          ),
+          Positioned(
+            top: AppSpacing.sm,
+            right: AppSpacing.sm,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                key: const ValueKey('gallery-card-selection-check'),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedTick02,
+                    color: colorScheme.onPrimary,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+    Widget result = card;
+    if (item is GalleryFolder &&
+        onRenameFolder != null &&
+        onDeleteFolder != null) {
+      result = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onSecondaryTapDown: (details) => showFolderContextMenu(
+          context: context,
+          globalPosition: details.globalPosition,
+          onRename: onRenameFolder!,
+          onMoveToTrash: onDeleteFolder!,
+        ),
+        child: result,
+      );
+    }
+    if (item case final GalleryFolder folder when onMediaDropped != null) {
+      final folderCard = result;
+      result = DragTarget<MediaDragPayload>(
+        onWillAcceptWithDetails: (details) => details.data.items.any(
+          (media) => !path.equals(path.dirname(media.path), folder.path),
+        ),
+        onAcceptWithDetails: (details) => onMediaDropped!(details.data),
+        builder: (context, candidates, rejected) => Stack(
+          fit: StackFit.expand,
+          children: [
+            folderCard,
+            if (candidates.isNotEmpty)
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: _galleryCardBorderRadius,
+                    border: Border.all(color: colorScheme.primary, width: 2),
+                  ),
+                ),
+              ),
           ],
         ),
-      ),
-    );
-    if (item is! GalleryFolder ||
-        onRenameFolder == null ||
-        onDeleteFolder == null) {
-      return card;
+      );
     }
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onSecondaryTapDown: (details) => showFolderContextMenu(
-        context: context,
-        globalPosition: details.globalPosition,
-        onRename: onRenameFolder!,
-        onMoveToTrash: onDeleteFolder!,
-      ),
-      child: card,
-    );
+    final payload = dragPayload;
+    if (item is MediaItem && payload != null) {
+      result = LongPressDraggable<MediaDragPayload>(
+        data: payload,
+        delay: const Duration(milliseconds: 120),
+        hapticFeedbackOnStart: false,
+        rootOverlay: true,
+        dragAnchorStrategy: pointerDragAnchorStrategy,
+        onDragStarted: onDragStarted,
+        feedback: _MediaDragFeedback(count: payload.count),
+        childWhenDragging: Opacity(opacity: 0.45, child: result),
+        child: result,
+      );
+    }
+    return result;
   }
+}
+
+class _MediaDragFeedback extends StatelessWidget {
+  const _MediaDragFeedback({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    elevation: 8,
+    color: Theme.of(context).colorScheme.primaryContainer,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const HugeIcon(icon: HugeIcons.strokeRoundedMove, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Text(count == 1 ? 'Move media' : 'Move $count media'),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Preview extends ConsumerWidget {

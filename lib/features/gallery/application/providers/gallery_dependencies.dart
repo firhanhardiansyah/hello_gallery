@@ -17,6 +17,7 @@ import '../services/gallery_directory_cache.dart';
 import '../use_cases/find_folder_preview_media.dart';
 import '../use_cases/create_folder.dart';
 import '../use_cases/move_folder_to_trash.dart';
+import '../use_cases/move_media_items.dart';
 import '../use_cases/read_gallery_directory.dart';
 import '../use_cases/read_media_recursively.dart';
 import '../use_cases/move_media_to_group.dart';
@@ -71,6 +72,10 @@ final mediaOrganizationRepositoryProvider =
 
 final moveMediaToGroupProvider = Provider(
   (ref) => MoveMediaToGroup(ref.watch(mediaOrganizationRepositoryProvider)),
+);
+
+final moveMediaItemsProvider = Provider(
+  (ref) => MoveMediaItems(ref.watch(mediaOrganizationRepositoryProvider)),
 );
 
 final galleryDirectoryCacheProvider = Provider(

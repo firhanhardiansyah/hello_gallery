@@ -81,10 +81,14 @@ void main() {
           state: state,
           scrollController: scrollController,
           selectedIndex: 0,
-          onSelectionChanged: (_) {},
+          selectedPaths: const {},
+          onSelectionChanged:
+              (_, {required bool toggle, required bool extend}) {},
+          onClearSelection: () {},
           onColumnCountChanged: (_) {},
           onFolderSelected: (_) {},
           onMediaSelected: (_) {},
+          onMediaDropped: (_, _) {},
         ),
       ),
     );

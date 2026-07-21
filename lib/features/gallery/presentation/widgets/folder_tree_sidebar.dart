@@ -10,6 +10,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
 import '../../application/providers/gallery_dependencies.dart';
+import '../states/media_drag_payload.dart';
 import 'folder_tree/folder_tree_contents.dart';
 import 'folder_tree/folder_tree_view.dart';
 
@@ -25,6 +26,7 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
     this.onFolderSelected,
     this.onRenameFolder,
     this.onDeleteFolder,
+    this.onMediaDropped,
     this.onClose,
     this.syncRevision = 0,
     this.syncedDirectoryPaths = const {},
@@ -41,6 +43,8 @@ class FolderTreeSidebar extends ConsumerStatefulWidget {
   final ValueChanged<String>? onFolderSelected;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
+  final void Function(MediaDragPayload payload, String destinationPath)?
+  onMediaDropped;
   final ValueChanged<MediaItem> onMediaSelected;
   final VoidCallback? onClose;
   final int syncRevision;
@@ -312,6 +316,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
               onFolderSelected: widget.onFolderSelected,
               onRenameFolder: widget.onRenameFolder,
               onDeleteFolder: widget.onDeleteFolder,
+              onMediaDropped: widget.onMediaDropped,
               onMediaSelected: widget.onMediaSelected,
             ),
           ),

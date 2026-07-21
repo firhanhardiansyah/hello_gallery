@@ -16,6 +16,7 @@ void main() {
       onMoveRight: _noop,
       onActivate: _noop,
       onBack: _noop,
+      onToggleSelectAll: _noop,
       onToggleSidebar: () => sidebarCount++,
       onToggleFullscreen: () => fullscreenCount++,
     );
@@ -36,6 +37,45 @@ void main() {
       KeyEventResult.handled,
     );
     expect(sidebarCount, 1);
+  });
+
+  testWidgets('toggles select all with Control or Command plus A', (
+    tester,
+  ) async {
+    var toggleCount = 0;
+    final handler = GalleryInputHandler(
+      isEnabled: () => true,
+      onMoveUp: _noop,
+      onMoveDown: _noop,
+      onMoveLeft: _noop,
+      onMoveRight: _noop,
+      onActivate: _noop,
+      onBack: _noop,
+      onToggleSelectAll: () => toggleCount++,
+      onToggleSidebar: _noop,
+      onToggleFullscreen: _noop,
+    );
+
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyA)),
+      KeyEventResult.ignored,
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyA)),
+      KeyEventResult.handled,
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyA)),
+      KeyEventResult.handled,
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+
+    expect(toggleCount, 2);
   });
 }
 

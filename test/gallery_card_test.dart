@@ -79,6 +79,21 @@ void main() {
     expect(renamed, isTrue);
     expect(deleted, isFalse);
   });
+
+  testWidgets('shows a prominent border and check for selected cards', (
+    tester,
+  ) async {
+    await _pumpFolderCard(tester, 0, selected: true);
+
+    expect(
+      find.byKey(const ValueKey('gallery-card-selection-border')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('gallery-card-selection-check')),
+      findsOneWidget,
+    );
+  });
 }
 
 Future<void> _pumpFolderCard(
@@ -86,6 +101,7 @@ Future<void> _pumpFolderCard(
   int previewCount, {
   VoidCallback? onRenameFolder,
   VoidCallback? onDeleteFolder,
+  bool selected = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -120,6 +136,7 @@ Future<void> _pumpFolderCard(
                   modifiedAt: DateTime(2026),
                 ),
                 onTap: () {},
+                selected: selected,
                 onRenameFolder: onRenameFolder,
                 onDeleteFolder: onDeleteFolder,
               ),

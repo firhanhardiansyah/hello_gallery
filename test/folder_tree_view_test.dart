@@ -5,6 +5,7 @@ import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree/folder_tree_contents.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree/folder_tree_view.dart';
+import 'package:hello_gallery/features/gallery/presentation/states/media_drag_payload.dart';
 
 void main() {
   testWidgets('hides the root header and shows its child folders', (
@@ -300,5 +301,65 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(deletedPath, childPath);
+  });
+
+  testWidgets('accepts media drops on a tree folder', (tester) async {
+    const rootPath = '/gallery/Wallpapers';
+    const childPath = '$rootPath/Anime';
+    final media = MediaItem(
+      path: '$rootPath/cover.jpg',
+      name: 'cover.jpg',
+      modifiedAt: DateTime(2026),
+      mediaType: GalleryItemType.image,
+    );
+    String? destinationPath;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              Draggable<MediaDragPayload>(
+                data: MediaDragPayload([media]),
+                feedback: const Material(child: Text('Dragging')),
+                child: const Text('Drag source'),
+              ),
+              Expanded(
+                child: FolderTreeView(
+                  rootPath: rootPath,
+                  currentFolderPath: rootPath,
+                  sort: GallerySort.nameAscending,
+                  expandedPaths: const {rootPath},
+                  loadingPaths: const {},
+                  contentsByPath: {
+                    rootPath: FolderTreeContents(
+                      folders: [
+                        GalleryFolder(
+                          path: childPath,
+                          name: 'Anime',
+                          modifiedAt: DateTime(2026),
+                        ),
+                      ],
+                    ),
+                    childPath: const FolderTreeContents(),
+                  },
+                  revealKeyFor: (_) => GlobalKey(),
+                  onToggleFolder: (_) {},
+                  onMediaDropped: (_, path) => destinationPath = path,
+                  onMediaSelected: (_) {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final offset =
+        tester.getCenter(find.text('Anime')) -
+        tester.getCenter(find.text('Drag source'));
+    await tester.drag(find.text('Drag source'), offset);
+    await tester.pumpAndSettle();
+
+    expect(destinationPath, childPath);
   });
 }
