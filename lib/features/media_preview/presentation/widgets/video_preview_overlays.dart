@@ -1,0 +1,172 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
+import 'package:hugeicons/hugeicons.dart';
+
+import '../states/media_preview_ui_state.dart';
+import 'video_controls.dart';
+
+class VideoPreviewOverlays extends StatelessWidget {
+  const VideoPreviewOverlays({
+    required this.itemPath,
+    required this.thumbnailPath,
+    required this.state,
+    required this.controlsVisible,
+    required this.onTogglePlayback,
+    required this.onInteraction,
+    super.key,
+  });
+
+  final String itemPath;
+  final String? thumbnailPath;
+  final MediaPreviewUiState state;
+  final bool controlsVisible;
+  final VoidCallback onTogglePlayback;
+  final VoidCallback onInteraction;
+
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        _VideoLoadingOverlay(
+          itemPath: itemPath,
+          thumbnailPath: thumbnailPath,
+          isReady: state.isVideoReady,
+        ),
+        _VideoPlaybackButton(
+          isPlaying: state.isPlaying,
+          visible: controlsVisible,
+          onPressed: onTogglePlayback,
+        ),
+        _VideoControlsOverlay(
+          state: state,
+          visible: controlsVisible,
+          onInteraction: onInteraction,
+        ),
+      ],
+    ),
+  );
+}
+
+class _VideoLoadingOverlay extends StatelessWidget {
+  const _VideoLoadingOverlay({
+    required this.itemPath,
+    required this.thumbnailPath,
+    required this.isReady,
+  });
+
+  final String itemPath;
+  final String? thumbnailPath;
+  final bool isReady;
+
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+    child: IgnorePointer(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: isReady ? 0 : 1,
+        child: ColoredBox(
+          color: context.appColors.mediaBackground,
+          child: thumbnailPath == null
+              ? const _VideoLoadingPlaceholder()
+              : Image.file(
+                  File(thumbnailPath!),
+                  key: ValueKey('thumbnail:$itemPath'),
+                  fit: BoxFit.contain,
+                  cacheWidth: 960,
+                  errorBuilder: (_, _, _) => const _VideoLoadingPlaceholder(),
+                ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _VideoLoadingPlaceholder extends StatelessWidget {
+  const _VideoLoadingPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: HugeIcon(
+      icon: HugeIcons.strokeRoundedPlayCircle,
+      size: 72,
+      color: context.appColors.onMediaMuted,
+    ),
+  );
+}
+
+class _VideoPlaybackButton extends StatelessWidget {
+  const _VideoPlaybackButton({
+    required this.isPlaying,
+    required this.visible,
+    required this.onPressed,
+  });
+
+  final bool isPlaying;
+  final bool visible;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final appColors = context.appColors;
+    return Center(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 150),
+        opacity: visible ? 1 : 0,
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: IconButton.filled(
+            tooltip: isPlaying ? 'Pause' : 'Play',
+            onPressed: onPressed,
+            style: IconButton.styleFrom(
+              backgroundColor: appColors.mediaOverlay,
+              foregroundColor: appColors.onMedia,
+              minimumSize: const Size.square(72),
+              iconSize: 42,
+            ),
+            icon: HugeIcon(
+              icon: isPlaying
+                  ? HugeIcons.strokeRoundedPause
+                  : HugeIcons.strokeRoundedPlay,
+              size: 42,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoControlsOverlay extends StatelessWidget {
+  const _VideoControlsOverlay({
+    required this.state,
+    required this.visible,
+    required this.onInteraction,
+  });
+
+  final MediaPreviewUiState state;
+  final bool visible;
+  final VoidCallback onInteraction;
+
+  @override
+  Widget build(BuildContext context) => Positioned(
+    left: 0,
+    right: 0,
+    bottom: 0,
+    child: AnimatedSlide(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      offset: visible ? Offset.zero : const Offset(0, 1),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 150),
+        opacity: visible ? 1 : 0,
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: VideoControls(state: state, onInteraction: onInteraction),
+        ),
+      ),
+    ),
+  );
+}
