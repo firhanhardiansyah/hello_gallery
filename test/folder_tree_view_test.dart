@@ -197,4 +197,62 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('shows subfolders before media at every folder level', (
+    tester,
+  ) async {
+    const rootPath = '/gallery/Wallpapers';
+    const allPath = '$rootPath/All';
+    const charactersPath = '$allPath/Characters';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FolderTreeView(
+            rootPath: rootPath,
+            currentFolderPath: allPath,
+            sort: GallerySort.nameAscending,
+            expandedPaths: const {rootPath, allPath},
+            loadingPaths: const {},
+            contentsByPath: {
+              rootPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: allPath,
+                    name: 'All',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+              ),
+              allPath: FolderTreeContents(
+                folders: [
+                  GalleryFolder(
+                    path: charactersPath,
+                    name: 'Characters',
+                    modifiedAt: DateTime(2026),
+                  ),
+                ],
+                media: [
+                  MediaItem(
+                    path: '$allPath/cover.jpg',
+                    name: 'cover.jpg',
+                    modifiedAt: DateTime(2026),
+                    mediaType: GalleryItemType.image,
+                  ),
+                ],
+              ),
+              charactersPath: const FolderTreeContents(),
+            },
+            revealKeyFor: (_) => GlobalKey(),
+            onToggleFolder: (_) {},
+            onMediaSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getTopLeft(find.text('Characters')).dy,
+      lessThan(tester.getTopLeft(find.text('cover.jpg')).dy),
+    );
+  });
 }

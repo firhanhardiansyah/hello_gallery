@@ -110,6 +110,13 @@ class FolderTreeView extends StatelessWidget {
             child: LinearProgressIndicator(),
           ),
         ),
+      if (expanded && contents != null)
+        for (final child in folders)
+          ..._buildFolderSlivers(
+            context,
+            child.path,
+            isRoot ? depth : depth + 1,
+          ),
       if (expanded && media.isNotEmpty)
         SliverList.builder(
           itemCount: media.length,
@@ -131,17 +138,7 @@ class FolderTreeView extends StatelessWidget {
         ),
     ];
 
-    final slivers = <Widget>[
-      if (sectionSlivers.isNotEmpty)
-        SliverMainAxisGroup(slivers: sectionSlivers),
-    ];
-    if (expanded && contents != null) {
-      for (final child in folders) {
-        slivers.addAll(
-          _buildFolderSlivers(context, child.path, isRoot ? depth : depth + 1),
-        );
-      }
-    }
-    return slivers;
+    if (isRoot) return sectionSlivers;
+    return [SliverMainAxisGroup(slivers: sectionSlivers)];
   }
 }
