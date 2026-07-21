@@ -8,9 +8,7 @@ import 'package:hello_gallery/features/media_preview/presentation/widgets/video_
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
 void main() {
-  testWidgets('loop button delegates to the media preview notifier', (
-    tester,
-  ) async {
+  testWidgets('video control actions delegate to their owners', (tester) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final subscription = container.listen(
@@ -18,6 +16,7 @@ void main() {
       (_, _) {},
     );
     addTearDown(subscription.close);
+    var fullscreenCount = 0;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -26,10 +25,12 @@ void main() {
             colorTheme: AppColorTheme.indigo,
             brightness: Brightness.light,
           ),
-          home: const Scaffold(
+          home: Scaffold(
             body: VideoControls(
-              state: MediaPreviewUiState(duration: Duration(minutes: 1)),
+              state: const MediaPreviewUiState(duration: Duration(minutes: 1)),
+              isFullscreen: false,
               onInteraction: _noop,
+              onToggleFullscreen: () => fullscreenCount++,
             ),
           ),
         ),
@@ -39,7 +40,13 @@ void main() {
     await tester.tap(find.byTooltip('Loop video'));
     await tester.pump();
 
+    expect(
+      find.byKey(const ValueKey('video-secondary-controls')),
+      findsOneWidget,
+    );
     expect(container.read(mediaPreviewNotifierProvider).isLooping, isTrue);
+    await tester.tap(find.byTooltip('Fullscreen'));
+    expect(fullscreenCount, 1);
   });
 }
 
