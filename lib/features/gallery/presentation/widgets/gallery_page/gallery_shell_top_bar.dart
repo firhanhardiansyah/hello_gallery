@@ -18,6 +18,7 @@ class GalleryShellTopBar extends ConsumerWidget {
     required this.sidebarVisible,
     required this.onToggleSidebar,
     required this.onClosePreview,
+    required this.onGroupMedia,
     super.key,
   });
 
@@ -27,6 +28,7 @@ class GalleryShellTopBar extends ConsumerWidget {
   final bool sidebarVisible;
   final VoidCallback onToggleSidebar;
   final VoidCallback onClosePreview;
+  final VoidCallback onGroupMedia;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -87,6 +89,14 @@ class GalleryShellTopBar extends ConsumerWidget {
                 icon: const HugeIcon(icon: HugeIcons.strokeRoundedCancel01),
               ),
             ] else ...[
+              IconButton(
+                tooltip: 'Group media',
+                onPressed: gallery.status == GalleryStatus.ready
+                    ? onGroupMedia
+                    : null,
+                icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolderMoveIn),
+              ),
+              const SizedBox(width: AppSpacing.xs),
               if (gallery.status == GalleryStatus.ready ||
                   gallery.status == GalleryStatus.empty)
                 DropdownButtonHideUnderline(

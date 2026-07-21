@@ -24,6 +24,7 @@ import '../states/media_preview_selection.dart';
 import '../widgets/folder_tree_sidebar.dart';
 import '../widgets/gallery_page/choose_folder_prompt.dart';
 import '../widgets/gallery_page/gallery_body.dart';
+import '../widgets/gallery_page/group_media_dialog.dart';
 import '../widgets/gallery_page/gallery_shell_top_bar.dart';
 
 class GalleryPage extends ConsumerStatefulWidget {
@@ -39,6 +40,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   final _scrollController = ScrollController();
   String? _loadedRoot;
   bool _sidebarVisible = true;
+  bool _isModalOpen = false;
   MediaPreviewSelection? _preview;
   bool _isFullscreen = false;
   bool? _sidebarBeforeFullscreen;
@@ -54,7 +56,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   void initState() {
     super.initState();
     _inputHandler = GalleryInputHandler(
-      isEnabled: () => _preview == null,
+      isEnabled: () => _preview == null && !_isModalOpen,
       onMoveUp: () => _moveGridSelection(-_gridColumnCount),
       onMoveDown: () => _moveGridSelection(_gridColumnCount),
       onMoveLeft: () => _moveGridSelection(-1),
@@ -309,6 +311,23 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (mounted) context.goNamed(AppRoute.gallery.name);
   }
 
+  Future<void> _openGroupMedia() async {
+    final gallery = ref.read(galleryNotifierProvider);
+    final rootPath = gallery.rootPath;
+    final currentPath = gallery.currentPath;
+    if (rootPath == null || currentPath == null) return;
+    _isModalOpen = true;
+    try {
+      await showGroupMediaDialog(
+        context: context,
+        rootPath: rootPath,
+        currentDirectoryPath: currentPath,
+      );
+    } finally {
+      _isModalOpen = false;
+    }
+  }
+
   Future<void> _toggleFullscreen() async {
     final target = !_isFullscreen;
     try {
@@ -411,6 +430,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               sidebarVisible: _sidebarVisible,
                               onToggleSidebar: _toggleSidebar,
                               onClosePreview: _closePreview,
+                              onGroupMedia: _openGroupMedia,
                             ),
                           Expanded(
                             child: _preview != null

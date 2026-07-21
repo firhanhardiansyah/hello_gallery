@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:gamepads/gamepads.dart';
 
 class GalleryInputHandler {
@@ -39,7 +40,13 @@ class GalleryInputHandler {
   }
 
   bool _handleKey(KeyEvent event) {
-    if (!isEnabled() || event is! KeyDownEvent) return false;
+    return handleKeyEvent(event) == KeyEventResult.handled;
+  }
+
+  KeyEventResult handleKeyEvent(KeyEvent event) {
+    if (!isEnabled() || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowUp:
         onMoveUp();
@@ -59,9 +66,9 @@ class GalleryInputHandler {
       case LogicalKeyboardKey.escape:
         onBack();
       default:
-        return false;
+        return KeyEventResult.ignored;
     }
-    return true;
+    return KeyEventResult.handled;
   }
 
   void _handleGamepad(NormalizedGamepadEvent event) {
