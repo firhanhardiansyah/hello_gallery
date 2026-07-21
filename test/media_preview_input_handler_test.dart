@@ -8,6 +8,8 @@ void main() {
     var nextCount = 0;
     var seekBackwardCount = 0;
     var muteCount = 0;
+    var rotateCount = 0;
+    var loopCount = 0;
     var fullscreenCount = 0;
     var escapeCount = 0;
     var focusCount = 0;
@@ -18,6 +20,8 @@ void main() {
       onSeekForward: _noop,
       onTogglePlay: _noop,
       onToggleMute: () => muteCount++,
+      onRotate: () => rotateCount++,
+      onToggleLoop: () => loopCount++,
       onToggleSidebar: _noop,
       onToggleFullscreen: () => fullscreenCount++,
       onClose: _noop,
@@ -32,12 +36,16 @@ void main() {
     );
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.arrowLeft));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyM));
+    handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyR));
+    handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyL));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyF));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.escape));
 
     expect(nextCount, 1);
     expect(seekBackwardCount, 1);
     expect(muteCount, 1);
+    expect(rotateCount, 1);
+    expect(loopCount, 1);
     expect(fullscreenCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);

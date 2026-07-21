@@ -48,6 +48,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   bool _controlsVisible = true;
   bool _controlsHiddenByNavigation = false;
   int _silentNavigationCount = 0;
+  final _rotationByMediaPath = <String, int>{};
 
   MediaPreviewNotifier get _controller =>
       ref.read(mediaPreviewNotifierProvider.notifier);
@@ -62,6 +63,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onSeekForward: () => _seekBy(const Duration(seconds: 3)),
       onTogglePlay: _togglePlay,
       onToggleMute: _toggleMute,
+      onRotate: _rotateActiveMedia,
+      onToggleLoop: _toggleLoop,
       onToggleSidebar: _toggleSidebar,
       onToggleFullscreen: _toggleFullscreen,
       onClose: () => widget.onClose?.call(),
@@ -109,6 +112,16 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
 
   void _toggleFullscreen() => widget.onToggleFullscreen?.call();
 
+  void _rotateActiveMedia() {
+    final activePath = ref.read(mediaPreviewNotifierProvider).activeItem?.path;
+    if (activePath == null) return;
+    _showControls(userInitiated: true);
+    setState(() {
+      _rotationByMediaPath[activePath] =
+          ((_rotationByMediaPath[activePath] ?? 0) + 1) % 4;
+    });
+  }
+
   void _togglePlay() {
     _showControls(userInitiated: true);
     unawaited(_controller.togglePlay());
@@ -117,6 +130,14 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void _toggleMute() {
     _showControls(userInitiated: true);
     unawaited(_controller.toggleMute());
+  }
+
+  void _toggleLoop() {
+    if (ref.read(mediaPreviewNotifierProvider).activeItem?.isVideo != true) {
+      return;
+    }
+    _showControls(userInitiated: true);
+    unawaited(_controller.toggleLoop());
   }
 
   void _seekBy(Duration delta) {
@@ -161,6 +182,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaPreviewNotifierProvider);
+    final rotationQuarterTurns =
+        _rotationByMediaPath[state.activeItem?.path] ?? 0;
     ref.listen(
       mediaPreviewNotifierProvider.select((value) => value.activeIndex),
       (previous, activeIndex) {
@@ -194,7 +217,9 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             state: state,
             controlsVisible: _controlsVisible,
             isFullscreen: widget.isFullscreen,
+            rotationQuarterTurns: rotationQuarterTurns,
             onInteraction: () => _showControls(userInitiated: true),
+            onRotate: _rotateActiveMedia,
             onToggleFullscreen: _toggleFullscreen,
           ),
         ),

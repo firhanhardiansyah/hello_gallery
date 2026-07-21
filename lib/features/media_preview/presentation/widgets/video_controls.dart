@@ -12,6 +12,7 @@ class VideoControls extends ConsumerWidget {
     required this.state,
     required this.isFullscreen,
     required this.onInteraction,
+    required this.onRotate,
     required this.onToggleFullscreen,
     super.key,
   });
@@ -19,6 +20,7 @@ class VideoControls extends ConsumerWidget {
   final MediaPreviewUiState state;
   final bool isFullscreen;
   final VoidCallback onInteraction;
+  final VoidCallback onRotate;
   final VoidCallback onToggleFullscreen;
 
   static const _controlSize = 40.0;
@@ -94,6 +96,14 @@ class VideoControls extends ConsumerWidget {
                     onPressed: () {
                       onInteraction();
                       controller.toggleLoop();
+                    },
+                  ),
+                  _VideoControlAction(
+                    tooltip: 'Rotate clockwise',
+                    icon: HugeIcons.strokeRoundedRotateClockwise,
+                    onPressed: () {
+                      onInteraction();
+                      onRotate();
                     },
                   ),
                   _VideoControlAction(

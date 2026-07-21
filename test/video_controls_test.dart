@@ -17,6 +17,7 @@ void main() {
     );
     addTearDown(subscription.close);
     var fullscreenCount = 0;
+    var rotateCount = 0;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -30,6 +31,7 @@ void main() {
               state: const MediaPreviewUiState(duration: Duration(minutes: 1)),
               isFullscreen: false,
               onInteraction: _noop,
+              onRotate: () => rotateCount++,
               onToggleFullscreen: () => fullscreenCount++,
             ),
           ),
@@ -44,8 +46,21 @@ void main() {
       find.byKey(const ValueKey('video-secondary-controls')),
       findsOneWidget,
     );
+    final loopButton = find.byTooltip('Loop video');
+    final rotateButton = find.byTooltip('Rotate clockwise');
+    final fullscreenButton = find.byTooltip('Fullscreen');
+    expect(
+      tester.getCenter(loopButton).dx,
+      lessThan(tester.getCenter(rotateButton).dx),
+    );
+    expect(
+      tester.getCenter(rotateButton).dx,
+      lessThan(tester.getCenter(fullscreenButton).dx),
+    );
     expect(container.read(mediaPreviewNotifierProvider).isLooping, isTrue);
-    await tester.tap(find.byTooltip('Fullscreen'));
+    await tester.tap(rotateButton);
+    expect(rotateCount, 1);
+    await tester.tap(fullscreenButton);
     expect(fullscreenCount, 1);
   });
 }

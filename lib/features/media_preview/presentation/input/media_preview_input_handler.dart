@@ -15,6 +15,8 @@ final class MediaPreviewInputHandler {
     required this.onSeekForward,
     required this.onTogglePlay,
     required this.onToggleMute,
+    required this.onRotate,
+    required this.onToggleLoop,
     required this.onToggleSidebar,
     required this.onToggleFullscreen,
     required this.onClose,
@@ -28,6 +30,8 @@ final class MediaPreviewInputHandler {
   final VoidCallback onSeekForward;
   final VoidCallback onTogglePlay;
   final VoidCallback onToggleMute;
+  final VoidCallback onRotate;
+  final VoidCallback onToggleLoop;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onClose;
@@ -126,6 +130,10 @@ final class MediaPreviewInputHandler {
         onTogglePlay();
       case LogicalKeyboardKey.keyM:
         onToggleMute();
+      case LogicalKeyboardKey.keyR:
+        onRotate();
+      case LogicalKeyboardKey.keyL:
+        onToggleLoop();
       case LogicalKeyboardKey.keyS:
         onToggleSidebar();
       case LogicalKeyboardKey.keyF:

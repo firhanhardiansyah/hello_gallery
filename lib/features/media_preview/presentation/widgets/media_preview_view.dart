@@ -6,6 +6,7 @@ import '../notifiers/media_preview_notifier.dart';
 import '../states/media_preview_ui_state.dart';
 import 'media_preview_canvas.dart';
 import 'media_preview_interaction_surface.dart';
+import 'image_preview_actions.dart';
 import 'video_preview_overlays.dart';
 
 class MediaPreviewView extends ConsumerWidget {
@@ -13,7 +14,9 @@ class MediaPreviewView extends ConsumerWidget {
     required this.state,
     required this.controlsVisible,
     required this.isFullscreen,
+    required this.rotationQuarterTurns,
     required this.onInteraction,
+    required this.onRotate,
     required this.onToggleFullscreen,
     super.key,
   });
@@ -21,7 +24,9 @@ class MediaPreviewView extends ConsumerWidget {
   final MediaPreviewUiState state;
   final bool controlsVisible;
   final bool isFullscreen;
+  final int rotationQuarterTurns;
   final VoidCallback onInteraction;
+  final VoidCallback onRotate;
   final VoidCallback onToggleFullscreen;
 
   @override
@@ -49,8 +54,15 @@ class MediaPreviewView extends ConsumerWidget {
             itemPath: item.path,
             isVideo: item.isVideo,
             videoController: controller.videoController,
+            rotationQuarterTurns: rotationQuarterTurns,
           ),
         ),
+        if (!item.isVideo)
+          ImagePreviewActions(
+            visible: controlsVisible,
+            onRotate: onRotate,
+            onInteraction: onInteraction,
+          ),
         if (item.isVideo)
           VideoPreviewOverlays(
             itemPath: item.path,
@@ -58,7 +70,9 @@ class MediaPreviewView extends ConsumerWidget {
             state: state,
             controlsVisible: controlsVisible,
             isFullscreen: isFullscreen,
+            rotationQuarterTurns: rotationQuarterTurns,
             onTogglePlayback: togglePlayback,
+            onRotate: onRotate,
             onToggleFullscreen: onToggleFullscreen,
             onInteraction: onInteraction,
           ),

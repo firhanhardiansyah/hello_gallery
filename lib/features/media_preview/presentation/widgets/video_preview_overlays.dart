@@ -14,7 +14,9 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.state,
     required this.controlsVisible,
     required this.isFullscreen,
+    required this.rotationQuarterTurns,
     required this.onTogglePlayback,
+    required this.onRotate,
     required this.onToggleFullscreen,
     required this.onInteraction,
     super.key,
@@ -25,7 +27,9 @@ class VideoPreviewOverlays extends StatelessWidget {
   final MediaPreviewUiState state;
   final bool controlsVisible;
   final bool isFullscreen;
+  final int rotationQuarterTurns;
   final VoidCallback onTogglePlayback;
+  final VoidCallback onRotate;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onInteraction;
 
@@ -38,6 +42,7 @@ class VideoPreviewOverlays extends StatelessWidget {
           itemPath: itemPath,
           thumbnailPath: thumbnailPath,
           isReady: state.isVideoReady,
+          rotationQuarterTurns: rotationQuarterTurns,
         ),
         _VideoPlaybackButton(
           isPlaying: state.isPlaying,
@@ -48,6 +53,7 @@ class VideoPreviewOverlays extends StatelessWidget {
           state: state,
           visible: controlsVisible,
           isFullscreen: isFullscreen,
+          onRotate: onRotate,
           onInteraction: onInteraction,
           onToggleFullscreen: onToggleFullscreen,
         ),
@@ -61,11 +67,13 @@ class _VideoLoadingOverlay extends StatelessWidget {
     required this.itemPath,
     required this.thumbnailPath,
     required this.isReady,
+    required this.rotationQuarterTurns,
   });
 
   final String itemPath;
   final String? thumbnailPath;
   final bool isReady;
+  final int rotationQuarterTurns;
 
   @override
   Widget build(BuildContext context) => Positioned.fill(
@@ -75,15 +83,18 @@ class _VideoLoadingOverlay extends StatelessWidget {
         opacity: isReady ? 0 : 1,
         child: ColoredBox(
           color: context.appColors.mediaBackground,
-          child: thumbnailPath == null
-              ? const _VideoLoadingPlaceholder()
-              : Image.file(
-                  File(thumbnailPath!),
-                  key: ValueKey('thumbnail:$itemPath'),
-                  fit: BoxFit.contain,
-                  cacheWidth: 960,
-                  errorBuilder: (_, _, _) => const _VideoLoadingPlaceholder(),
-                ),
+          child: RotatedBox(
+            quarterTurns: rotationQuarterTurns,
+            child: thumbnailPath == null
+                ? const _VideoLoadingPlaceholder()
+                : Image.file(
+                    File(thumbnailPath!),
+                    key: ValueKey('thumbnail:$itemPath'),
+                    fit: BoxFit.contain,
+                    cacheWidth: 960,
+                    errorBuilder: (_, _, _) => const _VideoLoadingPlaceholder(),
+                  ),
+          ),
         ),
       ),
     ),
@@ -156,6 +167,7 @@ class _VideoControlsOverlay extends StatelessWidget {
     required this.state,
     required this.visible,
     required this.isFullscreen,
+    required this.onRotate,
     required this.onInteraction,
     required this.onToggleFullscreen,
   });
@@ -163,6 +175,7 @@ class _VideoControlsOverlay extends StatelessWidget {
   final MediaPreviewUiState state;
   final bool visible;
   final bool isFullscreen;
+  final VoidCallback onRotate;
   final VoidCallback onInteraction;
   final VoidCallback onToggleFullscreen;
 
@@ -183,6 +196,7 @@ class _VideoControlsOverlay extends StatelessWidget {
           child: VideoControls(
             state: state,
             isFullscreen: isFullscreen,
+            onRotate: onRotate,
             onInteraction: onInteraction,
             onToggleFullscreen: onToggleFullscreen,
           ),
