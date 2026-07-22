@@ -43,101 +43,22 @@ class GalleryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final card = Stack(
-      fit: StackFit.expand,
-      children: [
-        Material(
-          color: selected
-              ? colorScheme.primaryContainer.withValues(alpha: 0.24)
-              : Colors.transparent,
-          shape: const RoundedRectangleBorder(
-            borderRadius: _galleryCardBorderRadius,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            borderRadius: _galleryCardBorderRadius,
-            onTap: onTap,
-            onDoubleTap: onDoubleTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _Preview(item: item)),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                  ),
-                  child: Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (selected) ...[
-          IgnorePointer(
-            child: DecoratedBox(
-              key: const ValueKey('gallery-card-selection-border'),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.08),
-                borderRadius: _galleryCardBorderRadius,
-                border: Border.all(color: colorScheme.primary, width: 2),
-              ),
-            ),
-          ),
-          Positioned(
-            top: AppSpacing.sm,
-            right: AppSpacing.sm,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                key: const ValueKey('gallery-card-selection-check'),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xs),
-                  child: HugeIcon(
-                    icon: HugeIcons.strokeRoundedTick02,
-                    color: colorScheme.onPrimary,
-                    size: 16,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-        if (focused && !selected)
-          IgnorePointer(
-            child: DecoratedBox(
-              key: const ValueKey('gallery-card-focus-border'),
-              decoration: BoxDecoration(
-                borderRadius: _galleryCardBorderRadius,
-                border: Border.all(color: colorScheme.primary, width: 2),
-              ),
-            ),
-          ),
-      ],
+    Widget buildCard({bool dropHighlighted = false}) => _GalleryCardSurface(
+      item: item,
+      selected: selected,
+      focused: focused,
+      dropHighlighted: dropHighlighted,
+      onTap: onTap,
+      onDoubleTap: onDoubleTap,
     );
-    Widget result = card;
-    if (item is GalleryFolder &&
-        onRenameFolder != null &&
-        onDeleteFolder != null) {
-      result = GestureDetector(
+
+    Widget withFolderContextMenu(Widget child) {
+      if (item is! GalleryFolder ||
+          onRenameFolder == null ||
+          onDeleteFolder == null) {
+        return child;
+      }
+      return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onSecondaryTapDown: (details) => showFolderContextMenu(
           context: context,
@@ -145,31 +66,19 @@ class GalleryCard extends StatelessWidget {
           onRename: onRenameFolder!,
           onMoveToTrash: onDeleteFolder!,
         ),
-        child: result,
+        child: child,
       );
     }
+
+    Widget result = withFolderContextMenu(buildCard());
     if (item case final GalleryFolder folder when onMediaDropped != null) {
-      final folderCard = result;
       result = DragTarget<MediaDragPayload>(
         onWillAcceptWithDetails: (details) => details.data.items.any(
           (media) => !path.equals(path.dirname(media.path), folder.path),
         ),
         onAcceptWithDetails: (details) => onMediaDropped!(details.data),
-        builder: (context, candidates, rejected) => Stack(
-          fit: StackFit.expand,
-          children: [
-            folderCard,
-            if (candidates.isNotEmpty)
-              IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                    borderRadius: _galleryCardBorderRadius,
-                    border: Border.all(color: colorScheme.primary, width: 2),
-                  ),
-                ),
-              ),
-          ],
+        builder: (context, candidates, rejected) => withFolderContextMenu(
+          buildCard(dropHighlighted: candidates.isNotEmpty),
         ),
       );
     }
@@ -177,7 +86,7 @@ class GalleryCard extends StatelessWidget {
     if (item is MediaItem && payload != null) {
       result = LongPressDraggable<MediaDragPayload>(
         data: payload,
-        delay: const Duration(milliseconds: 120),
+        delay: const Duration(milliseconds: 300),
         hapticFeedbackOnStart: false,
         rootOverlay: true,
         dragAnchorStrategy: pointerDragAnchorStrategy,
@@ -192,6 +101,159 @@ class GalleryCard extends StatelessWidget {
     }
     return result;
   }
+}
+
+class _GalleryCardSurface extends StatelessWidget {
+  const _GalleryCardSurface({
+    required this.item,
+    required this.selected,
+    required this.focused,
+    required this.dropHighlighted,
+    required this.onTap,
+    required this.onDoubleTap,
+  });
+
+  final GalleryItem item;
+  final bool selected;
+  final bool focused;
+  final bool dropHighlighted;
+  final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: _galleryCardBorderRadius,
+      ),
+      child: InkWell(
+        borderRadius: _galleryCardBorderRadius,
+        onTap: onTap,
+        onDoubleTap: onDoubleTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                key: const ValueKey('gallery-card-preview'),
+                fit: StackFit.expand,
+                children: [
+                  _Preview(item: item),
+                  if (selected)
+                    _PreviewBorder(
+                      key: const ValueKey('gallery-card-selection-border'),
+                      color: colorScheme.primary,
+                      backgroundColor: colorScheme.primary.withValues(
+                        alpha: 0.08,
+                      ),
+                    )
+                  else if (focused)
+                    _PreviewBorder(
+                      key: const ValueKey('gallery-card-focus-border'),
+                      color: colorScheme.primary,
+                    ),
+                  if (dropHighlighted)
+                    _PreviewBorder(
+                      key: const ValueKey('gallery-card-drop-border'),
+                      color: colorScheme.primary,
+                      backgroundColor: colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
+                    ),
+                  if (selected)
+                    Positioned(
+                      top: AppSpacing.sm,
+                      right: AppSpacing.sm,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          key: const ValueKey('gallery-card-selection-check'),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            shape: BoxShape.circle,
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x33000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.xs),
+                            child: HugeIcon(
+                              icon: HugeIcons.strokeRoundedTick02,
+                              color: colorScheme.onPrimary,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xs,
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.xs,
+              ),
+              child: Align(
+                child: DecoratedBox(
+                  key: const ValueKey('gallery-card-label-background'),
+                  decoration: BoxDecoration(
+                    color: selected || focused
+                        ? colorScheme.primary
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: Text(
+                      item.name,
+                      maxLines: selected || focused ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: selected || focused
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewBorder extends StatelessWidget {
+  const _PreviewBorder({required this.color, this.backgroundColor, super.key});
+
+  final Color color;
+  final Color? backgroundColor;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: _galleryCardBorderRadius,
+        border: Border.all(color: color, width: 2),
+      ),
+    ),
+  );
 }
 
 class _MediaDragFeedback extends StatelessWidget {

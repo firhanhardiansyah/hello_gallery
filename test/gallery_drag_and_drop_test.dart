@@ -57,7 +57,7 @@ void main() {
     final source = find.text('one.jpg');
     final target = find.text('Target');
     final gesture = await tester.startGesture(tester.getCenter(source));
-    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.byKey(const ValueKey('media-drag-feedback')), findsOneWidget);
     expect(find.byKey(const ValueKey('media-drag-preview-0')), findsOneWidget);

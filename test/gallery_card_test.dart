@@ -85,14 +85,37 @@ void main() {
   ) async {
     await _pumpFolderCard(tester, 0, selected: true);
 
-    expect(
-      find.byKey(const ValueKey('gallery-card-selection-border')),
-      findsOneWidget,
+    final preview = tester.getRect(
+      find.byKey(const ValueKey('gallery-card-preview')),
     );
+    final selectionBorder = tester.getRect(
+      find.byKey(const ValueKey('gallery-card-selection-border')),
+    );
+    final label = tester.getRect(
+      find.byKey(const ValueKey('gallery-card-label-background')),
+    );
+
+    expect(selectionBorder, preview);
+    expect(selectionBorder.bottom, lessThan(label.top));
     expect(
       find.byKey(const ValueKey('gallery-card-selection-check')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('wraps the item name in a compact background', (tester) async {
+    await _pumpFolderCard(tester, 0);
+
+    final card = tester.getRect(find.byType(GalleryCard));
+    final labelFinder = find.byKey(
+      const ValueKey('gallery-card-label-background'),
+    );
+    final label = tester.getRect(labelFinder);
+    final decoration = tester.widget<DecoratedBox>(labelFinder).decoration;
+
+    expect(label.width, lessThan(card.width));
+    expect(decoration, isA<BoxDecoration>());
+    expect((decoration as BoxDecoration).color, isNotNull);
   });
 
   testWidgets('shows keyboard focus without selection check', (tester) async {
@@ -106,6 +129,15 @@ void main() {
       find.byKey(const ValueKey('gallery-card-selection-check')),
       findsNothing,
     );
+    final context = tester.element(find.byType(GalleryCard));
+    final decoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.byKey(const ValueKey('gallery-card-label-background')),
+                )
+                .decoration
+            as BoxDecoration;
+    expect(decoration.color, Theme.of(context).colorScheme.primary);
   });
 }
 
