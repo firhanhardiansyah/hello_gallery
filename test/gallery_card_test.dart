@@ -94,6 +94,19 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('shows keyboard focus without selection check', (tester) async {
+    await _pumpFolderCard(tester, 0, focused: true);
+
+    expect(
+      find.byKey(const ValueKey('gallery-card-focus-border')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('gallery-card-selection-check')),
+      findsNothing,
+    );
+  });
 }
 
 Future<void> _pumpFolderCard(
@@ -102,6 +115,7 @@ Future<void> _pumpFolderCard(
   VoidCallback? onRenameFolder,
   VoidCallback? onDeleteFolder,
   bool selected = false,
+  bool focused = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -137,6 +151,7 @@ Future<void> _pumpFolderCard(
                 ),
                 onTap: () {},
                 selected: selected,
+                focused: focused,
                 onRenameFolder: onRenameFolder,
                 onDeleteFolder: onDeleteFolder,
               ),

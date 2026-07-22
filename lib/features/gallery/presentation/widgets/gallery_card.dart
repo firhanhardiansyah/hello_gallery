@@ -21,6 +21,7 @@ class GalleryCard extends StatelessWidget {
     required this.onTap,
     this.onDoubleTap,
     this.selected = false,
+    this.focused = false,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.dragPayload,
@@ -33,6 +34,7 @@ class GalleryCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
   final bool selected;
+  final bool focused;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
   final MediaDragPayload? dragPayload;
@@ -119,6 +121,16 @@ class GalleryCard extends StatelessWidget {
             ),
           ),
         ],
+        if (focused && !selected)
+          IgnorePointer(
+            child: DecoratedBox(
+              key: const ValueKey('gallery-card-focus-border'),
+              decoration: BoxDecoration(
+                borderRadius: _galleryCardBorderRadius,
+                border: Border.all(color: colorScheme.primary, width: 2),
+              ),
+            ),
+          ),
       ],
     );
     Widget result = card;

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gamepads/gamepads.dart';
 import 'package:hello_gallery/features/media_preview/presentation/input/media_preview_input_handler.dart';
 
 void main() {
@@ -11,6 +12,8 @@ void main() {
     var rotateCount = 0;
     var loopCount = 0;
     var fullscreenCount = 0;
+    var closeCount = 0;
+    var sidebarCount = 0;
     var escapeCount = 0;
     var focusCount = 0;
     final handler = MediaPreviewInputHandler(
@@ -22,9 +25,9 @@ void main() {
       onToggleMute: () => muteCount++,
       onRotate: () => rotateCount++,
       onToggleLoop: () => loopCount++,
-      onToggleSidebar: _noop,
+      onToggleSidebar: () => sidebarCount++,
       onToggleFullscreen: () => fullscreenCount++,
-      onClose: _noop,
+      onClose: () => closeCount++,
       onEscape: () => escapeCount++,
       onRequestFocus: () => focusCount++,
     );
@@ -40,6 +43,9 @@ void main() {
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyL));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyF));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.escape));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.b));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.touchpad));
 
     expect(nextCount, 1);
     expect(seekBackwardCount, 1);
@@ -47,9 +53,28 @@ void main() {
     expect(rotateCount, 1);
     expect(loopCount, 1);
     expect(fullscreenCount, 1);
+    expect(closeCount, 2);
+    expect(sidebarCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);
   });
+}
+
+NormalizedGamepadEvent _gamepadButton(GamepadButton button) {
+  final rawEvent = GamepadEvent(
+    gamepadId: 'test-controller',
+    timestamp: 0,
+    type: KeyType.button,
+    key: button.name,
+    value: 1,
+  );
+  return NormalizedGamepadEvent(
+    gamepadId: rawEvent.gamepadId,
+    timestamp: rawEvent.timestamp,
+    button: button,
+    value: rawEvent.value,
+    rawEvent: rawEvent,
+  );
 }
 
 KeyDownEvent _keyDown(LogicalKeyboardKey key) => KeyDownEvent(

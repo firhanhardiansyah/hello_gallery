@@ -12,22 +12,22 @@ import 'package:window_manager/window_manager.dart';
 import '../../../../app/routing/app_router.dart';
 import '../../../../core/widgets/desktop_window_title_bar.dart';
 import '../../../gamepad/presentation/widgets/virtual_cursor_overlay.dart';
-import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
-import '../../../media_preview/presentation/pages/media_preview_page.dart';
 import '../../../media_index/application/providers/media_index_dependencies.dart';
 import '../../../media_index/domain/entities/file_change.dart';
+import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
+import '../../../media_preview/presentation/pages/media_preview_page.dart';
 import '../../../settings/presentation/notifiers/settings_notifier.dart';
 import '../../application/providers/gallery_dependencies.dart';
 import '../input/gallery_input_handler.dart';
 import '../notifiers/gallery_notifier.dart';
-import '../states/media_preview_selection.dart';
 import '../states/media_drag_payload.dart';
-import '../widgets/folder_tree_sidebar.dart';
+import '../states/media_preview_selection.dart';
 import '../widgets/folder_management/folder_management_dialogs.dart';
+import '../widgets/folder_tree_sidebar.dart';
 import '../widgets/gallery_page/choose_folder_prompt.dart';
 import '../widgets/gallery_page/gallery_body.dart';
-import '../widgets/gallery_page/group_media_dialog.dart';
 import '../widgets/gallery_page/gallery_shell_top_bar.dart';
+import '../widgets/gallery_page/group_media_dialog.dart';
 import '../widgets/media_move/media_move_progress_dialog.dart';
 
 class GalleryPage extends ConsumerStatefulWidget {
@@ -49,6 +49,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   bool? _sidebarBeforeFullscreen;
   late final GalleryInputHandler _inputHandler;
   int _selectedGridIndex = 0;
+  bool _gridKeyboardFocusVisible = false;
   final _selectedItemPaths = <String>{};
   int? _selectionAnchorIndex;
   String? _selectionFolderPath;
@@ -123,13 +124,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     final items = ref.read(galleryNotifierProvider).visibleItems;
     if (items.isEmpty) return;
     final next = (_selectedGridIndex + delta).clamp(0, items.length - 1);
-    if (next != _selectedGridIndex || _selectedItemPaths.length != 1) {
+    if (next != _selectedGridIndex || !_gridKeyboardFocusVisible) {
       setState(() {
         _selectedGridIndex = next;
+        _gridKeyboardFocusVisible = true;
         _selectionAnchorIndex = next;
-        _selectedItemPaths
-          ..clear()
-          ..add(items[next].path);
       });
     }
   }
@@ -143,6 +142,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (index < 0 || index >= items.length) return;
     setState(() {
       _selectedGridIndex = index;
+      _gridKeyboardFocusVisible = false;
       if (extend && _selectionAnchorIndex != null) {
         final start = _selectionAnchorIndex! < index
             ? _selectionAnchorIndex!
@@ -171,9 +171,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   }
 
   void _clearGridSelection() {
-    if (_selectedItemPaths.isEmpty) return;
+    if (_selectedItemPaths.isEmpty && !_gridKeyboardFocusVisible) return;
     setState(() {
       _selectedItemPaths.clear();
+      _gridKeyboardFocusVisible = false;
       _selectionAnchorIndex = null;
     });
   }
@@ -186,6 +187,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         ..clear()
         ..addAll(items.map((item) => item.path));
       _selectedGridIndex = items.length - 1;
+      _gridKeyboardFocusVisible = false;
       _selectionAnchorIndex = 0;
     });
   }
@@ -392,6 +394,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (mounted) {
       setState(() {
         _selectedGridIndex = 0;
+        _gridKeyboardFocusVisible = false;
         _selectedItemPaths.clear();
         _selectionAnchorIndex = null;
       });
@@ -442,6 +445,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (!mounted) return;
     setState(() {
       _selectedItemPaths.clear();
+      _gridKeyboardFocusVisible = false;
       _selectionAnchorIndex = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -622,6 +626,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         !path.equals(_selectionFolderPath!, selectionFolderPath)) {
       _selectionFolderPath = selectionFolderPath;
       _selectedGridIndex = 0;
+      _gridKeyboardFocusVisible = false;
       _selectionAnchorIndex = null;
       _selectedItemPaths.clear();
     }
@@ -735,6 +740,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     state: gallery,
                                     scrollController: _scrollController,
                                     selectedIndex: _selectedGridIndex,
+                                    keyboardFocusVisible:
+                                        _gridKeyboardFocusVisible,
                                     selectedPaths: _selectedItemPaths,
                                     onSelectionChanged: _changeGridSelection,
                                     onClearSelection: _clearGridSelection,

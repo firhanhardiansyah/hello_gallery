@@ -23,6 +23,7 @@ class GalleryBody extends ConsumerStatefulWidget {
     required this.state,
     required this.scrollController,
     required this.selectedIndex,
+    this.keyboardFocusVisible = false,
     required this.selectedPaths,
     required this.onSelectionChanged,
     required this.onClearSelection,
@@ -38,6 +39,7 @@ class GalleryBody extends ConsumerStatefulWidget {
   final GalleryUiState state;
   final ScrollController scrollController;
   final int selectedIndex;
+  final bool keyboardFocusVisible;
   final Set<String> selectedPaths;
   final GallerySelectionChanged onSelectionChanged;
   final VoidCallback onClearSelection;
@@ -193,6 +195,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   ) {
     final item = visibleItems[index];
     final selected = widget.selectedPaths.contains(item.path);
+    final focused =
+        widget.keyboardFocusVisible && widget.selectedIndex == index;
     final dragPayload = item is MediaItem
         ? MediaDragPayload(
             selected
@@ -211,6 +215,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         key: ValueKey(item.path),
         item: item,
         selected: selected,
+        focused: focused,
         onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
             ? () => widget.onRenameFolder!(item.path)
             : null,

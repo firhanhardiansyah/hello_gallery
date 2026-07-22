@@ -47,9 +47,7 @@ final class MediaPreviewInputHandler {
     if (_started || _disposed) return;
     _started = true;
     HardwareKeyboard.instance.addHandler(_handleGlobalKey);
-    _gamepadSubscription = Gamepads.normalizedEvents.listen(
-      _handleGamepadEvent,
-    );
+    _gamepadSubscription = Gamepads.normalizedEvents.listen(handleGamepadEvent);
   }
 
   void dispose() {
@@ -77,7 +75,7 @@ final class MediaPreviewInputHandler {
     return handleKeyEvent(event) == KeyEventResult.handled;
   }
 
-  void _handleGamepadEvent(NormalizedGamepadEvent event) {
+  void handleGamepadEvent(NormalizedGamepadEvent event) {
     if (_disposed) return;
     final button = event.button;
     if (button == null || event.value < 0.5) return;
@@ -97,9 +95,9 @@ final class MediaPreviewInputHandler {
       case GamepadButton.y:
       case GamepadButton.start:
         onToggleFullscreen();
-      case GamepadButton.back:
       case GamepadButton.touchpad:
         onToggleSidebar();
+      case GamepadButton.back:
       case GamepadButton.b:
         onClose();
       case GamepadButton.home:
