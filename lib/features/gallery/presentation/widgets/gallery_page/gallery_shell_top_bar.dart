@@ -10,6 +10,7 @@ import '../../states/gallery_ui_state.dart';
 import 'appearance_theme_menu.dart';
 import 'gallery_breadcrumb.dart';
 import 'gallery_navigation_controls.dart';
+import 'gallery_view_options_menu.dart';
 
 class GalleryShellTopBar extends ConsumerWidget {
   const GalleryShellTopBar({
@@ -151,6 +152,8 @@ class GalleryShellTopBar extends ConsumerWidget {
                       ),
                     ),
                   const SizedBox(width: AppSpacing.sm),
+                  const GalleryViewOptionsMenu(),
+                  const SizedBox(width: AppSpacing.xs),
                   const AppearanceThemeMenu(),
                 ],
               ],

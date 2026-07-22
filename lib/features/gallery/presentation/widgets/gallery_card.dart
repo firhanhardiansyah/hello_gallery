@@ -13,7 +13,8 @@ import '../../application/providers/gallery_dependencies.dart';
 import '../states/media_drag_payload.dart';
 import 'folder_management/folder_context_menu.dart';
 
-const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
+const _galleryCardBorderRadius = BorderRadius.zero;
+const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));
 
 class GalleryCard extends StatelessWidget {
   const GalleryCard({
@@ -22,6 +23,7 @@ class GalleryCard extends StatelessWidget {
     this.onDoubleTap,
     this.selected = false,
     this.focused = false,
+    this.showItemName = true,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.dragPayload,
@@ -35,6 +37,7 @@ class GalleryCard extends StatelessWidget {
   final VoidCallback? onDoubleTap;
   final bool selected;
   final bool focused;
+  final bool showItemName;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
   final MediaDragPayload? dragPayload;
@@ -47,6 +50,7 @@ class GalleryCard extends StatelessWidget {
       item: item,
       selected: selected,
       focused: focused,
+      showItemName: showItemName,
       dropHighlighted: dropHighlighted,
       onTap: onTap,
       onDoubleTap: onDoubleTap,
@@ -108,6 +112,7 @@ class _GalleryCardSurface extends StatelessWidget {
     required this.item,
     required this.selected,
     required this.focused,
+    required this.showItemName,
     required this.dropHighlighted,
     required this.onTap,
     required this.onDoubleTap,
@@ -116,6 +121,7 @@ class _GalleryCardSurface extends StatelessWidget {
   final GalleryItem item;
   final bool selected;
   final bool focused;
+  final bool showItemName;
   final bool dropHighlighted;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
@@ -123,7 +129,7 @@ class _GalleryCardSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Material(
+    final surface = Material(
       color: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: _galleryCardBorderRadius,
@@ -195,45 +201,53 @@ class _GalleryCardSurface extends StatelessWidget {
               ),
             ),
 
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xs,
-                AppSpacing.sm,
-                AppSpacing.xs,
-                AppSpacing.xs,
-              ),
-              child: Align(
-                child: DecoratedBox(
-                  key: const ValueKey('gallery-card-label-background'),
-                  decoration: BoxDecoration(
-                    color: selected || focused
-                        ? colorScheme.primary
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
+            if (showItemName)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xs,
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                  AppSpacing.xs,
+                ),
+                child: Align(
+                  child: DecoratedBox(
+                    key: const ValueKey('gallery-card-label-background'),
+                    decoration: BoxDecoration(
+                      color: selected || focused
+                          ? colorScheme.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
-                      item.name,
-                      maxLines: selected || focused ? 2 : 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: selected || focused
-                            ? colorScheme.onPrimary
-                            : colorScheme.onSurface,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      child: Text(
+                        item.name,
+                        maxLines: selected || focused ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: selected || focused
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurface,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
+    );
+    if (showItemName) return surface;
+    return Semantics(
+      label: item.name,
+      button: true,
+      excludeSemantics: true,
+      child: surface,
     );
   }
 }
@@ -339,7 +353,7 @@ class _DragMediaCard extends ConsumerWidget {
       elevation: isFront ? 10 : 5,
       shadowColor: Colors.black45,
       color: colorScheme.surfaceContainerHighest,
-      borderRadius: _galleryCardBorderRadius,
+      borderRadius: _dragFeedbackBorderRadius,
       clipBehavior: Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,

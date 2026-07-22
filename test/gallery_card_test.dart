@@ -91,11 +91,24 @@ void main() {
     final selectionBorder = tester.getRect(
       find.byKey(const ValueKey('gallery-card-selection-border')),
     );
+    final selectionDecoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.descendant(
+                    of: find.byKey(
+                      const ValueKey('gallery-card-selection-border'),
+                    ),
+                    matching: find.byType(DecoratedBox),
+                  ),
+                )
+                .decoration
+            as BoxDecoration;
     final label = tester.getRect(
       find.byKey(const ValueKey('gallery-card-label-background')),
     );
 
     expect(selectionBorder, preview);
+    expect(selectionDecoration.borderRadius, BorderRadius.zero);
     expect(selectionBorder.bottom, lessThan(label.top));
     expect(
       find.byKey(const ValueKey('gallery-card-selection-check')),
@@ -117,6 +130,23 @@ void main() {
     expect(decoration, isA<BoxDecoration>());
     expect((decoration as BoxDecoration).color, isNotNull);
   });
+
+  testWidgets(
+    'expands preview and preserves item metadata when name is hidden',
+    (tester) async {
+      await _pumpFolderCard(tester, 0, showItemName: false);
+
+      expect(
+        find.byKey(const ValueKey('gallery-card-label-background')),
+        findsNothing,
+      );
+      expect(find.byTooltip('Album'), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('gallery-card-preview'))),
+        tester.getRect(find.byType(GalleryCard)),
+      );
+    },
+  );
 
   testWidgets('shows keyboard focus without selection check', (tester) async {
     await _pumpFolderCard(tester, 0, focused: true);
@@ -148,6 +178,7 @@ Future<void> _pumpFolderCard(
   VoidCallback? onDeleteFolder,
   bool selected = false,
   bool focused = false,
+  bool showItemName = true,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -184,6 +215,7 @@ Future<void> _pumpFolderCard(
                 onTap: () {},
                 selected: selected,
                 focused: focused,
+                showItemName: showItemName,
                 onRenameFolder: onRenameFolder,
                 onDeleteFolder: onDeleteFolder,
               ),

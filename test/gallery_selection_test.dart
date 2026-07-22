@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/app/theme/app_theme.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/presentation/states/gallery_ui_state.dart';
+import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_card.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_body.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
@@ -53,6 +55,11 @@ void main() {
     );
     await tester.pump();
 
+    final firstCard = tester.getRect(find.byType(GalleryCard).at(0));
+    final secondCard = tester.getRect(find.byType(GalleryCard).at(1));
+    expect(firstCard.width / firstCard.height, closeTo(3 / 4, 0.01));
+    expect(secondCard.left - firstCard.right, AppSpacing.sm);
+
     await tester.tap(find.text('one.jpg'));
     expect(selections, isEmpty);
     expect(openedMedia, first);
@@ -72,7 +79,7 @@ void main() {
     final gesture = await tester.startGesture(
       tester.getCenter(find.text('two.jpg')),
     );
-    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump(const Duration(milliseconds: 350));
     await gesture.up();
     await tester.pumpAndSettle();
 

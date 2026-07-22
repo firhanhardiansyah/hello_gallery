@@ -1,3 +1,4 @@
+import '../entities/gallery_view_preferences.dart';
 import '../entities/theme_preferences.dart';
 import '../value_objects/app_appearance_mode.dart';
 import '../value_objects/app_color_theme.dart';
@@ -14,4 +15,8 @@ abstract interface class SettingsRepository {
   Future<AppColorTheme> readColorTheme();
 
   Future<void> saveThemePreferences(ThemePreferences preferences);
+
+  Future<GalleryViewPreferences> readGalleryViewPreferences();
+
+  Future<void> saveGalleryViewPreferences(GalleryViewPreferences preferences);
 }

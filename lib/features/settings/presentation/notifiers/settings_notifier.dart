@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers/settings_dependencies.dart';
+import '../../domain/entities/gallery_view_preferences.dart';
 import '../../domain/entities/theme_preferences.dart';
 import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
@@ -20,13 +21,16 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
     final results = await Future.wait([
       ref.read(loadGalleryRootProvider)(),
       ref.read(loadThemePreferencesProvider)(),
+      ref.read(loadGalleryViewPreferencesProvider)(),
     ]);
     final theme = results[1] as ThemePreferences;
+    final galleryView = results[2] as GalleryViewPreferences;
     state = SettingsUiState(
       rootPath: results[0] as String?,
       isLoading: false,
       appearanceMode: theme.appearanceMode,
       colorTheme: theme.colorTheme,
+      showItemNames: galleryView.showItemNames,
     );
   }
 
@@ -51,6 +55,13 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
   Future<void> setColorTheme(AppColorTheme theme) async {
     state = state.copyWith(colorTheme: theme);
     await _saveThemePreferences();
+  }
+
+  Future<void> setShowItemNames(bool showItemNames) async {
+    state = state.copyWith(showItemNames: showItemNames);
+    await ref.read(saveGalleryViewPreferencesProvider)(
+      GalleryViewPreferences(showItemNames: showItemNames),
+    );
   }
 
   Future<void> _saveThemePreferences() {

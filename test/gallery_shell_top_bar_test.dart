@@ -88,5 +88,24 @@ void main() {
     );
 
     expect(find.byType(DesktopWindowsCaptionControls), findsNothing);
+    expect(find.byTooltip('View options'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('View options'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Show item names'), findsOneWidget);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    expect(
+      find.ancestor(of: find.byType(Switch), matching: find.byType(InkWell)),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Show item names'));
+    await tester.pump();
+    expect(find.text('Show item names'), findsOneWidget);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('Show item names'), findsNothing);
   });
 }

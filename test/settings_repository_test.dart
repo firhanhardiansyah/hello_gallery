@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/settings/data/repositories/settings_repository_impl.dart';
+import 'package:hello_gallery/features/settings/domain/entities/gallery_view_preferences.dart';
 import 'package:hello_gallery/features/settings/domain/entities/theme_preferences.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_appearance_mode.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
@@ -34,5 +35,24 @@ void main() {
     final repository = SettingsRepositoryImpl();
 
     expect(await repository.readColorTheme(), AppColorTheme.emerald);
+  });
+
+  test('gallery view preferences show item names by default', () async {
+    final repository = SettingsRepositoryImpl();
+
+    final preferences = await repository.readGalleryViewPreferences();
+
+    expect(preferences.showItemNames, isTrue);
+  });
+
+  test('gallery view preferences persist item name visibility', () async {
+    final repository = SettingsRepositoryImpl();
+
+    await repository.saveGalleryViewPreferences(
+      const GalleryViewPreferences(showItemNames: false),
+    );
+
+    final preferences = await repository.readGalleryViewPreferences();
+    expect(preferences.showItemNames, isFalse);
   });
 }

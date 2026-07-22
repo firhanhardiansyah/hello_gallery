@@ -18,6 +18,13 @@ typedef GallerySelectionChanged =
 typedef MediaFolderDrop =
     void Function(MediaDragPayload payload, String destinationPath);
 
+abstract final class _GalleryGridLayout {
+  static const padding = AppSpacing.md;
+  static const spacing = AppSpacing.xs;
+  static const maxCrossAxisExtent = 260.0;
+  static const childAspectRatio = 3 / 4;
+}
+
 class GalleryBody extends ConsumerStatefulWidget {
   const GalleryBody({
     required this.state,
@@ -31,6 +38,7 @@ class GalleryBody extends ConsumerStatefulWidget {
     required this.onFolderSelected,
     required this.onMediaSelected,
     required this.onMediaDropped,
+    this.showItemNames = true,
     this.onRenameFolder,
     this.onDeleteFolder,
     super.key,
@@ -47,6 +55,7 @@ class GalleryBody extends ConsumerStatefulWidget {
   final ValueChanged<String> onFolderSelected;
   final ValueChanged<MediaItem> onMediaSelected;
   final MediaFolderDrop onMediaDropped;
+  final bool showItemNames;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
 
@@ -55,13 +64,10 @@ class GalleryBody extends ConsumerStatefulWidget {
 }
 
 class _GalleryBodyState extends ConsumerState<GalleryBody> {
-  static const _gridPadding = AppSpacing.lg;
-  static const _itemMainExtent = 210.0;
-  static const _mainAxisSpacing = AppSpacing.md;
-
   late final ThumbnailJobScheduler _thumbnailScheduler;
   late final FolderPreviewJobScheduler _folderPreviewScheduler;
   int _reportedColumnCount = 1;
+  double _itemMainExtent = 0;
 
   @override
   void initState() {
@@ -114,14 +120,16 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     if (!widget.scrollController.hasClients) return;
     final position = widget.scrollController.position;
     final row = index ~/ _reportedColumnCount;
-    final itemTop = _gridPadding + row * (_itemMainExtent + _mainAxisSpacing);
+    final itemTop =
+        _GalleryGridLayout.padding +
+        row * (_itemMainExtent + _GalleryGridLayout.spacing);
     final itemBottom = itemTop + _itemMainExtent;
     final viewportTop = position.pixels;
     final viewportBottom = viewportTop + position.viewportDimension;
     if (itemTop >= viewportTop && itemBottom <= viewportBottom) return;
     final target = itemTop < viewportTop
-        ? itemTop - _gridPadding
-        : itemBottom - position.viewportDimension + _gridPadding;
+        ? itemTop - _GalleryGridLayout.padding
+        : itemBottom - position.viewportDimension + _GalleryGridLayout.padding;
     widget.scrollController.animateTo(
       target.clamp(position.minScrollExtent, position.maxScrollExtent),
       duration: const Duration(milliseconds: 180),
@@ -152,7 +160,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     final visibleItems = widget.state.visibleItems;
     return LayoutBuilder(
       builder: (context, constraints) {
-        _reportColumnCount(constraints.maxWidth);
+        _updateGridMetrics(constraints.maxWidth);
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: widget.onClearSelection,
@@ -160,14 +168,14 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
             onNotification: _handleScrollNotification,
             child: GridView.builder(
               controller: widget.scrollController,
-              padding: const EdgeInsets.all(_gridPadding),
+              padding: const EdgeInsets.all(_GalleryGridLayout.padding),
               addAutomaticKeepAlives: false,
               cacheExtent: 240,
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 260,
-                mainAxisExtent: _itemMainExtent,
-                crossAxisSpacing: AppSpacing.md,
-                mainAxisSpacing: _mainAxisSpacing,
+                maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
+                childAspectRatio: _GalleryGridLayout.childAspectRatio,
+                crossAxisSpacing: _GalleryGridLayout.spacing,
+                mainAxisSpacing: _GalleryGridLayout.spacing,
               ),
               itemCount: visibleItems.length,
               itemBuilder: (context, index) =>
@@ -179,8 +187,17 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     );
   }
 
-  void _reportColumnCount(double availableWidth) {
-    final columns = ((availableWidth - 20) / 272).ceil().clamp(1, 1000);
+  void _updateGridMetrics(double availableWidth) {
+    final gridWidth = availableWidth - _GalleryGridLayout.padding * 2;
+    final columns =
+        (gridWidth /
+                (_GalleryGridLayout.maxCrossAxisExtent +
+                    _GalleryGridLayout.spacing))
+            .ceil()
+            .clamp(1, 1000);
+    final itemCrossAxisExtent =
+        (gridWidth - _GalleryGridLayout.spacing * (columns - 1)) / columns;
+    _itemMainExtent = itemCrossAxisExtent / _GalleryGridLayout.childAspectRatio;
     if (columns == _reportedColumnCount) return;
     _reportedColumnCount = columns;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -216,6 +233,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         item: item,
         selected: selected,
         focused: focused,
+        showItemName: widget.showItemNames,
         onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
             ? () => widget.onRenameFolder!(item.path)
             : null,
@@ -263,16 +281,15 @@ class _LoadingGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final appColors = context.appColors;
     return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(_GalleryGridLayout.padding),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 260,
-        mainAxisExtent: 210,
-        crossAxisSpacing: AppSpacing.md,
-        mainAxisSpacing: AppSpacing.md,
+        maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
+        childAspectRatio: _GalleryGridLayout.childAspectRatio,
+        crossAxisSpacing: _GalleryGridLayout.spacing,
+        mainAxisSpacing: _GalleryGridLayout.spacing,
       ),
       itemCount: 18,
-      itemBuilder: (_, _) =>
-          Card(child: ColoredBox(color: appColors.loadingPlaceholder)),
+      itemBuilder: (_, _) => ColoredBox(color: appColors.loadingPlaceholder),
     );
   }
 }

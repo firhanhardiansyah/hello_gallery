@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/entities/gallery_view_preferences.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../../domain/entities/theme_preferences.dart';
 import '../../domain/value_objects/app_appearance_mode.dart';
@@ -10,6 +11,7 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   static const _rootBookmarkKey = 'gallery_root_bookmark';
   static const _appearanceModeKey = 'appearance_mode';
   static const _colorThemeKey = 'color_theme';
+  static const _showItemNamesKey = 'show_item_names';
 
   @override
   Future<String?> readRootPath() async {
@@ -55,5 +57,21 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       storage.setString(_appearanceModeKey, preferences.appearanceMode.name),
       storage.setString(_colorThemeKey, preferences.colorTheme.name),
     ]);
+  }
+
+  @override
+  Future<GalleryViewPreferences> readGalleryViewPreferences() async {
+    final preferences = await SharedPreferences.getInstance();
+    return GalleryViewPreferences(
+      showItemNames: preferences.getBool(_showItemNamesKey) ?? true,
+    );
+  }
+
+  @override
+  Future<void> saveGalleryViewPreferences(
+    GalleryViewPreferences preferences,
+  ) async {
+    final storage = await SharedPreferences.getInstance();
+    await storage.setBool(_showItemNamesKey, preferences.showItemNames);
   }
 }

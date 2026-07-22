@@ -757,6 +757,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     selectedIndex: _selectedGridIndex,
                                     keyboardFocusVisible:
                                         _gridKeyboardFocusVisible,
+                                    showItemNames: settings.showItemNames,
                                     selectedPaths: _selectedItemPaths,
                                     onSelectionChanged: _changeGridSelection,
                                     onClearSelection: _clearGridSelection,
