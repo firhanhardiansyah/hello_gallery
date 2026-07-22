@@ -13,6 +13,7 @@ class GalleryInputHandler {
     required this.onMoveRight,
     required this.onActivate,
     required this.onBack,
+    required this.onGamepadBack,
     required this.onToggleSelectAll,
     required this.onToggleSidebar,
     required this.onToggleFullscreen,
@@ -25,6 +26,7 @@ class GalleryInputHandler {
   final VoidCallback onMoveRight;
   final VoidCallback onActivate;
   final VoidCallback onBack;
+  final VoidCallback onGamepadBack;
   final VoidCallback onToggleSelectAll;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleFullscreen;
@@ -33,7 +35,7 @@ class GalleryInputHandler {
 
   void start() {
     HardwareKeyboard.instance.addHandler(_handleKey);
-    _gamepadSubscription = Gamepads.normalizedEvents.listen(_handleGamepad);
+    _gamepadSubscription = Gamepads.normalizedEvents.listen(handleGamepadEvent);
   }
 
   void dispose() {
@@ -81,7 +83,7 @@ class GalleryInputHandler {
     return KeyEventResult.handled;
   }
 
-  void _handleGamepad(NormalizedGamepadEvent event) {
+  void handleGamepadEvent(NormalizedGamepadEvent event) {
     if (!isEnabled() || event.button == null || event.value < 0.5) return;
     switch (event.button!) {
       case GamepadButton.dpadUp:
@@ -95,7 +97,7 @@ class GalleryInputHandler {
       case GamepadButton.a:
         onActivate();
       case GamepadButton.b:
-        onBack();
+        onGamepadBack();
       case GamepadButton.back:
       case GamepadButton.touchpad:
         onToggleSidebar();

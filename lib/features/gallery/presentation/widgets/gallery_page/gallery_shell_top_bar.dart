@@ -15,6 +15,7 @@ class GalleryShellTopBar extends ConsumerWidget {
   const GalleryShellTopBar({
     required this.gallery,
     required this.isPreview,
+    required this.isFullscreen,
     required this.previewTitle,
     required this.sidebarVisible,
     required this.onToggleSidebar,
@@ -31,6 +32,7 @@ class GalleryShellTopBar extends ConsumerWidget {
 
   final GalleryUiState gallery;
   final bool isPreview;
+  final bool isFullscreen;
   final String? previewTitle;
   final bool sidebarVisible;
   final VoidCallback onToggleSidebar;
@@ -59,6 +61,7 @@ class GalleryShellTopBar extends ConsumerWidget {
         platform: platform,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         reserveMacOSWindowButtons: !sidebarVisible,
+        showWindowsCaptionControls: !isFullscreen,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Row(

@@ -22,6 +22,7 @@ void main() {
                 currentPath: '/gallery',
               ),
               isPreview: false,
+              isFullscreen: false,
               previewTitle: null,
               sidebarVisible: true,
               windowPlatform: DesktopWindowPlatform.macOS,
@@ -52,5 +53,40 @@ void main() {
 
     expect(selectAllCount, 1);
     expect(clearCount, 1);
+  });
+
+  testWidgets('hides Windows caption controls while fullscreen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: GalleryShellTopBar(
+              gallery: const GalleryUiState(
+                status: GalleryStatus.ready,
+                rootPath: '/gallery',
+                currentPath: '/gallery',
+              ),
+              isPreview: false,
+              isFullscreen: true,
+              previewTitle: null,
+              sidebarVisible: true,
+              windowPlatform: DesktopWindowPlatform.windows,
+              onToggleSidebar: () {},
+              onClosePreview: () {},
+              onGroupMedia: () {},
+              onCreateFolder: () {},
+              selectedItemCount: 0,
+              totalItemCount: 0,
+              onSelectAll: () {},
+              onClearSelection: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(DesktopWindowsCaptionControls), findsNothing);
   });
 }

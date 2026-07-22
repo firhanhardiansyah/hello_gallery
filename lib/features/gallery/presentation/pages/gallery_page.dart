@@ -71,6 +71,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       onMoveRight: () => _moveGridSelection(1),
       onActivate: _openSelectedGridItem,
       onBack: _handleBackInput,
+      onGamepadBack: _handleGamepadBackInput,
       onToggleSelectAll: _toggleSelectAllGridItems,
       onToggleSidebar: _toggleSidebar,
       onToggleFullscreen: () => unawaited(_toggleFullscreen()),
@@ -106,13 +107,25 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     } else if (_isFullscreen) {
       unawaited(_toggleFullscreen());
     } else {
-      final gallery = ref.read(galleryNotifierProvider);
-      final notifier = ref.read(galleryNotifierProvider.notifier);
-      if (gallery.canGoBack) {
-        unawaited(notifier.goBack());
-      } else {
-        unawaited(notifier.goUp());
-      }
+      _navigateBackInGallery();
+    }
+  }
+
+  void _handleGamepadBackInput() {
+    if (_selectedItemPaths.isNotEmpty) {
+      _clearGridSelection();
+      return;
+    }
+    _navigateBackInGallery();
+  }
+
+  void _navigateBackInGallery() {
+    final gallery = ref.read(galleryNotifierProvider);
+    final notifier = ref.read(galleryNotifierProvider.notifier);
+    if (gallery.canGoBack) {
+      unawaited(notifier.goBack());
+    } else {
+      unawaited(notifier.goUp());
     }
   }
 
@@ -710,6 +723,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                             GalleryShellTopBar(
                               gallery: gallery,
                               isPreview: _preview != null,
+                              isFullscreen: _isFullscreen,
                               previewTitle: previewState?.activeItem?.name,
                               sidebarVisible: _sidebarVisible,
                               onToggleSidebar: _toggleSidebar,
