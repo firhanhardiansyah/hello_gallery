@@ -327,7 +327,7 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
 
   Widget _buildRootHeader(BuildContext context, String rootFolderName) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
