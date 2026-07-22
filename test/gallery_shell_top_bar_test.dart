@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/presentation/states/gallery_ui_state.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_shell_top_bar.dart';
+import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 
 void main() {
   testWidgets('replaces gallery actions with selection information', (
@@ -23,6 +24,7 @@ void main() {
               isPreview: false,
               previewTitle: null,
               sidebarVisible: true,
+              windowPlatform: DesktopWindowPlatform.macOS,
               onToggleSidebar: () {},
               onClosePreview: () {},
               onGroupMedia: () {},
@@ -38,7 +40,12 @@ void main() {
     );
 
     expect(find.text('3 items selected'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('gallery-shell-top-bar-border')),
+      findsOneWidget,
+    );
     expect(find.byTooltip('New folder'), findsNothing);
+    expect(find.byTooltip('Hide sidebar'), findsOneWidget);
 
     await tester.tap(find.text('Select all'));
     await tester.tap(find.byTooltip('Clear selection'));
