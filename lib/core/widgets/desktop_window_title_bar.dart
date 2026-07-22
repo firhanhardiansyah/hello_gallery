@@ -22,8 +22,9 @@ class DesktopWindowTitleBar extends StatelessWidget {
     super.key,
   });
 
-  static const double height = 60;
-  static const double macOSWindowButtonsInset = 72;
+  static const double height = 56;
+  static const double macOSHeight = height;
+  static const double macOSWindowButtonsInset = 80;
 
   final Widget child;
   final Color backgroundColor;
@@ -41,10 +42,13 @@ class DesktopWindowTitleBar extends StatelessWidget {
     final showCaptionControls =
         currentPlatform == DesktopWindowPlatform.windows &&
         showWindowsCaptionControls;
+    final resolvedHeight = currentPlatform == DesktopWindowPlatform.macOS
+        ? macOSHeight
+        : height;
     return Material(
       color: backgroundColor,
       child: SizedBox(
-        height: height,
+        height: resolvedHeight,
         child: Stack(
           fit: StackFit.expand,
           children: [

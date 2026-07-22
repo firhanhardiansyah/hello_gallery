@@ -15,6 +15,10 @@ void main() {
       DesktopWindowTitleBar.macOSWindowButtonsInset,
     );
     expect(find.byKey(const ValueKey('test-caption-controls')), findsNothing);
+    expect(
+      tester.getSize(find.byType(DesktopWindowTitleBar)).height,
+      DesktopWindowTitleBar.macOSHeight,
+    );
   });
 
   testWidgets('adds caption controls to the right on Windows', (tester) async {
@@ -31,6 +35,40 @@ void main() {
     expect(content.left, 0);
     expect(content.right, controls.left);
     expect(controls.right, 500);
+    expect(
+      tester.getSize(find.byType(DesktopWindowTitleBar)).height,
+      DesktopWindowTitleBar.height,
+    );
+  });
+
+  testWidgets('uses standard desktop action buttons on macOS', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 500,
+            child: DesktopWindowTitleBar(
+              platform: DesktopWindowPlatform.macOS,
+              backgroundColor: Colors.white,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  key: const ValueKey('macos-title-action'),
+                  onPressed: () {},
+                  icon: const Icon(Icons.arrow_back),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSize(find.byKey(const ValueKey('macos-title-action'))),
+      const Size.square(48),
+    );
   });
 }
 
