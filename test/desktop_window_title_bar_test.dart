@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
@@ -83,6 +84,39 @@ void main() {
       tester.getSize(find.byKey(const ValueKey('macos-title-action'))),
       const Size.square(48),
     );
+  });
+
+  testWidgets('toggles the desktop window on mouse double click', (
+    tester,
+  ) async {
+    var doubleClickCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: DesktopDragToMoveArea(
+            key: const ValueKey('drag-area'),
+            onDoubleTap: () => doubleClickCount++,
+            child: const SizedBox(
+              width: 300,
+              height: DesktopWindowTitleBar.height,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('drag-area')),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(
+      find.byKey(const ValueKey('drag-area')),
+      kind: PointerDeviceKind.mouse,
+    );
+
+    expect(doubleClickCount, 1);
   });
 }
 

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -77,18 +79,80 @@ class DesktopWindowTitleBar extends StatelessWidget {
   }
 }
 
-class DesktopDragToMoveArea extends StatelessWidget {
-  const DesktopDragToMoveArea({required this.child, super.key});
+class DesktopDragToMoveArea extends StatefulWidget {
+  const DesktopDragToMoveArea({
+    required this.child,
+    this.onDoubleTap,
+    super.key,
+  });
 
   final Widget child;
+  final VoidCallback? onDoubleTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  State<DesktopDragToMoveArea> createState() => _DesktopDragToMoveAreaState();
+}
+
+class _DesktopDragToMoveAreaState extends State<DesktopDragToMoveArea> {
+  static const _doubleClickInterval = Duration(milliseconds: 500);
+  static const _doubleClickDistance = 6.0;
+
+  Duration? _lastPrimaryDownTime;
+  Offset? _lastPrimaryDownPosition;
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if (event.kind != PointerDeviceKind.mouse ||
+        event.buttons & kPrimaryMouseButton == 0) {
+      _resetDoubleClick();
+      return;
+    }
+    final lastTime = _lastPrimaryDownTime;
+    final lastPosition = _lastPrimaryDownPosition;
+    final isDoubleClick =
+        lastTime != null &&
+        lastPosition != null &&
+        event.timeStamp - lastTime <= _doubleClickInterval &&
+        (event.localPosition - lastPosition).distance <= _doubleClickDistance;
+    if (!isDoubleClick) {
+      _lastPrimaryDownTime = event.timeStamp;
+      _lastPrimaryDownPosition = event.localPosition;
+      return;
+    }
+
+    _resetDoubleClick();
+    final onDoubleTap = widget.onDoubleTap;
+    if (onDoubleTap != null) {
+      onDoubleTap();
+    } else {
+      unawaited(_toggleMaximized());
+    }
+  }
+
+  void _resetDoubleClick() {
+    _lastPrimaryDownTime = null;
+    _lastPrimaryDownPosition = null;
+  }
+
+  Future<void> _toggleMaximized() async {
+    if (await windowManager.isFullScreen()) return;
+    if (await windowManager.isMaximized()) {
+      await windowManager.unmaximize();
+    } else {
+      await windowManager.maximize();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
     behavior: HitTestBehavior.translucent,
-    onPanStart: (_) {
-      windowManager.startDragging();
-    },
-    child: child,
+    onPointerDown: _handlePointerDown,
+    child: GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanStart: (_) {
+        windowManager.startDragging();
+      },
+      child: widget.child,
+    ),
   );
 }
 
