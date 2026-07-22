@@ -39,6 +39,20 @@ void main() {
       tester.getSize(find.byType(DesktopWindowTitleBar)).height,
       DesktopWindowTitleBar.height,
     );
+    expect(
+      find.descendant(
+        of: find.byType(DesktopDragToMoveArea),
+        matching: find.byKey(const ValueKey('title-content')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(DesktopDragToMoveArea),
+        matching: find.byKey(const ValueKey('test-caption-controls')),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('uses standard desktop action buttons on macOS', (tester) async {

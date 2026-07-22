@@ -49,37 +49,47 @@ class DesktopWindowTitleBar extends StatelessWidget {
       color: backgroundColor,
       child: SizedBox(
         height: resolvedHeight,
-        child: Stack(
-          fit: StackFit.expand,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const DragToMoveArea(child: SizedBox.expand()),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: AnimatedPadding(
-                    duration: const Duration(milliseconds: 240),
-                    curve: Curves.easeOutCubic,
-                    padding: EdgeInsets.only(
-                      left:
-                          currentPlatform == DesktopWindowPlatform.macOS &&
-                              reserveMacOSWindowButtons
-                          ? macOSWindowButtonsInset
-                          : 0,
-                    ),
-                    child: child,
+            Expanded(
+              child: DesktopDragToMoveArea(
+                child: AnimatedPadding(
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOutCubic,
+                  padding: EdgeInsets.only(
+                    left:
+                        currentPlatform == DesktopWindowPlatform.macOS &&
+                            reserveMacOSWindowButtons
+                        ? macOSWindowButtonsInset
+                        : 0,
                   ),
+                  child: child,
                 ),
-                if (showCaptionControls)
-                  windowsCaptionControls ??
-                      const DesktopWindowsCaptionControls(),
-              ],
+              ),
             ),
+            if (showCaptionControls)
+              windowsCaptionControls ?? const DesktopWindowsCaptionControls(),
           ],
         ),
       ),
     );
   }
+}
+
+class DesktopDragToMoveArea extends StatelessWidget {
+  const DesktopDragToMoveArea({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onPanStart: (_) {
+      windowManager.startDragging();
+    },
+    child: child,
+  );
 }
 
 class DesktopWindowsCaptionControls extends StatefulWidget {
