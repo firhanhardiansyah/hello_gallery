@@ -57,7 +57,9 @@ class DesktopWindowTitleBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: Padding(
+                  child: AnimatedPadding(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
                     padding: EdgeInsets.only(
                       left:
                           currentPlatform == DesktopWindowPlatform.macOS &&

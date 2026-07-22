@@ -24,6 +24,7 @@ import '../states/media_drag_payload.dart';
 import '../states/media_preview_selection.dart';
 import '../widgets/folder_management/folder_management_dialogs.dart';
 import '../widgets/folder_tree_sidebar.dart';
+import '../widgets/gallery_page/animated_gallery_sidebar.dart';
 import '../widgets/gallery_page/choose_folder_prompt.dart';
 import '../widgets/gallery_page/gallery_body.dart';
 import '../widgets/gallery_page/gallery_shell_top_bar.dart';
@@ -664,44 +665,44 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                 )
               : Row(
                   children: [
-                    if (_sidebarVisible)
-                      SizedBox(
-                        width: 300,
-                        child: ExcludeFocus(
-                          child: FolderTreeSidebar(
-                            rootPath: root,
-                            currentFolderPath: gallery.currentPath ?? root,
-                            activeMediaPath: previewState?.activeItem?.path,
-                            sort: gallery.sort,
-                            onRefresh: gallery.currentPath == null
-                                ? null
-                                : ref
-                                      .read(galleryNotifierProvider.notifier)
-                                      .refresh,
-                            onChooseRootFolder: () async {
-                              final changed = await ref
-                                  .read(settingsNotifierProvider.notifier)
-                                  .chooseRootFolder();
-                              if (changed) _loadedRoot = null;
-                            },
-                            onClose: () =>
-                                setState(() => _sidebarVisible = false),
-                            syncRevision: _folderTreeSyncRevision,
-                            syncedDirectoryPaths: _syncedDirectoryPaths,
-                            onFolderSelected: _openFolder,
-                            onRenameFolder: _preview == null
-                                ? _renameFolder
-                                : null,
-                            onDeleteFolder: _preview == null
-                                ? _deleteFolder
-                                : null,
-                            onMediaDropped: _preview == null
-                                ? _moveMediaToFolder
-                                : null,
-                            onMediaSelected: _openMediaPreview,
-                          ),
+                    AnimatedGallerySidebar(
+                      visible: _sidebarVisible,
+                      child: ExcludeFocus(
+                        excluding: !_sidebarVisible,
+                        child: FolderTreeSidebar(
+                          rootPath: root,
+                          currentFolderPath: gallery.currentPath ?? root,
+                          activeMediaPath: previewState?.activeItem?.path,
+                          sort: gallery.sort,
+                          onRefresh: gallery.currentPath == null
+                              ? null
+                              : ref
+                                    .read(galleryNotifierProvider.notifier)
+                                    .refresh,
+                          onChooseRootFolder: () async {
+                            final changed = await ref
+                                .read(settingsNotifierProvider.notifier)
+                                .chooseRootFolder();
+                            if (changed) _loadedRoot = null;
+                          },
+                          onClose: () =>
+                              setState(() => _sidebarVisible = false),
+                          syncRevision: _folderTreeSyncRevision,
+                          syncedDirectoryPaths: _syncedDirectoryPaths,
+                          onFolderSelected: _openFolder,
+                          onRenameFolder: _preview == null
+                              ? _renameFolder
+                              : null,
+                          onDeleteFolder: _preview == null
+                              ? _deleteFolder
+                              : null,
+                          onMediaDropped: _preview == null
+                              ? _moveMediaToFolder
+                              : null,
+                          onMediaSelected: _openMediaPreview,
                         ),
                       ),
+                    ),
                     Expanded(
                       child: Column(
                         children: [
