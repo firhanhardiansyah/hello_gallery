@@ -58,7 +58,7 @@ void main() {
     final firstCard = tester.getRect(find.byType(GalleryCard).at(0));
     final secondCard = tester.getRect(find.byType(GalleryCard).at(1));
     expect(firstCard.width / firstCard.height, closeTo(3 / 4, 0.01));
-    expect(secondCard.left - firstCard.right, AppSpacing.sm);
+    expect(secondCard.left - firstCard.right, AppSpacing.xs);
 
     await tester.tap(find.text('one.jpg'));
     expect(selections, isEmpty);

@@ -167,6 +167,9 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           child: NotificationListener<ScrollNotification>(
             onNotification: _handleScrollNotification,
             child: GridView.builder(
+              key: PageStorageKey<String>(
+                'gallery-grid:${widget.state.currentPath}',
+              ),
               controller: widget.scrollController,
               padding: const EdgeInsets.all(_GalleryGridLayout.padding),
               addAutomaticKeepAlives: false,

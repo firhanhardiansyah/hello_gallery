@@ -140,7 +140,7 @@ void main() {
         find.byKey(const ValueKey('gallery-card-label-background')),
         findsNothing,
       );
-      expect(find.byTooltip('Album'), findsOneWidget);
+      expect(find.bySemanticsLabel('Album'), findsOneWidget);
       expect(
         tester.getRect(find.byKey(const ValueKey('gallery-card-preview'))),
         tester.getRect(find.byType(GalleryCard)),
