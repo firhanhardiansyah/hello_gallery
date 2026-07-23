@@ -80,6 +80,47 @@ void main() {
     expect(deleted, isFalse);
   });
 
+  testWidgets('offers media rename and trash actions on secondary click', (
+    tester,
+  ) async {
+    var renamed = false;
+    var deleted = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 260,
+              height: 210,
+              child: GalleryCard(
+                item: MediaItem(
+                  path: '/gallery/photo.jpg',
+                  name: 'photo.jpg',
+                  modifiedAt: DateTime(2026),
+                  mediaType: GalleryItemType.image,
+                ),
+                onTap: () {},
+                onRenameMedia: () => renamed = true,
+                onDeleteMedia: () => deleted = true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(GalleryCard), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Move to Trash'), findsOneWidget);
+    await tester.tap(find.text('Move to Trash'));
+    await tester.pumpAndSettle();
+
+    expect(renamed, isFalse);
+    expect(deleted, isTrue);
+  });
+
   testWidgets('shows a prominent border and check for selected cards', (
     tester,
   ) async {

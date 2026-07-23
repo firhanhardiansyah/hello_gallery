@@ -26,6 +26,12 @@ final class ThumbnailJobScheduler {
     return _repository.findCachedThumbnail(item);
   }
 
+  Future<void> invalidate(MediaItem item) async {
+    final job = _pending[item.path];
+    if (job != null) _cancel(job);
+    await _repository.removeCachedThumbnail(item);
+  }
+
   ThumbnailRequest getThumbnail(MediaItem item) {
     if (!item.isVideo) {
       return ThumbnailRequest._(

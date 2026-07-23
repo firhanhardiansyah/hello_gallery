@@ -27,6 +27,8 @@ class GalleryShellTopBar extends ConsumerWidget {
     required this.totalItemCount,
     required this.onSelectAll,
     required this.onClearSelection,
+    required this.selectedMediaCount,
+    required this.onDeleteSelectedMedia,
     this.windowPlatform,
     super.key,
   });
@@ -44,6 +46,8 @@ class GalleryShellTopBar extends ConsumerWidget {
   final int totalItemCount;
   final VoidCallback onSelectAll;
   final VoidCallback onClearSelection;
+  final int selectedMediaCount;
+  final VoidCallback onDeleteSelectedMedia;
   final DesktopWindowPlatform? windowPlatform;
 
   @override
@@ -183,6 +187,16 @@ class GalleryShellTopBar extends ConsumerWidget {
     TextButton(
       onPressed: selectedItemCount < totalItemCount ? onSelectAll : null,
       child: const Text('Select all'),
+    ),
+    const SizedBox(width: AppSpacing.xs),
+    IconButton(
+      key: const ValueKey('delete-selected-media-button'),
+      tooltip: selectedMediaCount == 1
+          ? 'Move selected file to Trash'
+          : 'Move selected files to Trash',
+      onPressed: selectedMediaCount > 0 ? onDeleteSelectedMedia : null,
+      color: Theme.of(context).colorScheme.error,
+      icon: const HugeIcon(icon: HugeIcons.strokeRoundedDelete02),
     ),
     const SizedBox(width: AppSpacing.xs),
   ];

@@ -83,6 +83,12 @@ final class ThumbnailRepositoryImpl implements ThumbnailRepository {
     }
   }
 
+  @override
+  Future<void> removeCachedThumbnail(MediaItem item) async {
+    final thumbnail = await _thumbnailFile(_cacheKey(item));
+    if (await thumbnail.exists()) await thumbnail.delete();
+  }
+
   Future<File> _thumbnailFile(String key) async {
     final cacheRoot = await (_cacheDirectory ??=
         getApplicationCacheDirectory());

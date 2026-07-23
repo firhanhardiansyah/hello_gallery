@@ -150,19 +150,19 @@ class MainFlutterWindow: NSWindow {
       }
       guard
         let arguments = call.arguments as? [String: Any],
-        let folderPath = arguments["path"] as? String
+        let entityPath = arguments["path"] as? String
       else {
         result(
           FlutterError(
             code: "invalid_arguments",
-            message: "Missing or invalid folder path",
+            message: "Missing or invalid file system path",
             details: nil
           )
         )
         return
       }
 
-      NSWorkspace.shared.recycle([URL(fileURLWithPath: folderPath)]) {
+      NSWorkspace.shared.recycle([URL(fileURLWithPath: entityPath)]) {
         _, error in
         DispatchQueue.main.async {
           if let error {

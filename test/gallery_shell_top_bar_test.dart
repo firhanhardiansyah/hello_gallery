@@ -11,6 +11,7 @@ void main() {
   ) async {
     var selectAllCount = 0;
     var clearCount = 0;
+    var deleteCount = 0;
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
@@ -34,6 +35,8 @@ void main() {
               totalItemCount: 8,
               onSelectAll: () => selectAllCount++,
               onClearSelection: () => clearCount++,
+              selectedMediaCount: 3,
+              onDeleteSelectedMedia: () => deleteCount++,
             ),
           ),
         ),
@@ -50,9 +53,11 @@ void main() {
 
     await tester.tap(find.text('Select all'));
     await tester.tap(find.byTooltip('Clear selection'));
+    await tester.tap(find.byTooltip('Move selected files to Trash'));
 
     expect(selectAllCount, 1);
     expect(clearCount, 1);
+    expect(deleteCount, 1);
   });
 
   testWidgets('hides Windows caption controls while fullscreen', (
@@ -81,6 +86,8 @@ void main() {
               totalItemCount: 0,
               onSelectAll: () {},
               onClearSelection: () {},
+              selectedMediaCount: 0,
+              onDeleteSelectedMedia: () {},
             ),
           ),
         ),

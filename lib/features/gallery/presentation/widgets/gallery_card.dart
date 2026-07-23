@@ -12,6 +12,7 @@ import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../application/providers/gallery_dependencies.dart';
 import '../states/media_drag_payload.dart';
 import 'folder_management/folder_context_menu.dart';
+import 'media_management/media_context_menu.dart';
 
 const _galleryCardBorderRadius = BorderRadius.zero;
 const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));
@@ -26,6 +27,9 @@ class GalleryCard extends StatelessWidget {
     this.showItemName = true,
     this.onRenameFolder,
     this.onDeleteFolder,
+    this.onRenameMedia,
+    this.onDeleteMedia,
+    this.onMediaContextMenuOpened,
     this.dragPayload,
     this.onDragStarted,
     this.onMediaDropped,
@@ -40,6 +44,9 @@ class GalleryCard extends StatelessWidget {
   final bool showItemName;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
+  final VoidCallback? onRenameMedia;
+  final VoidCallback? onDeleteMedia;
+  final VoidCallback? onMediaContextMenuOpened;
   final MediaDragPayload? dragPayload;
   final VoidCallback? onDragStarted;
   final ValueChanged<MediaDragPayload>? onMediaDropped;
@@ -56,34 +63,48 @@ class GalleryCard extends StatelessWidget {
       onDoubleTap: onDoubleTap,
     );
 
-    Widget withFolderContextMenu(Widget child) {
-      if (item is! GalleryFolder ||
-          onRenameFolder == null ||
-          onDeleteFolder == null) {
-        return child;
+    Widget withContextMenu(Widget child) {
+      if (item is GalleryFolder &&
+          onRenameFolder != null &&
+          onDeleteFolder != null) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onSecondaryTapDown: (details) => showFolderContextMenu(
+            context: context,
+            globalPosition: details.globalPosition,
+            onRename: onRenameFolder!,
+            onMoveToTrash: onDeleteFolder!,
+          ),
+          child: child,
+        );
       }
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onSecondaryTapDown: (details) => showFolderContextMenu(
-          context: context,
-          globalPosition: details.globalPosition,
-          onRename: onRenameFolder!,
-          onMoveToTrash: onDeleteFolder!,
-        ),
-        child: child,
-      );
+      if (item is MediaItem && onDeleteMedia != null) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onSecondaryTapDown: (details) {
+            onMediaContextMenuOpened?.call();
+            showMediaContextMenu(
+              context: context,
+              globalPosition: details.globalPosition,
+              onRename: onRenameMedia,
+              onMoveToTrash: onDeleteMedia!,
+            );
+          },
+          child: child,
+        );
+      }
+      return child;
     }
 
-    Widget result = withFolderContextMenu(buildCard());
+    Widget result = withContextMenu(buildCard());
     if (item case final GalleryFolder folder when onMediaDropped != null) {
       result = DragTarget<MediaDragPayload>(
         onWillAcceptWithDetails: (details) => details.data.items.any(
           (media) => !path.equals(path.dirname(media.path), folder.path),
         ),
         onAcceptWithDetails: (details) => onMediaDropped!(details.data),
-        builder: (context, candidates, rejected) => withFolderContextMenu(
-          buildCard(dropHighlighted: candidates.isNotEmpty),
-        ),
+        builder: (context, candidates, rejected) =>
+            withContextMenu(buildCard(dropHighlighted: candidates.isNotEmpty)),
       );
     }
     final payload = dragPayload;

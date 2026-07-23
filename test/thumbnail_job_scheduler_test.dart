@@ -103,4 +103,7 @@ final class _FakeThumbnailRepository implements ThumbnailRepository {
     generatedPaths.add(item.path);
     return '${item.path}.jpg';
   }
+
+  @override
+  Future<void> removeCachedThumbnail(MediaItem item) async {}
 }

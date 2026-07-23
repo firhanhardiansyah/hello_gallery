@@ -72,7 +72,7 @@ void RegisterPlatformFolderManagementChannel(
     }
     const auto path_it = arguments->find(flutter::EncodableValue("path"));
     if (path_it == arguments->end()) {
-      result->Error("invalid_arguments", "Missing folder path");
+      result->Error("invalid_arguments", "Missing file system path");
       return;
     }
     const auto* path = std::get_if<std::string>(&path_it->second);
@@ -109,7 +109,7 @@ bool HandlePlatformFolderManagementMessage(UINT message, WPARAM wparam) {
     pending->result->Success();
   } else {
     pending->result->Error(
-        "trash_failed", "Could not move folder to Recycle Bin",
+        "trash_failed", "Could not move item to Recycle Bin",
         flutter::EncodableValue(pending->error_code));
   }
   return true;

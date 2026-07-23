@@ -41,6 +41,8 @@ class GalleryBody extends ConsumerStatefulWidget {
     this.showItemNames = true,
     this.onRenameFolder,
     this.onDeleteFolder,
+    this.onRenameMedia,
+    this.onDeleteMedia,
     super.key,
   });
 
@@ -58,6 +60,8 @@ class GalleryBody extends ConsumerStatefulWidget {
   final bool showItemNames;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
+  final ValueChanged<MediaItem>? onRenameMedia;
+  final ValueChanged<List<MediaItem>>? onDeleteMedia;
 
   @override
   ConsumerState<GalleryBody> createState() => _GalleryBodyState();
@@ -230,6 +234,15 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
                 : [item],
           )
         : null;
+    final selectedMedia = [
+      for (final candidate in visibleItems.whereType<MediaItem>())
+        if (widget.selectedPaths.contains(candidate.path)) candidate,
+    ];
+    final mediaDeleteTargets = item is MediaItem
+        ? selected
+              ? selectedMedia
+              : [item]
+        : const <MediaItem>[];
     return ExcludeFocus(
       child: GalleryCard(
         key: ValueKey(item.path),
@@ -242,6 +255,19 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
             : null,
         onDeleteFolder: item is GalleryFolder && widget.onDeleteFolder != null
             ? () => widget.onDeleteFolder!(item.path)
+            : null,
+        onRenameMedia:
+            item is MediaItem &&
+                widget.onRenameMedia != null &&
+                (!selected || widget.selectedPaths.length == 1)
+            ? () => widget.onRenameMedia!(item)
+            : null,
+        onDeleteMedia: item is MediaItem && widget.onDeleteMedia != null
+            ? () => widget.onDeleteMedia!(mediaDeleteTargets)
+            : null,
+        onMediaContextMenuOpened: item is MediaItem && !selected
+            ? () =>
+                  widget.onSelectionChanged(index, toggle: false, extend: false)
             : null,
         dragPayload: dragPayload,
         onDragStarted: () {

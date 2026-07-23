@@ -17,6 +17,7 @@ import '../../../media_index/domain/entities/file_change.dart';
 import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
 import '../../../media_preview/presentation/pages/media_preview_page.dart';
 import '../../../settings/presentation/notifiers/settings_notifier.dart';
+import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../application/providers/gallery_dependencies.dart';
 import '../input/gallery_input_handler.dart';
 import '../notifiers/gallery_notifier.dart';
@@ -30,6 +31,7 @@ import '../widgets/gallery_page/gallery_body.dart';
 import '../widgets/gallery_page/gallery_shell_top_bar.dart';
 import '../widgets/gallery_page/group_media_dialog.dart';
 import '../widgets/media_move/media_move_progress_dialog.dart';
+import '../widgets/media_management/media_management_dialogs.dart';
 
 class GalleryPage extends ConsumerStatefulWidget {
   const GalleryPage({this.previewPath, super.key});
@@ -591,6 +593,113 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     });
   }
 
+  Future<void> _renameMedia(MediaItem item) async {
+    final gallery = ref.read(galleryNotifierProvider);
+    final rootPath = gallery.rootPath;
+    if (rootPath == null) return;
+    await _whileModalOpen(() async {
+      String? newPath;
+      final renamed = await showMediaNameDialog(
+        context: context,
+        locationPath: path.dirname(item.path),
+        initialBaseName: path.basenameWithoutExtension(item.path),
+        extension: item.extension,
+        onSubmit: (newBaseName) async {
+          newPath = await ref.read(renameMediaProvider)(
+            rootPath: rootPath,
+            mediaPath: item.path,
+            newBaseName: newBaseName,
+          );
+        },
+      );
+      final destination = newPath;
+      if (!renamed || destination == null || !mounted) return;
+      if (path.equals(destination, item.path)) return;
+
+      await _invalidateMediaCache(item);
+      final directoryPath = path.dirname(item.path);
+      ref.read(folderPreviewJobSchedulerProvider).clear();
+      _notifyFolderTreeChanged({directoryPath});
+      await ref.read(galleryNotifierProvider.notifier).syncDirectories({
+        directoryPath,
+      });
+      if (!mounted) return;
+      setState(() {
+        _selectedItemPaths.remove(item.path);
+        _selectionAnchorIndex = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Renamed to ${path.basename(destination)}')),
+      );
+    });
+  }
+
+  Future<void> _deleteMedia(List<MediaItem> items) async {
+    if (items.isEmpty) return;
+    final gallery = ref.read(galleryNotifierProvider);
+    final rootPath = gallery.rootPath;
+    if (rootPath == null) return;
+    final uniqueItems = <String, MediaItem>{
+      for (final item in items) path.normalize(item.path): item,
+    }.values.toList(growable: false);
+
+    await _whileModalOpen(() async {
+      final confirmed = await showMoveMediaToTrashDialog(
+        context: context,
+        mediaNames: [for (final item in uniqueItems) item.name],
+      );
+      if (!confirmed || !mounted) return;
+      final result = await runFolderOperationWithProgress(
+        context: context,
+        message: uniqueItems.length == 1
+            ? 'Moving ${uniqueItems.single.name} to Trash...'
+            : 'Moving ${uniqueItems.length} files to Trash...',
+        operation: () => ref.read(moveMediaToTrashProvider)(
+          rootPath: rootPath,
+          items: uniqueItems,
+        ),
+      );
+      if (!mounted) return;
+
+      await Future.wait([
+        for (final item in result.moved) _invalidateMediaCache(item),
+      ]);
+      final affectedDirectories = {
+        for (final item in result.moved) path.dirname(item.path),
+      };
+      if (affectedDirectories.isNotEmpty) {
+        ref.read(folderPreviewJobSchedulerProvider).clear();
+        _notifyFolderTreeChanged(affectedDirectories);
+        await ref
+            .read(galleryNotifierProvider.notifier)
+            .syncDirectories(affectedDirectories);
+      }
+      if (!mounted) return;
+      setState(() {
+        _selectedItemPaths.removeAll(result.moved.map((item) => item.path));
+        _selectionAnchorIndex = null;
+      });
+
+      final movedCount = result.moved.length;
+      final failedCount = result.failed.length;
+      final message = failedCount == 0
+          ? 'Moved $movedCount ${movedCount == 1 ? 'file' : 'files'} to Trash'
+          : 'Moved $movedCount, failed $failedCount';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    });
+  }
+
+  Future<void> _invalidateMediaCache(MediaItem item) async {
+    await Future.wait([
+      FileImage(File(item.path)).evict(),
+      ref.read(thumbnailJobSchedulerProvider).invalidate(item),
+    ]);
+    ref.invalidate(videoThumbnailProvider(item));
+    ref.invalidate(cachedVideoThumbnailProvider(item));
+  }
+
   bool _previewPathIsInside(String folderPath) {
     final previewPath = widget.previewPath;
     return previewPath != null &&
@@ -634,6 +743,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsNotifierProvider);
     final gallery = ref.watch(galleryNotifierProvider);
+    final selectedMediaItems = [
+      for (final item in gallery.visibleItems.whereType<MediaItem>())
+        if (_selectedItemPaths.contains(item.path)) item,
+    ];
     final selectionFolderPath = gallery.currentPath;
     if (_selectionFolderPath == null ||
         selectionFolderPath == null ||
@@ -734,6 +847,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                               totalItemCount: gallery.visibleItems.length,
                               onSelectAll: _selectAllGridItems,
                               onClearSelection: _clearGridSelection,
+                              selectedMediaCount: selectedMediaItems.length,
+                              onDeleteSelectedMedia: () =>
+                                  _deleteMedia(selectedMediaItems),
                             ),
                           Expanded(
                             child: _preview != null
@@ -767,6 +883,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                                     onFolderSelected: _openFolder,
                                     onRenameFolder: _renameFolder,
                                     onDeleteFolder: _deleteFolder,
+                                    onRenameMedia: _renameMedia,
+                                    onDeleteMedia: _deleteMedia,
                                     onMediaDropped: _moveMediaToFolder,
                                     onMediaSelected: _openMediaPreview,
                                   ),
