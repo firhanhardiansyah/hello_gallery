@@ -78,7 +78,7 @@ class _AnimatedGallerySidebarState extends State<AnimatedGallerySidebar>
         child: ClipRect(
           child: SizeTransition(
             axis: Axis.horizontal,
-            axisAlignment: -1,
+            alignment: Alignment.centerLeft,
             sizeFactor: _widthFactor,
             child: SizedBox(
               width: widget.width,

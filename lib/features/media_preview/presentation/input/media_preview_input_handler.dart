@@ -87,20 +87,22 @@ final class MediaPreviewInputHandler {
   void handleGamepadEvent(NormalizedGamepadEvent event) {
     if (_disposed) return;
     final button = event.button;
-    if (button == null) return;
-    if (button == GamepadButton.leftTrigger) {
+    final axis = event.axis;
+    if (button == GamepadButton.leftTrigger ||
+        axis == GamepadAxis.leftTrigger) {
       final pressed = event.value >= 0.5;
       if (pressed && !_leftTriggerPressed) onToggleRotationLock();
       _leftTriggerPressed = pressed;
       return;
     }
-    if (button == GamepadButton.rightTrigger) {
+    if (button == GamepadButton.rightTrigger ||
+        axis == GamepadAxis.rightTrigger) {
       final pressed = event.value >= 0.5;
       if (pressed && !_rightTriggerPressed) onRotate();
       _rightTriggerPressed = pressed;
       return;
     }
-    if (event.value < 0.5) return;
+    if (button == null || event.value < 0.5) return;
     switch (button) {
       case GamepadButton.dpadUp:
         onPrevious();

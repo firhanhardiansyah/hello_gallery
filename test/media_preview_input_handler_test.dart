@@ -55,18 +55,16 @@ void main() {
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.b));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.touchpad));
-    handler.handleGamepadEvent(_gamepadButton(GamepadButton.rightTrigger));
-    handler.handleGamepadEvent(_gamepadButton(GamepadButton.rightTrigger));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.rightTrigger));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.rightTrigger));
     handler.handleGamepadEvent(
-      _gamepadButton(GamepadButton.rightTrigger, value: 0),
+      _gamepadAxis(GamepadAxis.rightTrigger, value: 0),
     );
-    handler.handleGamepadEvent(_gamepadButton(GamepadButton.rightTrigger));
-    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftTrigger));
-    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftTrigger));
-    handler.handleGamepadEvent(
-      _gamepadButton(GamepadButton.leftTrigger, value: 0),
-    );
-    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftTrigger));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.rightTrigger));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.leftTrigger));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.leftTrigger));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.leftTrigger, value: 0));
+    handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.leftTrigger));
 
     expect(nextCount, 1);
     expect(seekBackwardCount, 1);
@@ -98,6 +96,23 @@ NormalizedGamepadEvent _gamepadButton(
     gamepadId: rawEvent.gamepadId,
     timestamp: rawEvent.timestamp,
     button: button,
+    value: rawEvent.value,
+    rawEvent: rawEvent,
+  );
+}
+
+NormalizedGamepadEvent _gamepadAxis(GamepadAxis axis, {double value = 1}) {
+  final rawEvent = GamepadEvent(
+    gamepadId: 'test-controller',
+    timestamp: 0,
+    type: KeyType.analog,
+    key: axis.name,
+    value: value,
+  );
+  return NormalizedGamepadEvent(
+    gamepadId: rawEvent.gamepadId,
+    timestamp: rawEvent.timestamp,
+    axis: axis,
     value: rawEvent.value,
     rawEvent: rawEvent,
   );

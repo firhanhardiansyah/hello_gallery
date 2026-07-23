@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
@@ -175,7 +176,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
               controller: widget.scrollController,
               padding: const EdgeInsets.all(_GalleryGridLayout.padding),
               addAutomaticKeepAlives: false,
-              cacheExtent: 240,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(240),
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
                 childAspectRatio: _GalleryGridLayout.childAspectRatio,
