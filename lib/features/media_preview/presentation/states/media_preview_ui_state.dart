@@ -1,51 +1,25 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 
-class MediaPreviewUiState {
-  const MediaPreviewUiState({
-    this.items = const [],
-    this.activeIndex = 0,
-    this.isPlaying = false,
-    this.isVideoReady = false,
-    this.isMuted = false,
-    this.isLooping = false,
-    this.controlsVisible = true,
-    this.position = Duration.zero,
-    this.duration = Duration.zero,
-  });
+part 'media_preview_ui_state.freezed.dart';
 
-  final List<MediaItem> items;
-  final int activeIndex;
-  final bool isPlaying;
-  final bool isVideoReady;
-  final bool isMuted;
-  final bool isLooping;
-  final bool controlsVisible;
-  final Duration position;
-  final Duration duration;
+@freezed
+abstract class MediaPreviewUiState with _$MediaPreviewUiState {
+  const MediaPreviewUiState._();
+
+  const factory MediaPreviewUiState({
+    @Default(<MediaItem>[]) List<MediaItem> items,
+    @Default(0) int activeIndex,
+    @Default(false) bool isPlaying,
+    @Default(false) bool isVideoReady,
+    @Default(false) bool isMuted,
+    @Default(false) bool isLooping,
+    @Default(true) bool controlsVisible,
+    @Default(Duration.zero) Duration position,
+    @Default(Duration.zero) Duration duration,
+  }) = _MediaPreviewUiState;
 
   MediaItem? get activeItem => items.isEmpty ? null : items[activeIndex];
   bool get hasPrevious => activeIndex > 0;
   bool get hasNext => activeIndex + 1 < items.length;
-
-  MediaPreviewUiState copyWith({
-    List<MediaItem>? items,
-    int? activeIndex,
-    bool? isPlaying,
-    bool? isVideoReady,
-    bool? isMuted,
-    bool? isLooping,
-    bool? controlsVisible,
-    Duration? position,
-    Duration? duration,
-  }) => MediaPreviewUiState(
-    items: items ?? this.items,
-    activeIndex: activeIndex ?? this.activeIndex,
-    isPlaying: isPlaying ?? this.isPlaying,
-    isVideoReady: isVideoReady ?? this.isVideoReady,
-    isMuted: isMuted ?? this.isMuted,
-    isLooping: isLooping ?? this.isLooping,
-    controlsVisible: controlsVisible ?? this.controlsVisible,
-    position: position ?? this.position,
-    duration: duration ?? this.duration,
-  );
 }

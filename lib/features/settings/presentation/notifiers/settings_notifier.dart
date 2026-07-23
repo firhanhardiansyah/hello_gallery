@@ -18,21 +18,30 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
   }
 
   Future<void> _load() async {
-    final results = await Future.wait([
-      ref.read(loadGalleryRootProvider)(),
-      ref.read(loadThemePreferencesProvider)(),
-      ref.read(loadGalleryViewPreferencesProvider)(),
-    ]);
-    final theme = results[1] as ThemePreferences;
-    final galleryView = results[2] as GalleryViewPreferences;
-    state = SettingsUiState(
-      rootPath: results[0] as String?,
-      isLoading: false,
-      appearanceMode: theme.appearanceMode,
-      colorTheme: theme.colorTheme,
-      showItemNames: galleryView.showItemNames,
-    );
+    state = state.copyWith(loadState: const SettingsLoadState.loading());
+    try {
+      final results = await Future.wait([
+        ref.read(loadGalleryRootProvider)(),
+        ref.read(loadThemePreferencesProvider)(),
+        ref.read(loadGalleryViewPreferencesProvider)(),
+      ]);
+      final rootPath = results[0] as String?;
+      final theme = results[1] as ThemePreferences;
+      final galleryView = results[2] as GalleryViewPreferences;
+      state = SettingsUiState(
+        loadState: rootPath == null
+            ? const SettingsLoadState.rootRequired()
+            : SettingsLoadState.ready(rootPath),
+        appearanceMode: theme.appearanceMode,
+        colorTheme: theme.colorTheme,
+        showItemNames: galleryView.showItemNames,
+      );
+    } on Object catch (error) {
+      state = state.copyWith(loadState: SettingsLoadState.error('$error'));
+    }
   }
+
+  Future<void> reload() => _load();
 
   Future<bool> chooseRootFolder() async {
     try {
@@ -40,7 +49,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         initialDirectory: state.rootPath,
       );
       if (selectedPath == null) return false;
-      state = state.copyWith(rootPath: selectedPath, isLoading: false);
+      state = state.copyWith(loadState: SettingsLoadState.ready(selectedPath));
       return true;
     } on Object {
       return false;

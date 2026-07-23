@@ -11,7 +11,7 @@ import '../../../application/services/folder_preview_job_scheduler.dart';
 import '../../../domain/entities/gallery_item.dart';
 import '../../states/gallery_ui_state.dart';
 import '../../states/media_drag_payload.dart';
-import '../gallery_card.dart';
+import 'gallery_card.dart';
 
 typedef GallerySelectionChanged =
     void Function(int index, {required bool toggle, required bool extend});
@@ -88,7 +88,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
     }
     if (oldWidget.state.currentPath != widget.state.currentPath ||
-        oldWidget.state.status != widget.state.status) {
+        oldWidget.state.loadState != widget.state.loadState) {
       _resumePreviewSchedulersImmediately();
     }
   }
@@ -143,20 +143,18 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
 
   @override
   Widget build(BuildContext context) {
-    return switch (widget.state.status) {
-      GalleryStatus.initial || GalleryStatus.loading => const _LoadingGrid(),
-      GalleryStatus.empty => const Center(
+    return switch (widget.state.loadState) {
+      GalleryInitial() || GalleryLoading() => const _LoadingGrid(),
+      GalleryEmpty() => const Center(
         child: Text('No supported media in this folder.'),
       ),
-      GalleryStatus.error => Center(
+      GalleryError(:final message) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Text(
-            'Could not read this folder.\n${widget.state.errorMessage}',
-          ),
+          child: Text('Could not read this folder.\n$message'),
         ),
       ),
-      GalleryStatus.ready => _buildReadyGrid(),
+      GalleryReady() => _buildReadyGrid(),
     };
   }
 

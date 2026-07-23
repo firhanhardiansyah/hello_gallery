@@ -60,7 +60,7 @@ Widget _gallery(ScrollController controller, {required String path}) {
       home: Scaffold(
         body: GalleryBody(
           state: GalleryUiState(
-            status: GalleryStatus.ready,
+            loadState: const GalleryLoadState.ready(),
             rootPath: '/gallery',
             currentPath: path,
             items: [

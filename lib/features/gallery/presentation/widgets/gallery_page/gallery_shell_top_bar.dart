@@ -116,8 +116,7 @@ class GalleryShellTopBar extends ConsumerWidget {
                     tooltip: 'New folder',
                     onPressed:
                         gallery.currentPath != null &&
-                            (gallery.status == GalleryStatus.ready ||
-                                gallery.status == GalleryStatus.empty)
+                            gallery.canManageDirectory
                         ? onCreateFolder
                         : null,
                     icon: const HugeIcon(
@@ -126,16 +125,13 @@ class GalleryShellTopBar extends ConsumerWidget {
                   ),
                   IconButton(
                     tooltip: 'Group media',
-                    onPressed: gallery.status == GalleryStatus.ready
-                        ? onGroupMedia
-                        : null,
+                    onPressed: gallery.isReady ? onGroupMedia : null,
                     icon: const HugeIcon(
                       icon: HugeIcons.strokeRoundedFolderMoveIn,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  if (gallery.status == GalleryStatus.ready ||
-                      gallery.status == GalleryStatus.empty)
+                  if (gallery.canManageDirectory)
                     DropdownButtonHideUnderline(
                       child: DropdownButton<GallerySort>(
                         value: gallery.sort,

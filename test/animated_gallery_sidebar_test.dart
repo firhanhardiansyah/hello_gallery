@@ -73,7 +73,11 @@ void main() {
     expect(width, 380);
     expect(tester.getSize(find.byType(AnimatedGallerySidebar)).width, 380);
 
-    await tester.drag(handle, const Offset(-200, 0));
+    final dragIntoCollapseResistance =
+        width -
+        AnimatedGallerySidebar.minimumWidth +
+        AnimatedGallerySidebar.defaultCollapseDragDistance / 2;
+    await tester.drag(handle, Offset(-dragIntoCollapseResistance, 0));
     await tester.pump();
 
     expect(visible, isTrue);
@@ -83,7 +87,10 @@ void main() {
       AnimatedGallerySidebar.minimumWidth,
     );
 
-    await tester.drag(handle, const Offset(-60, 0));
+    await tester.drag(
+      handle,
+      const Offset(-AnimatedGallerySidebar.defaultCollapseDragDistance - 1, 0),
+    );
     await tester.pumpAndSettle();
 
     expect(visible, isFalse);

@@ -10,28 +10,32 @@ import 'package:path/path.dart' as path;
 import 'package:window_manager/window_manager.dart';
 
 import '../../../../app/routing/app_router.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/desktop_window_title_bar.dart';
 import '../../../gamepad/presentation/widgets/virtual_cursor_overlay.dart';
 import '../../../media_index/application/providers/media_index_dependencies.dart';
 import '../../../media_index/domain/entities/file_change.dart';
 import '../../../media_preview/presentation/notifiers/media_preview_notifier.dart';
 import '../../../media_preview/presentation/pages/media_preview_page.dart';
+import '../../../media_preview/presentation/states/media_preview_ui_state.dart';
 import '../../../settings/presentation/notifiers/settings_notifier.dart';
+import '../../../settings/presentation/states/settings_ui_state.dart';
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../application/providers/gallery_dependencies.dart';
 import '../input/gallery_input_handler.dart';
 import '../notifiers/gallery_notifier.dart';
+import '../states/gallery_ui_state.dart';
 import '../states/media_drag_payload.dart';
 import '../states/media_preview_selection.dart';
 import '../widgets/folder_management/folder_management_dialogs.dart';
-import '../widgets/folder_tree_sidebar.dart';
+import '../widgets/folder_tree/folder_tree_sidebar.dart';
 import '../widgets/gallery_page/animated_gallery_sidebar.dart';
 import '../widgets/gallery_page/choose_folder_prompt.dart';
 import '../widgets/gallery_page/gallery_body.dart';
 import '../widgets/gallery_page/gallery_shell_top_bar.dart';
-import '../widgets/gallery_page/group_media_dialog.dart';
-import '../widgets/media_move/media_move_progress_dialog.dart';
+import '../widgets/media_grouping/group_media_dialog.dart';
 import '../widgets/media_management/media_management_dialogs.dart';
+import '../widgets/media_move/media_move_progress_dialog.dart';
 
 class GalleryPage extends ConsumerStatefulWidget {
   const GalleryPage({this.previewPath, super.key});
@@ -764,16 +768,17 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       _selectionAnchorIndex = null;
       _selectedItemPaths.clear();
     }
-    final previewState = _preview == null
-        ? null
-        : ref.watch(mediaPreviewNotifierProvider);
+    MediaPreviewUiState? previewState;
+    if (_preview != null) {
+      previewState = ref.watch(mediaPreviewNotifierProvider);
+    }
     final root = settings.rootPath;
     if (root != null) {
       ref.listen(galleryAutoSyncProvider(root), (previous, next) {
         next.whenData((batch) => unawaited(_handleAutoSync(batch)));
       });
     }
-    if (!settings.isLoading && root != null && root != _loadedRoot) {
+    if (root != null && root != _loadedRoot) {
       _loadedRoot = root;
       Future.microtask(
         () => ref.read(galleryNotifierProvider.notifier).setRoot(root),
@@ -784,135 +789,220 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       autofocus: true,
       child: Scaffold(
         body: VirtualCursorOverlay(
-          child: settings.isLoading
-              ? const _StandaloneWindowChrome(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              : root == null
-              ? _StandaloneWindowChrome(
-                  child: ChooseFolderPrompt(
-                    onPressed: () => ref
-                        .read(settingsNotifierProvider.notifier)
-                        .chooseRootFolder(),
-                  ),
-                )
-              : Row(
-                  children: [
-                    AnimatedGallerySidebar(
-                      visible: _sidebarVisible,
-                      width: _sidebarWidth,
-                      onWidthChanged: (width) {
-                        if (width == _sidebarWidth) return;
-                        setState(() => _sidebarWidth = width);
-                      },
-                      onMinWidthReached: () {
-                        if (_sidebarVisible) {
-                          setState(() => _sidebarVisible = false);
-                        }
-                      },
-                      child: ExcludeFocus(
-                        excluding: !_sidebarVisible,
-                        child: FolderTreeSidebar(
-                          rootPath: root,
-                          currentFolderPath: gallery.currentPath ?? root,
-                          activeMediaPath: previewState?.activeItem?.path,
-                          sort: gallery.sort,
-                          onRefresh: gallery.currentPath == null
-                              ? null
-                              : ref
-                                    .read(galleryNotifierProvider.notifier)
-                                    .refresh,
-                          onChooseRootFolder: () async {
-                            final changed = await ref
-                                .read(settingsNotifierProvider.notifier)
-                                .chooseRootFolder();
-                            if (changed) _loadedRoot = null;
-                          },
-                          onClose: () =>
-                              setState(() => _sidebarVisible = false),
-                          syncRevision: _folderTreeSyncRevision,
-                          syncedDirectoryPaths: _syncedDirectoryPaths,
-                          onFolderSelected: _openFolder,
-                          onRenameFolder: _preview == null
-                              ? _renameFolder
-                              : null,
-                          onDeleteFolder: _preview == null
-                              ? _deleteFolder
-                              : null,
-                          onMediaDropped: _preview == null
-                              ? _moveMediaToFolder
-                              : null,
-                          onMediaSelected: _openMediaPreview,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          if (_preview == null || !_isFullscreen)
-                            GalleryShellTopBar(
-                              gallery: gallery,
-                              isPreview: _preview != null,
-                              isFullscreen: _isFullscreen,
-                              previewTitle: previewState?.activeItem?.name,
-                              sidebarVisible: _sidebarVisible,
-                              onToggleSidebar: _toggleSidebar,
-                              onClosePreview: _closePreview,
-                              onCreateFolder: _createFolder,
-                              onGroupMedia: _openGroupMedia,
-                              selectedItemCount: _selectedItemPaths.length,
-                              totalItemCount: gallery.visibleItems.length,
-                              onSelectAll: _selectAllGridItems,
-                              onClearSelection: _clearGridSelection,
-                              selectedMediaCount: selectedMediaItems.length,
-                              onDeleteSelectedMedia: () =>
-                                  _deleteMedia(selectedMediaItems),
-                            ),
-                          Expanded(
-                            child: _preview != null
-                                ? MediaPreviewPage(
-                                    key: ValueKey(_preview!.requestedMediaPath),
-                                    items: _preview!.items,
-                                    initialIndex: _preview!.initialIndex,
-                                    rootPath: root,
-                                    currentFolderPath: _preview!.folderPath,
-                                    sort: gallery.sort,
-                                    embedded: true,
-                                    sidebarVisible: _sidebarVisible,
-                                    onToggleSidebar: _toggleSidebar,
-                                    onClose: _closePreview,
-                                    isFullscreen: _isFullscreen,
-                                    onToggleFullscreen: _toggleFullscreen,
-                                  )
-                                : GalleryBody(
-                                    state: gallery,
-                                    scrollController: _scrollController,
-                                    selectedIndex: _selectedGridIndex,
-                                    keyboardFocusVisible:
-                                        _gridKeyboardFocusVisible,
-                                    showItemNames: settings.showItemNames,
-                                    selectedPaths: _selectedItemPaths,
-                                    onSelectionChanged: _changeGridSelection,
-                                    onClearSelection: _clearGridSelection,
-                                    onColumnCountChanged: (count) {
-                                      _gridColumnCount = count;
-                                    },
-                                    onFolderSelected: _openFolder,
-                                    onRenameFolder: _renameFolder,
-                                    onDeleteFolder: _deleteFolder,
-                                    onRenameMedia: _renameMedia,
-                                    onDeleteMedia: _deleteMedia,
-                                    onMediaDropped: _moveMediaToFolder,
-                                    onMediaSelected: _openMediaPreview,
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+          child: _buildPageContent(
+            settings: settings,
+            gallery: gallery,
+            previewState: previewState,
+            selectedMediaItems: selectedMediaItems,
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPageContent({
+    required SettingsUiState settings,
+    required GalleryUiState gallery,
+    required MediaPreviewUiState? previewState,
+    required List<MediaItem> selectedMediaItems,
+  }) {
+    return settings.loadState.when<Widget>(
+      loading: () => const _StandaloneWindowChrome(
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      rootRequired: () => _StandaloneWindowChrome(
+        child: ChooseFolderPrompt(
+          onPressed: () =>
+              ref.read(settingsNotifierProvider.notifier).chooseRootFolder(),
+        ),
+      ),
+      ready: (rootPath) => _buildGalleryWorkspace(
+        rootPath: rootPath,
+        settings: settings,
+        gallery: gallery,
+        previewState: previewState,
+        selectedMediaItems: selectedMediaItems,
+      ),
+      error: (message) => _StandaloneWindowChrome(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: ref.read(settingsNotifierProvider.notifier).reload,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGalleryWorkspace({
+    required String rootPath,
+    required SettingsUiState settings,
+    required GalleryUiState gallery,
+    required MediaPreviewUiState? previewState,
+    required List<MediaItem> selectedMediaItems,
+  }) {
+    return Row(
+      children: [
+        _buildSidebar(
+          rootPath: rootPath,
+          gallery: gallery,
+          previewState: previewState,
+        ),
+        Expanded(
+          child: _buildMainPanel(
+            rootPath: rootPath,
+            settings: settings,
+            gallery: gallery,
+            previewState: previewState,
+            selectedMediaItems: selectedMediaItems,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSidebar({
+    required String rootPath,
+    required GalleryUiState gallery,
+    required MediaPreviewUiState? previewState,
+  }) {
+    VoidCallback? onRefresh;
+    ValueChanged<String>? onRenameFolder;
+    ValueChanged<String>? onDeleteFolder;
+    MediaFolderDrop? onMediaDropped;
+    if (gallery.currentPath != null) {
+      onRefresh = ref.read(galleryNotifierProvider.notifier).refresh;
+    }
+    if (_preview == null) {
+      onRenameFolder = _renameFolder;
+      onDeleteFolder = _deleteFolder;
+      onMediaDropped = _moveMediaToFolder;
+    }
+
+    return AnimatedGallerySidebar(
+      visible: _sidebarVisible,
+      width: _sidebarWidth,
+      onWidthChanged: (width) {
+        if (width == _sidebarWidth) return;
+        setState(() => _sidebarWidth = width);
+      },
+      onMinWidthReached: () {
+        if (_sidebarVisible) setState(() => _sidebarVisible = false);
+      },
+      child: ExcludeFocus(
+        excluding: !_sidebarVisible,
+        child: FolderTreeSidebar(
+          rootPath: rootPath,
+          currentFolderPath: gallery.currentPath ?? rootPath,
+          activeMediaPath: previewState?.activeItem?.path,
+          sort: gallery.sort,
+          onRefresh: onRefresh,
+          onChooseRootFolder: _chooseRootFolder,
+          onClose: () => setState(() => _sidebarVisible = false),
+          syncRevision: _folderTreeSyncRevision,
+          syncedDirectoryPaths: _syncedDirectoryPaths,
+          onFolderSelected: _openFolder,
+          onRenameFolder: onRenameFolder,
+          onDeleteFolder: onDeleteFolder,
+          onMediaDropped: onMediaDropped,
+          onMediaSelected: _openMediaPreview,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _chooseRootFolder() async {
+    final changed = await ref
+        .read(settingsNotifierProvider.notifier)
+        .chooseRootFolder();
+    if (changed) _loadedRoot = null;
+  }
+
+  Widget _buildMainPanel({
+    required String rootPath,
+    required SettingsUiState settings,
+    required GalleryUiState gallery,
+    required MediaPreviewUiState? previewState,
+    required List<MediaItem> selectedMediaItems,
+  }) {
+    return Column(
+      children: [
+        if (_preview == null || !_isFullscreen)
+          GalleryShellTopBar(
+            gallery: gallery,
+            isPreview: _preview != null,
+            isFullscreen: _isFullscreen,
+            previewTitle: previewState?.activeItem?.name,
+            sidebarVisible: _sidebarVisible,
+            onToggleSidebar: _toggleSidebar,
+            onClosePreview: _closePreview,
+            onCreateFolder: _createFolder,
+            onGroupMedia: _openGroupMedia,
+            selectedItemCount: _selectedItemPaths.length,
+            totalItemCount: gallery.visibleItems.length,
+            onSelectAll: _selectAllGridItems,
+            onClearSelection: _clearGridSelection,
+            selectedMediaCount: selectedMediaItems.length,
+            onDeleteSelectedMedia: () => _deleteMedia(selectedMediaItems),
+          ),
+        Expanded(
+          child: _buildActiveContent(
+            rootPath: rootPath,
+            settings: settings,
+            gallery: gallery,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveContent({
+    required String rootPath,
+    required SettingsUiState settings,
+    required GalleryUiState gallery,
+  }) {
+    final preview = _preview;
+    if (preview != null) {
+      return MediaPreviewPage(
+        key: ValueKey(preview.requestedMediaPath),
+        items: preview.items,
+        initialIndex: preview.initialIndex,
+        rootPath: rootPath,
+        currentFolderPath: preview.folderPath,
+        sort: gallery.sort,
+        embedded: true,
+        sidebarVisible: _sidebarVisible,
+        onToggleSidebar: _toggleSidebar,
+        onClose: _closePreview,
+        isFullscreen: _isFullscreen,
+        onToggleFullscreen: _toggleFullscreen,
+      );
+    }
+
+    return GalleryBody(
+      state: gallery,
+      scrollController: _scrollController,
+      selectedIndex: _selectedGridIndex,
+      keyboardFocusVisible: _gridKeyboardFocusVisible,
+      showItemNames: settings.showItemNames,
+      selectedPaths: _selectedItemPaths,
+      onSelectionChanged: _changeGridSelection,
+      onClearSelection: _clearGridSelection,
+      onColumnCountChanged: (count) => _gridColumnCount = count,
+      onFolderSelected: _openFolder,
+      onRenameFolder: _renameFolder,
+      onDeleteFolder: _deleteFolder,
+      onRenameMedia: _renameMedia,
+      onDeleteMedia: _deleteMedia,
+      onMediaDropped: _moveMediaToFolder,
+      onMediaSelected: _openMediaPreview,
     );
   }
 }

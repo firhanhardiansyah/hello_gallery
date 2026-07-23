@@ -37,7 +37,10 @@ void main() {
 
     final backNavigation = notifier.goBack();
 
-    expect(container.read(galleryNotifierProvider).status, GalleryStatus.empty);
+    expect(
+      container.read(galleryNotifierProvider).loadState,
+      const GalleryLoadState.empty(),
+    );
     await backNavigation;
 
     expect(container.read(galleryNotifierProvider).currentPath, '/gallery');
@@ -93,7 +96,7 @@ void main() {
 
     final state = container.read(galleryNotifierProvider);
     expect(repository.readCount, 2);
-    expect(state.status, GalleryStatus.ready);
+    expect(state.loadState, const GalleryLoadState.ready());
     expect(state.items.single.name, 'new.jpg');
     expect(state.canGoBack, isFalse);
   });
@@ -113,7 +116,7 @@ void main() {
       final state = container.read(galleryNotifierProvider);
       expect(state.currentPath, '/gallery');
       expect(state.canGoBack, isFalse);
-      expect(state.status, GalleryStatus.empty);
+      expect(state.loadState, const GalleryLoadState.empty());
     },
   );
 

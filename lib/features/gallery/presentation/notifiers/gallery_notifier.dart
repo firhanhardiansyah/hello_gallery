@@ -64,7 +64,7 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
     }
 
     state = state.copyWith(
-      status: GalleryStatus.loading,
+      loadState: const GalleryLoadState.loading(),
       currentPath: directoryPath,
       visibleCount: 60,
       canGoBack: _backHistory.isNotEmpty,
@@ -77,9 +77,8 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
     } catch (error) {
       if (generation != _loadGeneration) return;
       state = state.copyWith(
-        status: GalleryStatus.error,
+        loadState: GalleryLoadState.error(error.toString()),
         items: const [],
-        errorMessage: error.toString(),
       );
     }
   }
@@ -87,7 +86,7 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
   void _showDirectory(String directoryPath, List<GalleryItem> items) {
     final sorted = _sortItems(items, state.sort);
     state = state.copyWith(
-      status: sorted.isEmpty ? GalleryStatus.empty : GalleryStatus.ready,
+      loadState: _loadStateFor(sorted),
       currentPath: directoryPath,
       items: sorted,
       visibleCount: 60,
@@ -193,9 +192,10 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
         if (path.equals(removedDirectory, root) ||
             path.isWithin(removedDirectory, root)) {
           state = state.copyWith(
-            status: GalleryStatus.error,
+            loadState: const GalleryLoadState.error(
+              'Root folder no longer exists',
+            ),
             items: const [],
-            errorMessage: 'Root folder no longer exists',
           );
           return;
         }
@@ -228,7 +228,7 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
       if (generation != _loadGeneration) return;
       final sorted = _sortItems(items, state.sort);
       state = state.copyWith(
-        status: sorted.isEmpty ? GalleryStatus.empty : GalleryStatus.ready,
+        loadState: _loadStateFor(sorted),
         items: sorted,
         visibleCount: state.visibleCount,
       );
@@ -245,6 +245,11 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
 
   void setSort(GallerySort sort) {
     state = state.copyWith(sort: sort, items: _sortItems(state.items, sort));
+  }
+
+  GalleryLoadState _loadStateFor(List<GalleryItem> items) {
+    if (items.isEmpty) return const GalleryLoadState.empty();
+    return const GalleryLoadState.ready();
   }
 
   List<GalleryItem> _sortItems(List<GalleryItem> input, GallerySort sort) {

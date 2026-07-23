@@ -18,7 +18,7 @@ void main() {
           home: Scaffold(
             body: GalleryShellTopBar(
               gallery: const GalleryUiState(
-                status: GalleryStatus.ready,
+                loadState: GalleryLoadState.ready(),
                 rootPath: '/gallery',
                 currentPath: '/gallery',
               ),
@@ -69,7 +69,7 @@ void main() {
           home: Scaffold(
             body: GalleryShellTopBar(
               gallery: const GalleryUiState(
-                status: GalleryStatus.ready,
+                loadState: GalleryLoadState.ready(),
                 rootPath: '/gallery',
                 currentPath: '/gallery',
               ),

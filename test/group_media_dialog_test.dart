@@ -7,7 +7,7 @@ import 'package:hello_gallery/features/gallery/application/providers/gallery_dep
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/repositories/gallery_repository.dart';
 import 'package:hello_gallery/features/gallery/domain/repositories/media_organization_repository.dart';
-import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/group_media_dialog.dart';
+import 'package:hello_gallery/features/gallery/presentation/widgets/media_grouping/group_media_dialog.dart';
 
 void main() {
   testWidgets('validates filenames and shows determinate move progress', (

@@ -1,32 +1,31 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
 
-class SettingsUiState {
-  const SettingsUiState({
-    this.rootPath,
-    this.isLoading = true,
-    this.appearanceMode = AppAppearanceMode.system,
-    this.colorTheme = AppColorTheme.indigo,
-    this.showItemNames = true,
-  });
+part 'settings_ui_state.freezed.dart';
 
-  final String? rootPath;
-  final bool isLoading;
-  final AppAppearanceMode appearanceMode;
-  final AppColorTheme colorTheme;
-  final bool showItemNames;
+@freezed
+sealed class SettingsLoadState with _$SettingsLoadState {
+  const factory SettingsLoadState.loading() = SettingsLoading;
+  const factory SettingsLoadState.rootRequired() = SettingsRootRequired;
+  const factory SettingsLoadState.ready(String rootPath) = SettingsReady;
+  const factory SettingsLoadState.error(String message) = SettingsError;
+}
 
-  SettingsUiState copyWith({
-    String? rootPath,
-    bool? isLoading,
-    AppAppearanceMode? appearanceMode,
-    AppColorTheme? colorTheme,
-    bool? showItemNames,
-  }) => SettingsUiState(
-    rootPath: rootPath ?? this.rootPath,
-    isLoading: isLoading ?? this.isLoading,
-    appearanceMode: appearanceMode ?? this.appearanceMode,
-    colorTheme: colorTheme ?? this.colorTheme,
-    showItemNames: showItemNames ?? this.showItemNames,
-  );
+@freezed
+abstract class SettingsUiState with _$SettingsUiState {
+  const SettingsUiState._();
+
+  const factory SettingsUiState({
+    @Default(SettingsLoadState.loading()) SettingsLoadState loadState,
+    @Default(AppAppearanceMode.system) AppAppearanceMode appearanceMode,
+    @Default(AppColorTheme.indigo) AppColorTheme colorTheme,
+    @Default(true) bool showItemNames,
+  }) = _SettingsUiState;
+
+  String? get rootPath => switch (loadState) {
+    SettingsReady(:final rootPath) => rootPath,
+    SettingsLoading() || SettingsRootRequired() || SettingsError() => null,
+  };
 }

@@ -96,7 +96,7 @@ void main() {
     await tester.pumpWidget(
       buildGallery(
         const GalleryUiState(
-          status: GalleryStatus.ready,
+          loadState: GalleryLoadState.ready(),
           currentPath: '/gallery/first',
         ),
       ),
@@ -111,7 +111,7 @@ void main() {
     await tester.pumpWidget(
       buildGallery(
         GalleryUiState(
-          status: GalleryStatus.ready,
+          loadState: const GalleryLoadState.ready(),
           currentPath: '/gallery/second',
           items: [folder],
         ),

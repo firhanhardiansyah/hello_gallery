@@ -9,10 +9,10 @@ import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort
 import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
-import '../../application/providers/gallery_dependencies.dart';
-import '../states/media_drag_payload.dart';
-import 'folder_tree/folder_tree_contents.dart';
-import 'folder_tree/folder_tree_view.dart';
+import '../../../application/providers/gallery_dependencies.dart';
+import '../../states/media_drag_payload.dart';
+import 'folder_tree_contents.dart';
+import 'folder_tree_view.dart';
 
 class FolderTreeSidebar extends ConsumerStatefulWidget {
   const FolderTreeSidebar({

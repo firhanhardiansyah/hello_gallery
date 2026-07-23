@@ -8,11 +8,11 @@ import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart
 import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
-import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
-import '../../application/providers/gallery_dependencies.dart';
-import '../states/media_drag_payload.dart';
-import 'folder_management/folder_context_menu.dart';
-import 'media_management/media_context_menu.dart';
+import '../../../../thumbnail/application/providers/thumbnail_dependencies.dart';
+import '../../../application/providers/gallery_dependencies.dart';
+import '../../states/media_drag_payload.dart';
+import '../folder_management/folder_context_menu.dart';
+import '../media_management/media_context_menu.dart';
 
 const _galleryCardBorderRadius = BorderRadius.zero;
 const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));

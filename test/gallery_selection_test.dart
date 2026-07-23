@@ -6,7 +6,7 @@ import 'package:hello_gallery/app/theme/app_theme.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/presentation/states/gallery_ui_state.dart';
-import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_card.dart';
+import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_card.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_body.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
@@ -30,7 +30,7 @@ void main() {
           home: Scaffold(
             body: GalleryBody(
               state: GalleryUiState(
-                status: GalleryStatus.ready,
+                loadState: const GalleryLoadState.ready(),
                 currentPath: '/gallery',
                 items: [first, second],
               ),
@@ -105,7 +105,7 @@ void main() {
           home: Scaffold(
             body: GalleryBody(
               state: GalleryUiState(
-                status: GalleryStatus.ready,
+                loadState: const GalleryLoadState.ready(),
                 currentPath: '/gallery',
                 items: [first, second],
               ),

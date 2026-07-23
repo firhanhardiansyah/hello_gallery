@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 import 'package:hello_gallery/features/gallery/application/providers/gallery_dependencies.dart';
 import 'package:hello_gallery/features/gallery/application/services/gallery_directory_cache.dart';
 import 'package:hello_gallery/features/gallery/application/use_cases/read_gallery_directory.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/repositories/gallery_repository.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
-import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree_sidebar.dart';
-import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
+import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree/folder_tree_sidebar.dart';
 
 void main() {
   testWidgets('scrolls to the active folder when navigation changes', (
