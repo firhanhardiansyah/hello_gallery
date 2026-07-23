@@ -14,30 +14,24 @@ final class GalleryPageInputActions {
     required this.readSelection,
     required this.updateSelection,
     required this.isPreviewActive,
-    required this.isFullscreen,
     required this.openFolder,
     required this.openMedia,
     required this.goBack,
     required this.goUp,
-    required this.toggleFullscreen,
   });
 
   final GalleryUiState Function() readGallery;
   final GallerySelectionReader readSelection;
   final GallerySelectionUpdater updateSelection;
   final bool Function() isPreviewActive;
-  final bool Function() isFullscreen;
   final FutureOr<void> Function(String folderPath) openFolder;
   final FutureOr<void> Function(MediaItem item) openMedia;
   final FutureOr<void> Function() goBack;
   final FutureOr<void> Function() goUp;
-  final FutureOr<void> Function() toggleFullscreen;
 
   void handleBack() {
     if (!isPreviewActive() && readSelection().selectedPaths.isNotEmpty) {
       clearSelection();
-    } else if (isFullscreen()) {
-      unawaited(Future.sync(toggleFullscreen));
     } else {
       navigateBack();
     }

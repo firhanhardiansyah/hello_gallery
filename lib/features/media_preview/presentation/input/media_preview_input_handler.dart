@@ -103,8 +103,8 @@ final class MediaPreviewInputHandler {
       case GamepadButton.start:
         onToggleFullscreen();
       case GamepadButton.touchpad:
-        onToggleSidebar();
       case GamepadButton.back:
+        onToggleSidebar();
       case GamepadButton.b:
         onClose();
       case GamepadButton.home:

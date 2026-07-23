@@ -63,8 +63,8 @@ void main() {
     expect(rotationLockCount, 1);
     expect(loopCount, 1);
     expect(fullscreenCount, 1);
-    expect(closeCount, 2);
-    expect(sidebarCount, 1);
+    expect(closeCount, 1);
+    expect(sidebarCount, 2);
     expect(topBarCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);

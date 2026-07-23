@@ -70,8 +70,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onToggleSidebar: _toggleSidebar,
       onToggleTopBar: _toggleTopBar,
       onToggleFullscreen: _toggleFullscreen,
-      onClose: () => widget.onClose?.call(),
-      onEscape: _handleEscape,
+      onClose: _closePreview,
+      onEscape: _closePreview,
       onRequestFocus: _focusNode.requestFocus,
     )..start();
     Future.microtask(() async {
@@ -154,11 +154,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     unawaited(_controller.seekBy(delta));
   }
 
-  void _handleEscape() {
-    if (widget.isFullscreen) {
-      _toggleFullscreen();
-      return;
-    }
+  void _closePreview() {
     final onClose = widget.onClose;
     if (onClose != null) {
       onClose();

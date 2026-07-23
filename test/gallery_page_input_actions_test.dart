@@ -57,6 +57,25 @@ void main() {
     expect(goUpCount, 0);
   });
 
+  test(
+    'back action keeps window mode and navigates through gallery history',
+    () {
+      var goBackCount = 0;
+      final actions = _createActions(
+        gallery: GalleryUiState(
+          items: items,
+          visibleCount: items.length,
+          canGoBack: true,
+        ),
+        goBack: () => goBackCount++,
+      );
+
+      actions.handleBack();
+
+      expect(goBackCount, 1);
+    },
+  );
+
   test('opens the item at the independently supplied selection index', () {
     MediaItem? openedMedia;
     final actions = _createActions(
@@ -86,11 +105,9 @@ GalleryPageInputActions _createActions({
     updateSelection:
         updateSelection ?? (selection) => fallbackSelection = selection,
     isPreviewActive: () => false,
-    isFullscreen: () => false,
     openFolder: (_) {},
     openMedia: openMedia ?? (_) {},
     goBack: goBack ?? () {},
     goUp: goUp ?? () {},
-    toggleFullscreen: () {},
   );
 }

@@ -109,12 +109,10 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       readSelection: () => _selection,
       updateSelection: _setSelection,
       isPreviewActive: () => _preview != null,
-      isFullscreen: () => _isFullscreen,
       openFolder: _openFolder,
       openMedia: _previewCoordinator.open,
       goBack: ref.read(galleryNotifierProvider.notifier).goBack,
       goUp: ref.read(galleryNotifierProvider.notifier).goUp,
-      toggleFullscreen: _toggleFullscreen,
     );
     _folderActions = GalleryFolderActions(
       runModal: _whileModalOpen,
