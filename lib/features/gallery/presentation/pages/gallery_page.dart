@@ -46,6 +46,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   final _scrollController = ScrollController();
   String? _loadedRoot;
   bool _sidebarVisible = true;
+  double _sidebarWidth = AnimatedGallerySidebar.defaultWidth;
   bool _isModalOpen = false;
   MediaPreviewSelection? _preview;
   bool _isFullscreen = false;
@@ -400,7 +401,13 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   void _toggleSidebar() {
     if (ref.read(settingsNotifierProvider).rootPath == null) return;
-    setState(() => _sidebarVisible = !_sidebarVisible);
+    setState(() {
+      _sidebarVisible = !_sidebarVisible;
+      if (_sidebarVisible &&
+          _sidebarWidth <= AnimatedGallerySidebar.minimumWidth) {
+        _sidebarWidth = AnimatedGallerySidebar.defaultWidth;
+      }
+    });
   }
 
   Future<void> _openFolder(String folderPath) async {
@@ -793,6 +800,16 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
                   children: [
                     AnimatedGallerySidebar(
                       visible: _sidebarVisible,
+                      width: _sidebarWidth,
+                      onWidthChanged: (width) {
+                        if (width == _sidebarWidth) return;
+                        setState(() => _sidebarWidth = width);
+                      },
+                      onMinWidthReached: () {
+                        if (_sidebarVisible) {
+                          setState(() => _sidebarVisible = false);
+                        }
+                      },
                       child: ExcludeFocus(
                         excluding: !_sidebarVisible,
                         child: FolderTreeSidebar(

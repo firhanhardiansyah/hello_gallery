@@ -38,4 +38,56 @@ void main() {
     expect(tester.getSize(find.byType(AnimatedGallerySidebar)).width, 0);
     expect(find.byKey(const ValueKey('sidebar-content')), findsOneWidget);
   });
+
+  testWidgets('requires extra drag distance before hiding at minimum width', (
+    tester,
+  ) async {
+    var visible = true;
+    var width = AnimatedGallerySidebar.defaultWidth;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Align(
+            alignment: Alignment.topLeft,
+            child: Row(
+              children: [
+                AnimatedGallerySidebar(
+                  visible: visible,
+                  width: width,
+                  onWidthChanged: (value) => setState(() => width = value),
+                  onMinWidthReached: () => setState(() => visible = false),
+                  child: const SizedBox(height: 400),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final handle = find.byKey(const ValueKey('gallery-sidebar-resize-handle'));
+    await tester.drag(handle, const Offset(80, 0));
+    await tester.pump();
+
+    expect(width, 380);
+    expect(tester.getSize(find.byType(AnimatedGallerySidebar)).width, 380);
+
+    await tester.drag(handle, const Offset(-200, 0));
+    await tester.pump();
+
+    expect(visible, isTrue);
+    expect(width, AnimatedGallerySidebar.minimumWidth);
+    expect(
+      tester.getSize(find.byType(AnimatedGallerySidebar)).width,
+      AnimatedGallerySidebar.minimumWidth,
+    );
+
+    await tester.drag(handle, const Offset(-60, 0));
+    await tester.pumpAndSettle();
+
+    expect(visible, isFalse);
+    expect(width, AnimatedGallerySidebar.minimumWidth);
+    expect(tester.getSize(find.byType(AnimatedGallerySidebar)).width, 0);
+  });
 }
