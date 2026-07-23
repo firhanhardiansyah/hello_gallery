@@ -5,7 +5,7 @@ import 'package:gamepads/gamepads.dart';
 import 'package:hello_gallery/features/media_preview/presentation/input/media_preview_input_handler.dart';
 
 void main() {
-  test('maps keyboard shortcuts to preview actions', () {
+  test('maps keyboard and gamepad shortcuts to preview actions', () {
     var nextCount = 0;
     var seekBackwardCount = 0;
     var muteCount = 0;
@@ -55,12 +55,24 @@ void main() {
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.b));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.touchpad));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.rightTrigger));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.rightTrigger));
+    handler.handleGamepadEvent(
+      _gamepadButton(GamepadButton.rightTrigger, value: 0),
+    );
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.rightTrigger));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftTrigger));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftTrigger));
+    handler.handleGamepadEvent(
+      _gamepadButton(GamepadButton.leftTrigger, value: 0),
+    );
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftTrigger));
 
     expect(nextCount, 1);
     expect(seekBackwardCount, 1);
     expect(muteCount, 1);
-    expect(rotateCount, 1);
-    expect(rotationLockCount, 1);
+    expect(rotateCount, 3);
+    expect(rotationLockCount, 3);
     expect(loopCount, 1);
     expect(fullscreenCount, 1);
     expect(closeCount, 1);
@@ -71,13 +83,16 @@ void main() {
   });
 }
 
-NormalizedGamepadEvent _gamepadButton(GamepadButton button) {
+NormalizedGamepadEvent _gamepadButton(
+  GamepadButton button, {
+  double value = 1,
+}) {
   final rawEvent = GamepadEvent(
     gamepadId: 'test-controller',
     timestamp: 0,
     type: KeyType.button,
     key: button.name,
-    value: 1,
+    value: value,
   );
   return NormalizedGamepadEvent(
     gamepadId: rawEvent.gamepadId,

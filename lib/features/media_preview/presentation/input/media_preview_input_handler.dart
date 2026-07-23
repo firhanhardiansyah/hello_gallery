@@ -49,6 +49,8 @@ final class MediaPreviewInputHandler {
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
   bool _started = false;
   bool _disposed = false;
+  bool _leftTriggerPressed = false;
+  bool _rightTriggerPressed = false;
 
   void start() {
     if (_started || _disposed) return;
@@ -85,7 +87,20 @@ final class MediaPreviewInputHandler {
   void handleGamepadEvent(NormalizedGamepadEvent event) {
     if (_disposed) return;
     final button = event.button;
-    if (button == null || event.value < 0.5) return;
+    if (button == null) return;
+    if (button == GamepadButton.leftTrigger) {
+      final pressed = event.value >= 0.5;
+      if (pressed && !_leftTriggerPressed) onToggleRotationLock();
+      _leftTriggerPressed = pressed;
+      return;
+    }
+    if (button == GamepadButton.rightTrigger) {
+      final pressed = event.value >= 0.5;
+      if (pressed && !_rightTriggerPressed) onRotate();
+      _rightTriggerPressed = pressed;
+      return;
+    }
+    if (event.value < 0.5) return;
     switch (button) {
       case GamepadButton.dpadUp:
         onPrevious();
