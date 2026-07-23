@@ -11,16 +11,20 @@ class VideoControls extends ConsumerWidget {
   const VideoControls({
     required this.state,
     required this.isFullscreen,
+    required this.isRotationLocked,
     required this.onInteraction,
     required this.onRotate,
+    required this.onToggleRotationLock,
     required this.onToggleFullscreen,
     super.key,
   });
 
   final MediaPreviewUiState state;
   final bool isFullscreen;
+  final bool isRotationLocked;
   final VoidCallback onInteraction;
   final VoidCallback onRotate;
+  final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFullscreen;
 
   static const _controlSize = 40.0;
@@ -104,6 +108,21 @@ class VideoControls extends ConsumerWidget {
                     onPressed: () {
                       onInteraction();
                       onRotate();
+                    },
+                  ),
+                  _VideoControlAction(
+                    tooltip: isRotationLocked
+                        ? 'Unlock rotation'
+                        : 'Lock rotation',
+                    icon: isRotationLocked
+                        ? HugeIcons.strokeRoundedScreenLockRotation
+                        : HugeIcons.strokeRoundedSquareUnlock01,
+                    color: isRotationLocked
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                    onPressed: () {
+                      onInteraction();
+                      onToggleRotationLock();
                     },
                   ),
                   _VideoControlAction(

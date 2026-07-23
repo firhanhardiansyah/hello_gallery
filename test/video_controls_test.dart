@@ -18,6 +18,7 @@ void main() {
     addTearDown(subscription.close);
     var fullscreenCount = 0;
     var rotateCount = 0;
+    var rotationLockCount = 0;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -30,8 +31,10 @@ void main() {
             body: VideoControls(
               state: const MediaPreviewUiState(duration: Duration(minutes: 1)),
               isFullscreen: false,
+              isRotationLocked: false,
               onInteraction: _noop,
               onRotate: () => rotateCount++,
+              onToggleRotationLock: () => rotationLockCount++,
               onToggleFullscreen: () => fullscreenCount++,
             ),
           ),
@@ -49,6 +52,7 @@ void main() {
     expect(find.text('00:00 / 01:00'), findsOneWidget);
     final loopButton = find.byTooltip('Loop video');
     final rotateButton = find.byTooltip('Rotate clockwise');
+    final rotationLockButton = find.byTooltip('Lock rotation');
     final fullscreenButton = find.byTooltip('Fullscreen');
     expect(
       tester.getCenter(loopButton).dx,
@@ -56,11 +60,17 @@ void main() {
     );
     expect(
       tester.getCenter(rotateButton).dx,
+      lessThan(tester.getCenter(rotationLockButton).dx),
+    );
+    expect(
+      tester.getCenter(rotationLockButton).dx,
       lessThan(tester.getCenter(fullscreenButton).dx),
     );
     expect(container.read(mediaPreviewNotifierProvider).isLooping, isTrue);
     await tester.tap(rotateButton);
     expect(rotateCount, 1);
+    await tester.tap(rotationLockButton);
+    expect(rotationLockCount, 1);
     await tester.tap(fullscreenButton);
     expect(fullscreenCount, 1);
   });
@@ -90,8 +100,10 @@ void main() {
                 duration: Duration(hours: 1, minutes: 1),
               ),
               isFullscreen: false,
+              isRotationLocked: false,
               onInteraction: _noop,
               onRotate: _noop,
+              onToggleRotationLock: _noop,
               onToggleFullscreen: _noop,
             ),
           ),

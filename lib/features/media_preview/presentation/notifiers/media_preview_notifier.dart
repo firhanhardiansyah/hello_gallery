@@ -139,6 +139,50 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     state = state.copyWith(isLooping: isLooping);
   }
 
+  void rotateActiveMedia() {
+    final mediaPath = state.activeItem?.path;
+    if (mediaPath == null) return;
+    if (state.isRotationLocked) {
+      state = state.copyWith(
+        lockedRotationQuarterTurns: (state.lockedRotationQuarterTurns + 1) % 4,
+      );
+      return;
+    }
+    state = state.copyWith(
+      rotationByMediaPath: {
+        ...state.rotationByMediaPath,
+        mediaPath: ((state.rotationByMediaPath[mediaPath] ?? 0) + 1) % 4,
+      },
+    );
+  }
+
+  void toggleRotationLock() {
+    final mediaPath = state.activeItem?.path;
+    if (mediaPath == null) return;
+    if (!state.isRotationLocked) {
+      state = state.copyWith(
+        isRotationLocked: true,
+        lockedRotationQuarterTurns: state.rotationFor(mediaPath),
+      );
+      return;
+    }
+    state = state.copyWith(
+      isRotationLocked: false,
+      rotationByMediaPath: {
+        ...state.rotationByMediaPath,
+        mediaPath: state.lockedRotationQuarterTurns,
+      },
+    );
+  }
+
+  void resetRotation() {
+    state = state.copyWith(
+      isRotationLocked: false,
+      lockedRotationQuarterTurns: 0,
+      rotationByMediaPath: const {},
+    );
+  }
+
   Future<void> seekBy(Duration delta) async {
     final player = _player;
     if (player == null) return;

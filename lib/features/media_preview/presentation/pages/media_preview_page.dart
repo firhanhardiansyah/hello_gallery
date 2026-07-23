@@ -48,7 +48,6 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   bool _controlsVisible = true;
   bool _controlsHiddenByNavigation = false;
   int _silentNavigationCount = 0;
-  final _rotationByMediaPath = <String, int>{};
 
   MediaPreviewNotifier get _controller =>
       ref.read(mediaPreviewNotifierProvider.notifier);
@@ -64,6 +63,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onTogglePlay: _togglePlay,
       onToggleMute: _toggleMute,
       onRotate: _rotateActiveMedia,
+      onToggleRotationLock: _toggleRotationLock,
       onToggleLoop: _toggleLoop,
       onToggleSidebar: _toggleSidebar,
       onToggleFullscreen: _toggleFullscreen,
@@ -116,10 +116,14 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     final activePath = ref.read(mediaPreviewNotifierProvider).activeItem?.path;
     if (activePath == null) return;
     _showControls(userInitiated: true);
-    setState(() {
-      _rotationByMediaPath[activePath] =
-          ((_rotationByMediaPath[activePath] ?? 0) + 1) % 4;
-    });
+    _controller.rotateActiveMedia();
+  }
+
+  void _toggleRotationLock() {
+    final activePath = ref.read(mediaPreviewNotifierProvider).activeItem?.path;
+    if (activePath == null) return;
+    _showControls(userInitiated: true);
+    _controller.toggleRotationLock();
   }
 
   void _togglePlay() {
@@ -182,8 +186,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaPreviewNotifierProvider);
-    final rotationQuarterTurns =
-        _rotationByMediaPath[state.activeItem?.path] ?? 0;
+    final rotationQuarterTurns = state.rotationFor(state.activeItem?.path);
     ref.listen(
       mediaPreviewNotifierProvider.select((value) => value.activeIndex),
       (previous, activeIndex) {
@@ -218,8 +221,10 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             controlsVisible: _controlsVisible,
             isFullscreen: widget.isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
+            isRotationLocked: state.isRotationLocked,
             onInteraction: () => _showControls(userInitiated: true),
             onRotate: _rotateActiveMedia,
+            onToggleRotationLock: _toggleRotationLock,
             onToggleFullscreen: _toggleFullscreen,
           ),
         ),

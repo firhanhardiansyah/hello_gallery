@@ -16,13 +16,16 @@ final class MediaPreviewInputHandler {
     required this.onTogglePlay,
     required this.onToggleMute,
     required this.onRotate,
+    required this.onToggleRotationLock,
     required this.onToggleLoop,
     required this.onToggleSidebar,
     required this.onToggleFullscreen,
     required this.onClose,
     required this.onEscape,
     required this.onRequestFocus,
-  });
+    bool Function()? isPrimaryModifierPressed,
+  }) : _isPrimaryModifierPressed =
+           isPrimaryModifierPressed ?? _defaultPrimaryModifierPressed;
 
   final VoidCallback onPrevious;
   final VoidCallback onNext;
@@ -31,12 +34,14 @@ final class MediaPreviewInputHandler {
   final VoidCallback onTogglePlay;
   final VoidCallback onToggleMute;
   final VoidCallback onRotate;
+  final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleLoop;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onClose;
   final VoidCallback onEscape;
   final VoidCallback onRequestFocus;
+  final bool Function() _isPrimaryModifierPressed;
 
   final _scrollInput = MediaPreviewScrollInput();
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
@@ -129,7 +134,11 @@ final class MediaPreviewInputHandler {
       case LogicalKeyboardKey.keyM:
         onToggleMute();
       case LogicalKeyboardKey.keyR:
-        onRotate();
+        if (_isPrimaryModifierPressed()) {
+          onToggleRotationLock();
+        } else {
+          onRotate();
+        }
       case LogicalKeyboardKey.keyL:
         onToggleLoop();
       case LogicalKeyboardKey.keyS:
@@ -143,4 +152,9 @@ final class MediaPreviewInputHandler {
     }
     return KeyEventResult.handled;
   }
+}
+
+bool _defaultPrimaryModifierPressed() {
+  final keyboard = HardwareKeyboard.instance;
+  return keyboard.isControlPressed || keyboard.isMetaPressed;
 }

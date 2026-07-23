@@ -15,8 +15,10 @@ class MediaPreviewView extends ConsumerWidget {
     required this.controlsVisible,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
+    required this.isRotationLocked,
     required this.onInteraction,
     required this.onRotate,
+    required this.onToggleRotationLock,
     required this.onToggleFullscreen,
     super.key,
   });
@@ -25,8 +27,10 @@ class MediaPreviewView extends ConsumerWidget {
   final bool controlsVisible;
   final bool isFullscreen;
   final int rotationQuarterTurns;
+  final bool isRotationLocked;
   final VoidCallback onInteraction;
   final VoidCallback onRotate;
+  final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFullscreen;
 
   @override
@@ -60,7 +64,9 @@ class MediaPreviewView extends ConsumerWidget {
         if (!item.isVideo)
           ImagePreviewActions(
             visible: controlsVisible,
+            isRotationLocked: isRotationLocked,
             onRotate: onRotate,
+            onToggleRotationLock: onToggleRotationLock,
             onInteraction: onInteraction,
           ),
         if (item.isVideo)
@@ -71,8 +77,10 @@ class MediaPreviewView extends ConsumerWidget {
             controlsVisible: controlsVisible,
             isFullscreen: isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
+            isRotationLocked: isRotationLocked,
             onTogglePlayback: togglePlayback,
             onRotate: onRotate,
+            onToggleRotationLock: onToggleRotationLock,
             onToggleFullscreen: onToggleFullscreen,
             onInteraction: onInteraction,
           ),

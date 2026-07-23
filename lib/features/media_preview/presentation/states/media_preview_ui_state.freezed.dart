@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MediaPreviewUiState {
 
- List<MediaItem> get items; int get activeIndex; bool get isPlaying; bool get isVideoReady; bool get isMuted; bool get isLooping; bool get controlsVisible; Duration get position; Duration get duration;
+ List<MediaItem> get items; int get activeIndex; bool get isPlaying; bool get isVideoReady; bool get isMuted; bool get isLooping; bool get controlsVisible; Duration get position; Duration get duration; bool get isRotationLocked; int get lockedRotationQuarterTurns; Map<String, int> get rotationByMediaPath;
 /// Create a copy of MediaPreviewUiState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $MediaPreviewUiStateCopyWith<MediaPreviewUiState> get copyWith => _$MediaPreview
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaPreviewUiState&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.activeIndex, activeIndex) || other.activeIndex == activeIndex)&&(identical(other.isPlaying, isPlaying) || other.isPlaying == isPlaying)&&(identical(other.isVideoReady, isVideoReady) || other.isVideoReady == isVideoReady)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isLooping, isLooping) || other.isLooping == isLooping)&&(identical(other.controlsVisible, controlsVisible) || other.controlsVisible == controlsVisible)&&(identical(other.position, position) || other.position == position)&&(identical(other.duration, duration) || other.duration == duration));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaPreviewUiState&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.activeIndex, activeIndex) || other.activeIndex == activeIndex)&&(identical(other.isPlaying, isPlaying) || other.isPlaying == isPlaying)&&(identical(other.isVideoReady, isVideoReady) || other.isVideoReady == isVideoReady)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isLooping, isLooping) || other.isLooping == isLooping)&&(identical(other.controlsVisible, controlsVisible) || other.controlsVisible == controlsVisible)&&(identical(other.position, position) || other.position == position)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.isRotationLocked, isRotationLocked) || other.isRotationLocked == isRotationLocked)&&(identical(other.lockedRotationQuarterTurns, lockedRotationQuarterTurns) || other.lockedRotationQuarterTurns == lockedRotationQuarterTurns)&&const DeepCollectionEquality().equals(other.rotationByMediaPath, rotationByMediaPath));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(items),activeIndex,isPlaying,isVideoReady,isMuted,isLooping,controlsVisible,position,duration);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(items),activeIndex,isPlaying,isVideoReady,isMuted,isLooping,controlsVisible,position,duration,isRotationLocked,lockedRotationQuarterTurns,const DeepCollectionEquality().hash(rotationByMediaPath));
 
 @override
 String toString() {
-  return 'MediaPreviewUiState(items: $items, activeIndex: $activeIndex, isPlaying: $isPlaying, isVideoReady: $isVideoReady, isMuted: $isMuted, isLooping: $isLooping, controlsVisible: $controlsVisible, position: $position, duration: $duration)';
+  return 'MediaPreviewUiState(items: $items, activeIndex: $activeIndex, isPlaying: $isPlaying, isVideoReady: $isVideoReady, isMuted: $isMuted, isLooping: $isLooping, controlsVisible: $controlsVisible, position: $position, duration: $duration, isRotationLocked: $isRotationLocked, lockedRotationQuarterTurns: $lockedRotationQuarterTurns, rotationByMediaPath: $rotationByMediaPath)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $MediaPreviewUiStateCopyWith<$Res>  {
   factory $MediaPreviewUiStateCopyWith(MediaPreviewUiState value, $Res Function(MediaPreviewUiState) _then) = _$MediaPreviewUiStateCopyWithImpl;
 @useResult
 $Res call({
- List<MediaItem> items, int activeIndex, bool isPlaying, bool isVideoReady, bool isMuted, bool isLooping, bool controlsVisible, Duration position, Duration duration
+ List<MediaItem> items, int activeIndex, bool isPlaying, bool isVideoReady, bool isMuted, bool isLooping, bool controlsVisible, Duration position, Duration duration, bool isRotationLocked, int lockedRotationQuarterTurns, Map<String, int> rotationByMediaPath
 });
 
 
@@ -62,7 +62,7 @@ class _$MediaPreviewUiStateCopyWithImpl<$Res>
 
 /// Create a copy of MediaPreviewUiState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? activeIndex = null,Object? isPlaying = null,Object? isVideoReady = null,Object? isMuted = null,Object? isLooping = null,Object? controlsVisible = null,Object? position = null,Object? duration = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? activeIndex = null,Object? isPlaying = null,Object? isVideoReady = null,Object? isMuted = null,Object? isLooping = null,Object? controlsVisible = null,Object? position = null,Object? duration = null,Object? isRotationLocked = null,Object? lockedRotationQuarterTurns = null,Object? rotationByMediaPath = null,}) {
   return _then(_self.copyWith(
 items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
 as List<MediaItem>,activeIndex: null == activeIndex ? _self.activeIndex : activeIndex // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,10 @@ as bool,isLooping: null == isLooping ? _self.isLooping : isLooping // ignore: ca
 as bool,controlsVisible: null == controlsVisible ? _self.controlsVisible : controlsVisible // ignore: cast_nullable_to_non_nullable
 as bool,position: null == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
 as Duration,duration: null == duration ? _self.duration : duration // ignore: cast_nullable_to_non_nullable
-as Duration,
+as Duration,isRotationLocked: null == isRotationLocked ? _self.isRotationLocked : isRotationLocked // ignore: cast_nullable_to_non_nullable
+as bool,lockedRotationQuarterTurns: null == lockedRotationQuarterTurns ? _self.lockedRotationQuarterTurns : lockedRotationQuarterTurns // ignore: cast_nullable_to_non_nullable
+as int,rotationByMediaPath: null == rotationByMediaPath ? _self.rotationByMediaPath : rotationByMediaPath // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
   ));
 }
 
@@ -158,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<MediaItem> items,  int activeIndex,  bool isPlaying,  bool isVideoReady,  bool isMuted,  bool isLooping,  bool controlsVisible,  Duration position,  Duration duration)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<MediaItem> items,  int activeIndex,  bool isPlaying,  bool isVideoReady,  bool isMuted,  bool isLooping,  bool controlsVisible,  Duration position,  Duration duration,  bool isRotationLocked,  int lockedRotationQuarterTurns,  Map<String, int> rotationByMediaPath)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MediaPreviewUiState() when $default != null:
-return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady,_that.isMuted,_that.isLooping,_that.controlsVisible,_that.position,_that.duration);case _:
+return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady,_that.isMuted,_that.isLooping,_that.controlsVisible,_that.position,_that.duration,_that.isRotationLocked,_that.lockedRotationQuarterTurns,_that.rotationByMediaPath);case _:
   return orElse();
 
 }
@@ -179,10 +182,10 @@ return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<MediaItem> items,  int activeIndex,  bool isPlaying,  bool isVideoReady,  bool isMuted,  bool isLooping,  bool controlsVisible,  Duration position,  Duration duration)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<MediaItem> items,  int activeIndex,  bool isPlaying,  bool isVideoReady,  bool isMuted,  bool isLooping,  bool controlsVisible,  Duration position,  Duration duration,  bool isRotationLocked,  int lockedRotationQuarterTurns,  Map<String, int> rotationByMediaPath)  $default,) {final _that = this;
 switch (_that) {
 case _MediaPreviewUiState():
-return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady,_that.isMuted,_that.isLooping,_that.controlsVisible,_that.position,_that.duration);case _:
+return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady,_that.isMuted,_that.isLooping,_that.controlsVisible,_that.position,_that.duration,_that.isRotationLocked,_that.lockedRotationQuarterTurns,_that.rotationByMediaPath);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +202,10 @@ return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<MediaItem> items,  int activeIndex,  bool isPlaying,  bool isVideoReady,  bool isMuted,  bool isLooping,  bool controlsVisible,  Duration position,  Duration duration)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<MediaItem> items,  int activeIndex,  bool isPlaying,  bool isVideoReady,  bool isMuted,  bool isLooping,  bool controlsVisible,  Duration position,  Duration duration,  bool isRotationLocked,  int lockedRotationQuarterTurns,  Map<String, int> rotationByMediaPath)?  $default,) {final _that = this;
 switch (_that) {
 case _MediaPreviewUiState() when $default != null:
-return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady,_that.isMuted,_that.isLooping,_that.controlsVisible,_that.position,_that.duration);case _:
+return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady,_that.isMuted,_that.isLooping,_that.controlsVisible,_that.position,_that.duration,_that.isRotationLocked,_that.lockedRotationQuarterTurns,_that.rotationByMediaPath);case _:
   return null;
 
 }
@@ -214,7 +217,7 @@ return $default(_that.items,_that.activeIndex,_that.isPlaying,_that.isVideoReady
 
 
 class _MediaPreviewUiState extends MediaPreviewUiState {
-  const _MediaPreviewUiState({final  List<MediaItem> items = const <MediaItem>[], this.activeIndex = 0, this.isPlaying = false, this.isVideoReady = false, this.isMuted = false, this.isLooping = false, this.controlsVisible = true, this.position = Duration.zero, this.duration = Duration.zero}): _items = items,super._();
+  const _MediaPreviewUiState({final  List<MediaItem> items = const <MediaItem>[], this.activeIndex = 0, this.isPlaying = false, this.isVideoReady = false, this.isMuted = false, this.isLooping = false, this.controlsVisible = true, this.position = Duration.zero, this.duration = Duration.zero, this.isRotationLocked = false, this.lockedRotationQuarterTurns = 0, final  Map<String, int> rotationByMediaPath = const <String, int>{}}): _items = items,_rotationByMediaPath = rotationByMediaPath,super._();
   
 
  final  List<MediaItem> _items;
@@ -232,6 +235,15 @@ class _MediaPreviewUiState extends MediaPreviewUiState {
 @override@JsonKey() final  bool controlsVisible;
 @override@JsonKey() final  Duration position;
 @override@JsonKey() final  Duration duration;
+@override@JsonKey() final  bool isRotationLocked;
+@override@JsonKey() final  int lockedRotationQuarterTurns;
+ final  Map<String, int> _rotationByMediaPath;
+@override@JsonKey() Map<String, int> get rotationByMediaPath {
+  if (_rotationByMediaPath is EqualUnmodifiableMapView) return _rotationByMediaPath;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_rotationByMediaPath);
+}
+
 
 /// Create a copy of MediaPreviewUiState
 /// with the given fields replaced by the non-null parameter values.
@@ -243,16 +255,16 @@ _$MediaPreviewUiStateCopyWith<_MediaPreviewUiState> get copyWith => __$MediaPrev
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaPreviewUiState&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.activeIndex, activeIndex) || other.activeIndex == activeIndex)&&(identical(other.isPlaying, isPlaying) || other.isPlaying == isPlaying)&&(identical(other.isVideoReady, isVideoReady) || other.isVideoReady == isVideoReady)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isLooping, isLooping) || other.isLooping == isLooping)&&(identical(other.controlsVisible, controlsVisible) || other.controlsVisible == controlsVisible)&&(identical(other.position, position) || other.position == position)&&(identical(other.duration, duration) || other.duration == duration));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaPreviewUiState&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.activeIndex, activeIndex) || other.activeIndex == activeIndex)&&(identical(other.isPlaying, isPlaying) || other.isPlaying == isPlaying)&&(identical(other.isVideoReady, isVideoReady) || other.isVideoReady == isVideoReady)&&(identical(other.isMuted, isMuted) || other.isMuted == isMuted)&&(identical(other.isLooping, isLooping) || other.isLooping == isLooping)&&(identical(other.controlsVisible, controlsVisible) || other.controlsVisible == controlsVisible)&&(identical(other.position, position) || other.position == position)&&(identical(other.duration, duration) || other.duration == duration)&&(identical(other.isRotationLocked, isRotationLocked) || other.isRotationLocked == isRotationLocked)&&(identical(other.lockedRotationQuarterTurns, lockedRotationQuarterTurns) || other.lockedRotationQuarterTurns == lockedRotationQuarterTurns)&&const DeepCollectionEquality().equals(other._rotationByMediaPath, _rotationByMediaPath));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),activeIndex,isPlaying,isVideoReady,isMuted,isLooping,controlsVisible,position,duration);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),activeIndex,isPlaying,isVideoReady,isMuted,isLooping,controlsVisible,position,duration,isRotationLocked,lockedRotationQuarterTurns,const DeepCollectionEquality().hash(_rotationByMediaPath));
 
 @override
 String toString() {
-  return 'MediaPreviewUiState(items: $items, activeIndex: $activeIndex, isPlaying: $isPlaying, isVideoReady: $isVideoReady, isMuted: $isMuted, isLooping: $isLooping, controlsVisible: $controlsVisible, position: $position, duration: $duration)';
+  return 'MediaPreviewUiState(items: $items, activeIndex: $activeIndex, isPlaying: $isPlaying, isVideoReady: $isVideoReady, isMuted: $isMuted, isLooping: $isLooping, controlsVisible: $controlsVisible, position: $position, duration: $duration, isRotationLocked: $isRotationLocked, lockedRotationQuarterTurns: $lockedRotationQuarterTurns, rotationByMediaPath: $rotationByMediaPath)';
 }
 
 
@@ -263,7 +275,7 @@ abstract mixin class _$MediaPreviewUiStateCopyWith<$Res> implements $MediaPrevie
   factory _$MediaPreviewUiStateCopyWith(_MediaPreviewUiState value, $Res Function(_MediaPreviewUiState) _then) = __$MediaPreviewUiStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<MediaItem> items, int activeIndex, bool isPlaying, bool isVideoReady, bool isMuted, bool isLooping, bool controlsVisible, Duration position, Duration duration
+ List<MediaItem> items, int activeIndex, bool isPlaying, bool isVideoReady, bool isMuted, bool isLooping, bool controlsVisible, Duration position, Duration duration, bool isRotationLocked, int lockedRotationQuarterTurns, Map<String, int> rotationByMediaPath
 });
 
 
@@ -280,7 +292,7 @@ class __$MediaPreviewUiStateCopyWithImpl<$Res>
 
 /// Create a copy of MediaPreviewUiState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? activeIndex = null,Object? isPlaying = null,Object? isVideoReady = null,Object? isMuted = null,Object? isLooping = null,Object? controlsVisible = null,Object? position = null,Object? duration = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? activeIndex = null,Object? isPlaying = null,Object? isVideoReady = null,Object? isMuted = null,Object? isLooping = null,Object? controlsVisible = null,Object? position = null,Object? duration = null,Object? isRotationLocked = null,Object? lockedRotationQuarterTurns = null,Object? rotationByMediaPath = null,}) {
   return _then(_MediaPreviewUiState(
 items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
 as List<MediaItem>,activeIndex: null == activeIndex ? _self.activeIndex : activeIndex // ignore: cast_nullable_to_non_nullable
@@ -291,7 +303,10 @@ as bool,isLooping: null == isLooping ? _self.isLooping : isLooping // ignore: ca
 as bool,controlsVisible: null == controlsVisible ? _self.controlsVisible : controlsVisible // ignore: cast_nullable_to_non_nullable
 as bool,position: null == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
 as Duration,duration: null == duration ? _self.duration : duration // ignore: cast_nullable_to_non_nullable
-as Duration,
+as Duration,isRotationLocked: null == isRotationLocked ? _self.isRotationLocked : isRotationLocked // ignore: cast_nullable_to_non_nullable
+as bool,lockedRotationQuarterTurns: null == lockedRotationQuarterTurns ? _self.lockedRotationQuarterTurns : lockedRotationQuarterTurns // ignore: cast_nullable_to_non_nullable
+as int,rotationByMediaPath: null == rotationByMediaPath ? _self._rotationByMediaPath : rotationByMediaPath // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
   ));
 }
 

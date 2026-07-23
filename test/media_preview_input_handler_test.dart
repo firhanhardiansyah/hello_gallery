@@ -10,12 +10,14 @@ void main() {
     var seekBackwardCount = 0;
     var muteCount = 0;
     var rotateCount = 0;
+    var rotationLockCount = 0;
     var loopCount = 0;
     var fullscreenCount = 0;
     var closeCount = 0;
     var sidebarCount = 0;
     var escapeCount = 0;
     var focusCount = 0;
+    var primaryModifierPressed = false;
     final handler = MediaPreviewInputHandler(
       onPrevious: _noop,
       onNext: () => nextCount++,
@@ -24,12 +26,14 @@ void main() {
       onTogglePlay: _noop,
       onToggleMute: () => muteCount++,
       onRotate: () => rotateCount++,
+      onToggleRotationLock: () => rotationLockCount++,
       onToggleLoop: () => loopCount++,
       onToggleSidebar: () => sidebarCount++,
       onToggleFullscreen: () => fullscreenCount++,
       onClose: () => closeCount++,
       onEscape: () => escapeCount++,
       onRequestFocus: () => focusCount++,
+      isPrimaryModifierPressed: () => primaryModifierPressed,
     );
     addTearDown(handler.dispose);
 
@@ -39,6 +43,8 @@ void main() {
     );
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.arrowLeft));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyM));
+    handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyR));
+    primaryModifierPressed = true;
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyR));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyL));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyF));
@@ -51,6 +57,7 @@ void main() {
     expect(seekBackwardCount, 1);
     expect(muteCount, 1);
     expect(rotateCount, 1);
+    expect(rotationLockCount, 1);
     expect(loopCount, 1);
     expect(fullscreenCount, 1);
     expect(closeCount, 2);

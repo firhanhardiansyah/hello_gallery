@@ -15,8 +15,10 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.controlsVisible,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
+    required this.isRotationLocked,
     required this.onTogglePlayback,
     required this.onRotate,
+    required this.onToggleRotationLock,
     required this.onToggleFullscreen,
     required this.onInteraction,
     super.key,
@@ -28,8 +30,10 @@ class VideoPreviewOverlays extends StatelessWidget {
   final bool controlsVisible;
   final bool isFullscreen;
   final int rotationQuarterTurns;
+  final bool isRotationLocked;
   final VoidCallback onTogglePlayback;
   final VoidCallback onRotate;
+  final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onInteraction;
 
@@ -53,7 +57,9 @@ class VideoPreviewOverlays extends StatelessWidget {
           state: state,
           visible: controlsVisible,
           isFullscreen: isFullscreen,
+          isRotationLocked: isRotationLocked,
           onRotate: onRotate,
+          onToggleRotationLock: onToggleRotationLock,
           onInteraction: onInteraction,
           onToggleFullscreen: onToggleFullscreen,
         ),
@@ -167,7 +173,9 @@ class _VideoControlsOverlay extends StatelessWidget {
     required this.state,
     required this.visible,
     required this.isFullscreen,
+    required this.isRotationLocked,
     required this.onRotate,
+    required this.onToggleRotationLock,
     required this.onInteraction,
     required this.onToggleFullscreen,
   });
@@ -175,7 +183,9 @@ class _VideoControlsOverlay extends StatelessWidget {
   final MediaPreviewUiState state;
   final bool visible;
   final bool isFullscreen;
+  final bool isRotationLocked;
   final VoidCallback onRotate;
+  final VoidCallback onToggleRotationLock;
   final VoidCallback onInteraction;
   final VoidCallback onToggleFullscreen;
 
@@ -196,7 +206,9 @@ class _VideoControlsOverlay extends StatelessWidget {
           child: VideoControls(
             state: state,
             isFullscreen: isFullscreen,
+            isRotationLocked: isRotationLocked,
             onRotate: onRotate,
+            onToggleRotationLock: onToggleRotationLock,
             onInteraction: onInteraction,
             onToggleFullscreen: onToggleFullscreen,
           ),

@@ -6,14 +6,20 @@ import 'package:hugeicons/hugeicons.dart';
 class ImagePreviewActions extends StatelessWidget {
   const ImagePreviewActions({
     required this.visible,
+    required this.isRotationLocked,
     required this.onRotate,
+    required this.onToggleRotationLock,
     required this.onInteraction,
     super.key,
   });
 
   final bool visible;
+  final bool isRotationLocked;
   final VoidCallback onRotate;
+  final VoidCallback onToggleRotationLock;
   final VoidCallback onInteraction;
+
+  static const _controlSize = 44.0;
 
   @override
   Widget build(BuildContext context) => Positioned(
@@ -24,25 +30,71 @@ class ImagePreviewActions extends StatelessWidget {
       opacity: visible ? 1 : 0,
       child: IgnorePointer(
         ignoring: !visible,
-        child: IconButton(
-          tooltip: 'Rotate clockwise',
-          onPressed: () {
-            onInteraction();
-            onRotate();
-          },
-          style: IconButton.styleFrom(
-            fixedSize: const Size.square(44),
-            backgroundColor: context.appColors.mediaControlSurface.withValues(
-              alpha: 0.3,
-            ),
-            foregroundColor: context.appColors.onMedia,
-            hoverColor: context.appColors.mediaControlSurface.withValues(
-              alpha: 0.2,
-            ),
+        child: Container(
+          height: _controlSize,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: context.appColors.mediaControlSurface.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(_controlSize / 2),
           ),
-          icon: const HugeIcon(icon: HugeIcons.strokeRoundedRotateClockwise),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _button(
+                context: context,
+                tooltip: 'Rotate clockwise',
+                icon: HugeIcons.strokeRoundedRotateClockwise,
+                onPressed: onRotate,
+              ),
+              Container(
+                width: 1,
+                height: _controlSize / 2,
+                color: context.appColors.onMediaMuted.withValues(alpha: 0.35),
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              ),
+              _button(
+                context: context,
+                tooltip: isRotationLocked ? 'Unlock rotation' : 'Lock rotation',
+                icon: isRotationLocked
+                    ? HugeIcons.strokeRoundedScreenLockRotation
+                    : HugeIcons.strokeRoundedSquareUnlock01,
+                color: isRotationLocked
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                onPressed: onToggleRotationLock,
+              ),
+            ],
+          ),
         ),
       ),
     ),
   );
+
+  Widget _button({
+    required BuildContext context,
+    required String tooltip,
+    required List<List<dynamic>> icon,
+    required VoidCallback onPressed,
+    Color? color,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: () {
+        onInteraction();
+        onPressed();
+      },
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(_controlSize),
+        backgroundColor: Colors.transparent,
+        foregroundColor: context.appColors.onMedia,
+        hoverColor: context.appColors.mediaControlSurface.withValues(
+          alpha: 0.2,
+        ),
+        highlightColor: context.appColors.mediaControlSurface.withValues(
+          alpha: 0.3,
+        ),
+      ),
+      icon: HugeIcon(icon: icon, color: color ?? context.appColors.onMedia),
+    );
+  }
 }
