@@ -331,13 +331,32 @@ class _FolderTreeSidebarState extends ConsumerState<FolderTreeSidebar> {
       child: Row(
         children: [
           Expanded(
-            child: Tooltip(
-              message: widget.rootPath,
-              child: Text(
-                rootFolderName.isEmpty ? widget.rootPath : rootFolderName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Tooltip(
+                message: widget.rootPath,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap:
+                      widget.onFolderSelected != null &&
+                          !path.equals(
+                            widget.currentFolderPath,
+                            widget.rootPath,
+                          )
+                      ? () => widget.onFolderSelected!(widget.rootPath)
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: Text(
+                      rootFolderName.isEmpty ? widget.rootPath : rootFolderName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

@@ -19,6 +19,7 @@ void main() {
     final repository = _FolderTreeRepository(rootPath, targetPath);
     var refreshCount = 0;
     var chooseRootCount = 0;
+    String? selectedFolderPath;
     final container = ProviderContainer(
       overrides: [
         readGalleryDirectoryProvider.overrideWithValue(
@@ -48,7 +49,8 @@ void main() {
                 sort: GallerySort.nameAscending,
                 onRefresh: () => refreshCount++,
                 onChooseRootFolder: () => chooseRootCount++,
-                onFolderSelected: (_) {},
+                onFolderSelected: (folderPath) =>
+                    selectedFolderPath = folderPath,
                 onMediaSelected: (_) {},
               ),
             ),
@@ -86,6 +88,10 @@ void main() {
     expect(scrollable.position.pixels, greaterThan(0));
     expect(find.text('Studio Ghibli'), findsOneWidget);
     expect(find.byTooltip('Collapse folder'), findsOneWidget);
+
+    await tester.tap(find.text('Wallpapers'));
+
+    expect(selectedFolderPath, rootPath);
 
     await tester.tap(find.byTooltip('Collapse folders'));
     await tester.pump();
