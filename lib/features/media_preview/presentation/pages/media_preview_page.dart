@@ -19,6 +19,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
     this.embedded = false,
     this.sidebarVisible = true,
     this.onToggleSidebar,
+    this.onToggleTopBar,
     this.onClose,
     this.isFullscreen = false,
     this.onToggleFullscreen,
@@ -33,6 +34,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
   final bool embedded;
   final bool sidebarVisible;
   final VoidCallback? onToggleSidebar;
+  final VoidCallback? onToggleTopBar;
   final VoidCallback? onClose;
   final bool isFullscreen;
   final VoidCallback? onToggleFullscreen;
@@ -66,6 +68,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onToggleRotationLock: _toggleRotationLock,
       onToggleLoop: _toggleLoop,
       onToggleSidebar: _toggleSidebar,
+      onToggleTopBar: _toggleTopBar,
       onToggleFullscreen: _toggleFullscreen,
       onClose: () => widget.onClose?.call(),
       onEscape: _handleEscape,
@@ -109,6 +112,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   }
 
   void _toggleSidebar() => widget.onToggleSidebar?.call();
+
+  void _toggleTopBar() => widget.onToggleTopBar?.call();
 
   void _toggleFullscreen() => widget.onToggleFullscreen?.call();
 

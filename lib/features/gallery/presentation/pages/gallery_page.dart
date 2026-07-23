@@ -36,6 +36,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   bool _isModalOpen = false;
   MediaPreviewSelection? _preview;
   bool _isFullscreen = false;
+  bool _fullscreenTopBarVisible = false;
   bool? _sidebarBeforeFullscreen;
   late final GalleryInputHandler _inputHandler;
   late final GalleryPageInputActions _inputActions;
@@ -213,6 +214,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     setState(() {
       if (preview == null) {
         _preview = null;
+        _fullscreenTopBarVisible = false;
         if (_isFullscreen) {
           _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
         }
@@ -222,6 +224,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       if (_preview == null && _isFullscreen) {
         _sidebarBeforeFullscreen = _sidebarVisible;
         _sidebarVisible = false;
+        _fullscreenTopBarVisible = false;
       }
       _preview = preview;
     });
@@ -308,6 +311,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (!mounted) return;
     setState(() {
       _isFullscreen = target;
+      _fullscreenTopBarVisible = false;
       if (target && _preview != null) {
         _sidebarBeforeFullscreen = _sidebarVisible;
         _sidebarVisible = false;
@@ -315,6 +319,13 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
         _sidebarBeforeFullscreen = null;
       }
+    });
+  }
+
+  void _toggleFullscreenTopBar() {
+    if (!_isFullscreen || _preview == null) return;
+    setState(() {
+      _fullscreenTopBarVisible = !_fullscreenTopBarVisible;
     });
   }
 
@@ -524,7 +535,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   }) {
     return Column(
       children: [
-        if (_preview == null || !_isFullscreen)
+        if (_preview == null || !_isFullscreen || _fullscreenTopBarVisible)
           GalleryShellTopBar(
             gallery: gallery,
             isPreview: _preview != null,
@@ -590,6 +601,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         embedded: true,
         sidebarVisible: _sidebarVisible,
         onToggleSidebar: _toggleSidebar,
+        onToggleTopBar: _toggleFullscreenTopBar,
         onClose: _previewCoordinator.close,
         isFullscreen: _isFullscreen,
         onToggleFullscreen: _toggleFullscreen,

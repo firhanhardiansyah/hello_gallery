@@ -15,6 +15,7 @@ void main() {
     var fullscreenCount = 0;
     var closeCount = 0;
     var sidebarCount = 0;
+    var topBarCount = 0;
     var escapeCount = 0;
     var focusCount = 0;
     var primaryModifierPressed = false;
@@ -29,6 +30,7 @@ void main() {
       onToggleRotationLock: () => rotationLockCount++,
       onToggleLoop: () => loopCount++,
       onToggleSidebar: () => sidebarCount++,
+      onToggleTopBar: () => topBarCount++,
       onToggleFullscreen: () => fullscreenCount++,
       onClose: () => closeCount++,
       onEscape: () => escapeCount++,
@@ -47,6 +49,7 @@ void main() {
     primaryModifierPressed = true;
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyR));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyL));
+    handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyT));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyF));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.escape));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
@@ -62,6 +65,7 @@ void main() {
     expect(fullscreenCount, 1);
     expect(closeCount, 2);
     expect(sidebarCount, 1);
+    expect(topBarCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);
   });
