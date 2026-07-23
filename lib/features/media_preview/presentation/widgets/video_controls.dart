@@ -149,6 +149,7 @@ class VideoControls extends ConsumerWidget {
 
   Widget _buildDuration(BuildContext context) {
     final appColors = context.appColors;
+    final includeHours = state.duration.inHours > 0;
 
     return Container(
       height: _controlSize,
@@ -159,8 +160,8 @@ class VideoControls extends ConsumerWidget {
         borderRadius: BorderRadius.circular(_controlSize / 2),
       ),
       child: Text(
-        '${_formatDuration(state.position)} / '
-        '${_formatDuration(state.duration)}',
+        '${_formatDuration(state.position, includeHours: includeHours)} / '
+        '${_formatDuration(state.duration, includeHours: includeHours)}',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: appColors.onMedia,
           fontWeight: FontWeight.w500,
@@ -236,9 +237,11 @@ class _VideoControlAction {
   final Color? color;
 }
 
-String _formatDuration(Duration value) {
+String _formatDuration(Duration value, {required bool includeHours}) {
   final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
 
-  return '$minutes:$seconds';
+  if (!includeHours) return '$minutes:$seconds';
+  final hours = value.inHours.toString().padLeft(2, '0');
+  return '$hours:$minutes:$seconds';
 }

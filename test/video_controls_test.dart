@@ -46,6 +46,7 @@ void main() {
       find.byKey(const ValueKey('video-secondary-controls')),
       findsOneWidget,
     );
+    expect(find.text('00:00 / 01:00'), findsOneWidget);
     final loopButton = find.byTooltip('Loop video');
     final rotateButton = find.byTooltip('Rotate clockwise');
     final fullscreenButton = find.byTooltip('Fullscreen');
@@ -62,6 +63,43 @@ void main() {
     expect(rotateCount, 1);
     await tester.tap(fullscreenButton);
     expect(fullscreenCount, 1);
+  });
+
+  testWidgets('includes hours when the video is at least one hour long', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      mediaPreviewNotifierProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: buildAppTheme(
+            colorTheme: AppColorTheme.indigo,
+            brightness: Brightness.light,
+          ),
+          home: const Scaffold(
+            body: VideoControls(
+              state: MediaPreviewUiState(
+                position: Duration(minutes: 2),
+                duration: Duration(hours: 1, minutes: 1),
+              ),
+              isFullscreen: false,
+              onInteraction: _noop,
+              onRotate: _noop,
+              onToggleFullscreen: _noop,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('00:02:00 / 01:01:00'), findsOneWidget);
   });
 }
 
