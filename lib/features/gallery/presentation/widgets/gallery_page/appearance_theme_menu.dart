@@ -69,7 +69,7 @@ class AppearanceThemeMenu extends ConsumerWidget {
           icon: HugeIcons.strokeRoundedMoon02,
           selected: settings.appearanceMode == AppAppearanceMode.dark,
         ),
-        const PopupMenuDivider(),
+        PopupMenuDivider(indent: AppSpacing.md, endIndent: AppSpacing.md),
         const PopupMenuItem<_ThemeMenuOption>(
           enabled: false,
           height: 32,

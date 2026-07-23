@@ -101,17 +101,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Show item names'), findsOneWidget);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
-    expect(
-      find.ancestor(of: find.byType(Switch), matching: find.byType(InkWell)),
-      findsNothing,
-    );
+    expect(find.text('Hide item names'), findsOneWidget);
+    expect(find.byType(Switch), findsNothing);
 
-    await tester.tap(find.text('Show item names'));
-    await tester.pump();
-    expect(find.text('Show item names'), findsOneWidget);
-
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.text('Hide item names'));
     await tester.pumpAndSettle();
     expect(find.text('Show item names'), findsNothing);
   });

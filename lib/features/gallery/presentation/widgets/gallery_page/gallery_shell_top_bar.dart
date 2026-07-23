@@ -4,7 +4,6 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-import '../../../domain/value_objects/gallery_sort.dart';
 import '../../notifiers/gallery_notifier.dart';
 import '../../states/gallery_ui_state.dart';
 import 'appearance_theme_menu.dart';
@@ -131,27 +130,6 @@ class GalleryShellTopBar extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  if (gallery.canManageDirectory)
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<GallerySort>(
-                        value: gallery.sort,
-                        items: [
-                          for (final sort in GallerySort.values)
-                            DropdownMenuItem(
-                              value: sort,
-                              child: Text(sort.label),
-                            ),
-                        ],
-                        onChanged: (sort) {
-                          if (sort != null) {
-                            ref
-                                .read(galleryNotifierProvider.notifier)
-                                .setSort(sort);
-                          }
-                        },
-                      ),
-                    ),
-                  const SizedBox(width: AppSpacing.sm),
                   const GalleryViewOptionsMenu(),
                   const SizedBox(width: AppSpacing.xs),
                   const AppearanceThemeMenu(),
