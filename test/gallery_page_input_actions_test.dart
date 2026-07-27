@@ -76,6 +76,46 @@ void main() {
     },
   );
 
+  test('history back only navigates when back history is available', () {
+    var goBackCount = 0;
+    final actions = _createActions(
+      gallery: GalleryUiState(
+        items: items,
+        visibleCount: items.length,
+        canGoBack: true,
+      ),
+      goBack: () => goBackCount++,
+    );
+
+    actions.navigateHistoryBack();
+    _createActions(
+      gallery: GalleryUiState(items: items, visibleCount: items.length),
+      goBack: () => goBackCount++,
+    ).navigateHistoryBack();
+
+    expect(goBackCount, 1);
+  });
+
+  test('forward action only navigates when forward history is available', () {
+    var goForwardCount = 0;
+    final actions = _createActions(
+      gallery: GalleryUiState(
+        items: items,
+        visibleCount: items.length,
+        canGoForward: true,
+      ),
+      goForward: () => goForwardCount++,
+    );
+
+    actions.navigateForward();
+    _createActions(
+      gallery: GalleryUiState(items: items, visibleCount: items.length),
+      goForward: () => goForwardCount++,
+    ).navigateForward();
+
+    expect(goForwardCount, 1);
+  });
+
   test('opens the item at the independently supplied selection index', () {
     MediaItem? openedMedia;
     final actions = _createActions(
@@ -95,6 +135,7 @@ GalleryPageInputActions _createActions({
   GallerySelectionState Function()? readSelection,
   void Function(GallerySelectionState)? updateSelection,
   void Function()? goBack,
+  void Function()? goForward,
   void Function()? goUp,
   void Function(MediaItem)? openMedia,
 }) {
@@ -108,6 +149,7 @@ GalleryPageInputActions _createActions({
     openFolder: (_) {},
     openMedia: openMedia ?? (_) {},
     goBack: goBack ?? () {},
+    goForward: goForward ?? () {},
     goUp: goUp ?? () {},
   );
 }

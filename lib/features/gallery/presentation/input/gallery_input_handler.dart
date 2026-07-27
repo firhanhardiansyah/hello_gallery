@@ -1,12 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gamepads/gamepads.dart';
 
 class GalleryInputHandler {
+  static const _navigationDebounce = Duration(milliseconds: 80);
+
   GalleryInputHandler({
     required this.isEnabled,
+    required this.isNavigationEnabled,
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onMoveLeft,
@@ -17,9 +21,12 @@ class GalleryInputHandler {
     required this.onToggleSelectAll,
     required this.onToggleSidebar,
     required this.onToggleFullscreen,
+    required this.onNavigateBack,
+    required this.onNavigateForward,
   });
 
   final bool Function() isEnabled;
+  final bool Function() isNavigationEnabled;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onMoveLeft;
@@ -30,8 +37,12 @@ class GalleryInputHandler {
   final VoidCallback onToggleSelectAll;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleFullscreen;
+  final VoidCallback onNavigateBack;
+  final VoidCallback onNavigateForward;
 
   StreamSubscription<NormalizedGamepadEvent>? _gamepadSubscription;
+  Duration? _lastNavigationTime;
+  int? _lastNavigationButton;
 
   void start() {
     HardwareKeyboard.instance.addHandler(_handleKey);
@@ -48,9 +59,24 @@ class GalleryInputHandler {
   }
 
   KeyEventResult handleKeyEvent(KeyEvent event) {
-    if (!isEnabled() || event is! KeyDownEvent) {
+    if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
+    if (event.logicalKey == LogicalKeyboardKey.browserBack) {
+      return _handleNavigationShortcut(
+        button: kBackMouseButton,
+        timeStamp: event.timeStamp,
+        callback: onNavigateBack,
+      );
+    }
+    if (event.logicalKey == LogicalKeyboardKey.browserForward) {
+      return _handleNavigationShortcut(
+        button: kForwardMouseButton,
+        timeStamp: event.timeStamp,
+        callback: onNavigateForward,
+      );
+    }
+    if (!isEnabled()) return KeyEventResult.ignored;
     if (event.logicalKey == LogicalKeyboardKey.keyA) {
       final keyboard = HardwareKeyboard.instance;
       if (!keyboard.isControlPressed && !keyboard.isMetaPressed) {
@@ -80,6 +106,43 @@ class GalleryInputHandler {
       default:
         return KeyEventResult.ignored;
     }
+    return KeyEventResult.handled;
+  }
+
+  void handlePointerDown(PointerDownEvent event) {
+    if (event.kind != PointerDeviceKind.mouse) return;
+    if (event.buttons & kBackMouseButton != 0) {
+      _handleNavigationShortcut(
+        button: kBackMouseButton,
+        timeStamp: event.timeStamp,
+        callback: onNavigateBack,
+      );
+    } else if (event.buttons & kForwardMouseButton != 0) {
+      _handleNavigationShortcut(
+        button: kForwardMouseButton,
+        timeStamp: event.timeStamp,
+        callback: onNavigateForward,
+      );
+    }
+  }
+
+  KeyEventResult _handleNavigationShortcut({
+    required int button,
+    required Duration timeStamp,
+    required VoidCallback callback,
+  }) {
+    if (!isNavigationEnabled()) return KeyEventResult.ignored;
+    final lastTime = _lastNavigationTime;
+    final elapsed = lastTime == null ? null : timeStamp - lastTime;
+    if (_lastNavigationButton == button &&
+        elapsed != null &&
+        !elapsed.isNegative &&
+        elapsed < _navigationDebounce) {
+      return KeyEventResult.handled;
+    }
+    _lastNavigationButton = button;
+    _lastNavigationTime = timeStamp;
+    callback();
     return KeyEventResult.handled;
   }
 

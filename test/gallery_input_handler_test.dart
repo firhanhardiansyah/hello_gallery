@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,8 +10,10 @@ void main() {
     var enabled = false;
     var sidebarCount = 0;
     var fullscreenCount = 0;
+    var navigationBackCount = 0;
     final handler = GalleryInputHandler(
       isEnabled: () => enabled,
+      isNavigationEnabled: () => enabled,
       onMoveUp: _noop,
       onMoveDown: _noop,
       onMoveLeft: _noop,
@@ -21,6 +24,8 @@ void main() {
       onToggleSelectAll: _noop,
       onToggleSidebar: () => sidebarCount++,
       onToggleFullscreen: () => fullscreenCount++,
+      onNavigateBack: () => navigationBackCount++,
+      onNavigateForward: _noop,
     );
     expect(
       handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyS)),
@@ -32,6 +37,11 @@ void main() {
     );
     expect(sidebarCount, 0);
     expect(fullscreenCount, 0);
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.browserBack)),
+      KeyEventResult.ignored,
+    );
+    expect(navigationBackCount, 0);
 
     enabled = true;
     expect(
@@ -47,6 +57,7 @@ void main() {
     var toggleCount = 0;
     final handler = GalleryInputHandler(
       isEnabled: () => true,
+      isNavigationEnabled: () => true,
       onMoveUp: _noop,
       onMoveDown: _noop,
       onMoveLeft: _noop,
@@ -57,6 +68,8 @@ void main() {
       onToggleSelectAll: () => toggleCount++,
       onToggleSidebar: _noop,
       onToggleFullscreen: _noop,
+      onNavigateBack: _noop,
+      onNavigateForward: _noop,
     );
 
     expect(
@@ -86,6 +99,7 @@ void main() {
     var gamepadBackCount = 0;
     final handler = GalleryInputHandler(
       isEnabled: () => true,
+      isNavigationEnabled: () => true,
       onMoveUp: _noop,
       onMoveDown: _noop,
       onMoveLeft: _noop,
@@ -96,6 +110,8 @@ void main() {
       onToggleSelectAll: _noop,
       onToggleSidebar: _noop,
       onToggleFullscreen: _noop,
+      onNavigateBack: _noop,
+      onNavigateForward: _noop,
     );
 
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.escape));
@@ -103,6 +119,52 @@ void main() {
 
     expect(keyboardBackCount, 1);
     expect(gamepadBackCount, 1);
+  });
+
+  test('maps auxiliary mouse buttons and browser keys to navigation', () {
+    var backCount = 0;
+    var forwardCount = 0;
+    final handler = GalleryInputHandler(
+      isEnabled: () => true,
+      isNavigationEnabled: () => true,
+      onMoveUp: _noop,
+      onMoveDown: _noop,
+      onMoveLeft: _noop,
+      onMoveRight: _noop,
+      onActivate: _noop,
+      onBack: _noop,
+      onGamepadBack: _noop,
+      onToggleSelectAll: _noop,
+      onToggleSidebar: _noop,
+      onToggleFullscreen: _noop,
+      onNavigateBack: () => backCount++,
+      onNavigateForward: () => forwardCount++,
+    );
+
+    handler.handlePointerDown(
+      _mouseDown(kBackMouseButton, const Duration(milliseconds: 100)),
+    );
+    handler.handlePointerDown(
+      _mouseDown(kBackMouseButton, const Duration(milliseconds: 110)),
+    );
+    handler.handlePointerDown(
+      _mouseDown(kForwardMouseButton, const Duration(milliseconds: 200)),
+    );
+    handler.handleKeyEvent(
+      _keyDown(
+        LogicalKeyboardKey.browserBack,
+        const Duration(milliseconds: 300),
+      ),
+    );
+    handler.handleKeyEvent(
+      _keyDown(
+        LogicalKeyboardKey.browserForward,
+        const Duration(milliseconds: 400),
+      ),
+    );
+
+    expect(backCount, 2);
+    expect(forwardCount, 2);
   });
 }
 
@@ -123,10 +185,20 @@ NormalizedGamepadEvent _gamepadButton(GamepadButton button) {
   );
 }
 
-KeyDownEvent _keyDown(LogicalKeyboardKey key) => KeyDownEvent(
+PointerDownEvent _mouseDown(int buttons, Duration timeStamp) =>
+    PointerDownEvent(
+      kind: PointerDeviceKind.mouse,
+      buttons: buttons,
+      timeStamp: timeStamp,
+    );
+
+KeyDownEvent _keyDown(
+  LogicalKeyboardKey key, [
+  Duration timeStamp = Duration.zero,
+]) => KeyDownEvent(
   physicalKey: PhysicalKeyboardKey.keyA,
   logicalKey: key,
-  timeStamp: Duration.zero,
+  timeStamp: timeStamp,
 );
 
 void _noop() {}

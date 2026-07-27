@@ -55,6 +55,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     _initializeActions();
     _inputHandler = GalleryInputHandler(
       isEnabled: _isGalleryInputEnabled,
+      isNavigationEnabled: _isHistoryNavigationEnabled,
       onMoveUp: () => _inputActions.moveSelection(-_gridColumnCount),
       onMoveDown: () => _inputActions.moveSelection(_gridColumnCount),
       onMoveLeft: () => _inputActions.moveSelection(-1),
@@ -65,6 +66,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       onToggleSelectAll: _inputActions.toggleSelectAll,
       onToggleSidebar: _toggleSidebar,
       onToggleFullscreen: () => unawaited(_toggleFullscreen()),
+      onNavigateBack: _handleHistoryNavigationBack,
+      onNavigateForward: _handleHistoryNavigationForward,
     )..start();
     _scrollController.addListener(_loadMoreNearGridEnd);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -112,6 +115,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       openFolder: _openFolder,
       openMedia: _previewCoordinator.open,
       goBack: ref.read(galleryNotifierProvider.notifier).goBack,
+      goForward: ref.read(galleryNotifierProvider.notifier).goForward,
       goUp: ref.read(galleryNotifierProvider.notifier).goUp,
     );
     _folderActions = GalleryFolderActions(
@@ -251,6 +255,33 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     return ModalRoute.of(context)?.isCurrent ?? true;
   }
 
+  bool _isHistoryNavigationEnabled() {
+    if (!mounted || _isModalOpen) return false;
+    return ModalRoute.of(context)?.isCurrent ?? true;
+  }
+
+  void _handleHistoryNavigationBack() {
+    if (_preview != null) {
+      unawaited(_previewCoordinator.close());
+      return;
+    }
+    _inputActions.navigateHistoryBack();
+  }
+
+  void _handleHistoryNavigationForward() {
+    if (!ref.read(galleryNotifierProvider).canGoForward) return;
+    if (_preview == null) {
+      _inputActions.navigateForward();
+      return;
+    }
+    unawaited(_closePreviewAndNavigateForward());
+  }
+
+  Future<void> _closePreviewAndNavigateForward() async {
+    await _previewCoordinator.close();
+    if (mounted) _inputActions.navigateForward();
+  }
+
   void _toggleSidebar() {
     if (ref.read(settingsNotifierProvider).rootPath == null) return;
     setState(() {
@@ -345,13 +376,17 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
     return Focus(
       autofocus: true,
-      child: Scaffold(
-        body: VirtualCursorOverlay(
-          child: _buildPageContent(
-            settings: settings,
-            gallery: gallery,
-            previewState: previewState,
-            selectedMediaItems: selectedMediaItems,
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: _inputHandler.handlePointerDown,
+        child: Scaffold(
+          body: VirtualCursorOverlay(
+            child: _buildPageContent(
+              settings: settings,
+              gallery: gallery,
+              previewState: previewState,
+              selectedMediaItems: selectedMediaItems,
+            ),
           ),
         ),
       ),

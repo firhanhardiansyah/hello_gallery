@@ -17,6 +17,7 @@ final class GalleryPageInputActions {
     required this.openFolder,
     required this.openMedia,
     required this.goBack,
+    required this.goForward,
     required this.goUp,
   });
 
@@ -27,6 +28,7 @@ final class GalleryPageInputActions {
   final FutureOr<void> Function(String folderPath) openFolder;
   final FutureOr<void> Function(MediaItem item) openMedia;
   final FutureOr<void> Function() goBack;
+  final FutureOr<void> Function() goForward;
   final FutureOr<void> Function() goUp;
 
   void handleBack() {
@@ -48,6 +50,16 @@ final class GalleryPageInputActions {
   void navigateBack() {
     final gallery = readGallery();
     unawaited(Future.sync(gallery.canGoBack ? goBack : goUp));
+  }
+
+  void navigateHistoryBack() {
+    if (!readGallery().canGoBack) return;
+    unawaited(Future.sync(goBack));
+  }
+
+  void navigateForward() {
+    if (!readGallery().canGoForward) return;
+    unawaited(Future.sync(goForward));
   }
 
   void moveSelection(int delta) {
