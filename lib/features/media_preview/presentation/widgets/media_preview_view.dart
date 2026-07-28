@@ -7,9 +7,9 @@ import '../notifiers/media_preview_notifier.dart';
 import '../states/media_preview_ui_state.dart';
 import 'filmstrip/media_preview_filmstrip.dart';
 import 'filmstrip/media_preview_filmstrip_controller.dart';
+import 'image_preview_actions.dart';
 import 'media_preview_canvas.dart';
 import 'media_preview_interaction_surface.dart';
-import 'image_preview_actions.dart';
 import 'video_preview_overlays.dart';
 
 class MediaPreviewView extends ConsumerWidget {
@@ -44,7 +44,7 @@ class MediaPreviewView extends ConsumerWidget {
   final ValueChanged<int> onSelectMedia;
   final VoidCallback onToggleFullscreen;
 
-  static const _videoFilmstripBottomInset = 112.0;
+  static const _videoControlsFilmstripBottomInset = 84.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,6 +58,11 @@ class MediaPreviewView extends ConsumerWidget {
     void togglePlayback() {
       onInteraction();
       controller.togglePlay();
+    }
+
+    var filmstripBottomInset = AppSpacing.lg;
+    if (item.isVideo && controlsVisible) {
+      filmstripBottomInset = _videoControlsFilmstripBottomInset;
     }
 
     return Stack(
@@ -108,9 +113,7 @@ class MediaPreviewView extends ConsumerWidget {
           items: state.items,
           activeIndex: state.activeIndex,
           visible: filmstripVisible,
-          bottomInset: item.isVideo
-              ? _videoFilmstripBottomInset
-              : AppSpacing.lg,
+          bottomInset: filmstripBottomInset,
           controller: filmstripController,
           onSelected: onSelectMedia,
         ),

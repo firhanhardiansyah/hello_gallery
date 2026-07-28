@@ -53,6 +53,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   bool _controlsHiddenByNavigation = false;
   bool _filmstripEnabled = true;
   int? _filmstripNavigationTargetIndex;
+  int _manualNavigationCount = 0;
   int _silentNavigationCount = 0;
 
   MediaPreviewNotifier get _controller =>
@@ -62,8 +63,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void initState() {
     super.initState();
     _inputHandler = MediaPreviewInputHandler(
-      onPrevious: () => _navigateWithoutRevealingControls(_controller.previous),
-      onNext: () => _navigateWithoutRevealingControls(_controller.next),
+      onPrevious: () => _navigateKeepingControlsVisible(_controller.previous),
+      onNext: () => _navigateKeepingControlsVisible(_controller.next),
       onSeekBackward: () => _seekBy(const Duration(seconds: -3)),
       onSeekForward: () => _seekBy(const Duration(seconds: 3)),
       onTogglePlay: _togglePlay,
@@ -156,7 +157,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   }
 
   void _toggleFilmstrip() {
-    final showFilmstrip = !(_filmstripEnabled && _controlsVisible);
+    final showFilmstrip = !_filmstripEnabled;
     _showControls(userInitiated: true);
     setState(() => _filmstripEnabled = showFilmstrip);
     if (!showFilmstrip) return;
@@ -197,9 +198,23 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     }
   }
 
-  void _navigateWithoutRevealingControls(Future<void> Function() navigate) {
-    _suppressControlsDuringNavigation();
-    unawaited(navigate());
+  void _navigateKeepingControlsVisible(Future<void> Function() navigate) {
+    _manualNavigationCount++;
+    _showControls(userInitiated: true);
+    unawaited(_completeManualNavigation(navigate));
+  }
+
+  Future<void> _completeManualNavigation(
+    Future<void> Function() navigate,
+  ) async {
+    try {
+      await navigate();
+    } finally {
+      _manualNavigationCount--;
+      if (mounted) {
+        _showControls(userInitiated: true);
+      }
+    }
   }
 
   void _suppressControlsDuringNavigation() {
@@ -226,7 +241,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       mediaPreviewNotifierProvider.select((value) => value.activeIndex),
       (previous, activeIndex) {
         if (previous != activeIndex) {
-          if (_filmstripNavigationTargetIndex == activeIndex) {
+          if (_manualNavigationCount > 0 ||
+              _filmstripNavigationTargetIndex == activeIndex) {
             _showControls(userInitiated: true);
             return;
           }
@@ -245,7 +261,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
         }
       },
     );
-    final filmstripVisible = _filmstripEnabled && _controlsVisible;
+    final filmstripVisible = _filmstripEnabled;
     if (filmstripVisible && state.items.isNotEmpty) {
       _filmstripController.reveal(state.activeIndex, animated: false);
     }

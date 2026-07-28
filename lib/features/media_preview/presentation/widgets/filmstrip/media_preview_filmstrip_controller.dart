@@ -4,9 +4,9 @@ import 'package:flutter/widgets.dart';
 final class MediaPreviewFilmstripController {
   static const thumbnailWidth = 88.0;
   static const thumbnailHeight = 64.0;
-  static const itemSpacing = 8.0;
+  static const itemSpacing = 4.0;
   static const itemExtent = thumbnailWidth + itemSpacing;
-  static const horizontalPadding = 12.0;
+  static const horizontalPadding = 16.0;
 
   final scrollController = ScrollController();
 
