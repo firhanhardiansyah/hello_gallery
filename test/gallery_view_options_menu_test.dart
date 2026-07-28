@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_view_options_menu.dart';
 
 void main() {
-  testWidgets('combines sorting and item name options in one menu', (
+  testWidgets('combines sorting, item names, and layout in one menu', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -24,5 +24,8 @@ void main() {
     expect(find.text('Item names'), findsOneWidget);
     expect(find.text('Show item names'), findsOneWidget);
     expect(find.text('Hide item names'), findsOneWidget);
+    expect(find.text('Layout'), findsOneWidget);
+    expect(find.text('Grid'), findsOneWidget);
+    expect(find.text('Quilted'), findsOneWidget);
   });
 }

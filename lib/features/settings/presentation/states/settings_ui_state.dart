@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
+import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
 
 part 'settings_ui_state.freezed.dart';
 
@@ -22,6 +23,7 @@ abstract class SettingsUiState with _$SettingsUiState {
     @Default(AppAppearanceMode.system) AppAppearanceMode appearanceMode,
     @Default(AppColorTheme.indigo) AppColorTheme colorTheme,
     @Default(true) bool showItemNames,
+    @Default(GalleryLayoutMode.grid) GalleryLayoutMode galleryLayoutMode,
   }) = _SettingsUiState;
 
   String? get rootPath => switch (loadState) {

@@ -647,6 +647,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       selectedIndex: _selection.selectedIndex,
       keyboardFocusVisible: _selection.keyboardFocusVisible,
       showItemNames: settings.showItemNames,
+      layoutMode: settings.galleryLayoutMode,
       selectedPaths: _selection.selectedPaths,
       onSelectionChanged: _inputActions.changeSelection,
       onClearSelection: _inputActions.clearSelection,

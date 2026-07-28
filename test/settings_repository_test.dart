@@ -4,6 +4,7 @@ import 'package:hello_gallery/features/settings/domain/entities/gallery_view_pre
 import 'package:hello_gallery/features/settings/domain/entities/theme_preferences.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_appearance_mode.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_layout_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -43,16 +44,21 @@ void main() {
     final preferences = await repository.readGalleryViewPreferences();
 
     expect(preferences.showItemNames, isTrue);
+    expect(preferences.layoutMode, GalleryLayoutMode.grid);
   });
 
-  test('gallery view preferences persist item name visibility', () async {
+  test('gallery view preferences persist display options', () async {
     final repository = SettingsRepositoryImpl();
 
     await repository.saveGalleryViewPreferences(
-      const GalleryViewPreferences(showItemNames: false),
+      const GalleryViewPreferences(
+        showItemNames: false,
+        layoutMode: GalleryLayoutMode.quilted,
+      ),
     );
 
     final preferences = await repository.readGalleryViewPreferences();
     expect(preferences.showItemNames, isFalse);
+    expect(preferences.layoutMode, GalleryLayoutMode.quilted);
   });
 }

@@ -5,6 +5,7 @@ import '../../domain/entities/gallery_view_preferences.dart';
 import '../../domain/entities/theme_preferences.dart';
 import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
+import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
 import '../states/settings_ui_state.dart';
 
 final settingsNotifierProvider =
@@ -35,6 +36,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         appearanceMode: theme.appearanceMode,
         colorTheme: theme.colorTheme,
         showItemNames: galleryView.showItemNames,
+        galleryLayoutMode: galleryView.layoutMode,
       );
     } on Object catch (error) {
       state = state.copyWith(loadState: SettingsLoadState.error('$error'));
@@ -68,8 +70,20 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
 
   Future<void> setShowItemNames(bool showItemNames) async {
     state = state.copyWith(showItemNames: showItemNames);
-    await ref.read(saveGalleryViewPreferencesProvider)(
-      GalleryViewPreferences(showItemNames: showItemNames),
+    await _saveGalleryViewPreferences();
+  }
+
+  Future<void> setGalleryLayoutMode(GalleryLayoutMode layoutMode) async {
+    state = state.copyWith(galleryLayoutMode: layoutMode);
+    await _saveGalleryViewPreferences();
+  }
+
+  Future<void> _saveGalleryViewPreferences() {
+    return ref.read(saveGalleryViewPreferencesProvider)(
+      GalleryViewPreferences(
+        showItemNames: state.showItemNames,
+        layoutMode: state.galleryLayoutMode,
+      ),
     );
   }
 

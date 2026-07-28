@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 
@@ -10,6 +11,7 @@ import '../../../../thumbnail/application/services/thumbnail_job_scheduler.dart'
 import '../../../application/providers/gallery_dependencies.dart';
 import '../../../application/services/folder_preview_job_scheduler.dart';
 import '../../../domain/entities/gallery_item.dart';
+import '../../../domain/value_objects/gallery_layout_mode.dart';
 import '../../states/gallery_ui_state.dart';
 import '../../states/media_drag_payload.dart';
 import 'gallery_card.dart';
@@ -40,6 +42,7 @@ class GalleryBody extends ConsumerStatefulWidget {
     required this.onMediaSelected,
     required this.onMediaDropped,
     this.showItemNames = true,
+    this.layoutMode = GalleryLayoutMode.grid,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.onRenameMedia,
@@ -59,6 +62,7 @@ class GalleryBody extends ConsumerStatefulWidget {
   final ValueChanged<MediaItem> onMediaSelected;
   final MediaFolderDrop onMediaDropped;
   final bool showItemNames;
+  final GalleryLayoutMode layoutMode;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
   final ValueChanged<MediaItem>? onRenameMedia;
@@ -169,28 +173,68 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           onTap: widget.onClearSelection,
           child: NotificationListener<ScrollNotification>(
             onNotification: _handleScrollNotification,
-            child: GridView.builder(
-              key: PageStorageKey<String>(
-                'gallery-grid:${widget.state.currentPath}',
-              ),
-              controller: widget.scrollController,
-              padding: const EdgeInsets.all(_GalleryGridLayout.padding),
-              addAutomaticKeepAlives: false,
-              scrollCacheExtent: const ScrollCacheExtent.pixels(240),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
-                childAspectRatio: _GalleryGridLayout.childAspectRatio,
-                crossAxisSpacing: _GalleryGridLayout.spacing,
-                mainAxisSpacing: _GalleryGridLayout.spacing,
-              ),
-              itemCount: visibleItems.length,
-              itemBuilder: (context, index) =>
-                  _buildItem(context, index, visibleItems),
-            ),
+            child: _buildGrid(visibleItems),
           ),
         );
       },
     );
+  }
+
+  Widget _buildGrid(List<GalleryItem> visibleItems) {
+    final key = PageStorageKey<String>(
+      'gallery-grid:${widget.state.currentPath}',
+    );
+    if (widget.layoutMode == GalleryLayoutMode.quilted &&
+        _reportedColumnCount > 1) {
+      return GridView.custom(
+        key: key,
+        controller: widget.scrollController,
+        padding: const EdgeInsets.all(_GalleryGridLayout.padding),
+        scrollCacheExtent: const ScrollCacheExtent.pixels(240),
+        gridDelegate: SliverQuiltedGridDelegate(
+          crossAxisCount: _reportedColumnCount,
+          mainAxisSpacing: _GalleryGridLayout.spacing,
+          crossAxisSpacing: _GalleryGridLayout.spacing,
+          repeatPattern: QuiltedGridRepeatPattern.inverted,
+          pattern: _quiltedPattern(_reportedColumnCount),
+        ),
+        childrenDelegate: SliverChildBuilderDelegate(
+          (context, index) => _buildItem(context, index, visibleItems),
+          childCount: visibleItems.length,
+          addAutomaticKeepAlives: false,
+        ),
+      );
+    }
+    return GridView.builder(
+      key: key,
+      controller: widget.scrollController,
+      padding: const EdgeInsets.all(_GalleryGridLayout.padding),
+      addAutomaticKeepAlives: false,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(240),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
+        childAspectRatio: _GalleryGridLayout.childAspectRatio,
+        crossAxisSpacing: _GalleryGridLayout.spacing,
+        mainAxisSpacing: _GalleryGridLayout.spacing,
+      ),
+      itemCount: visibleItems.length,
+      itemBuilder: (context, index) => _buildItem(context, index, visibleItems),
+    );
+  }
+
+  List<QuiltedGridTile> _quiltedPattern(int columns) {
+    if (columns == 2) {
+      return const [
+        QuiltedGridTile(2, 2),
+        QuiltedGridTile(1, 1),
+        QuiltedGridTile(1, 1),
+      ];
+    }
+    return [
+      const QuiltedGridTile(2, 2),
+      for (var index = 0; index < columns * 2 - 4; index++)
+        const QuiltedGridTile(1, 1),
+    ];
   }
 
   void _updateGridMetrics(double availableWidth) {

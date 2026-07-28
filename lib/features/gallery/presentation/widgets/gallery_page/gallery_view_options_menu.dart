@@ -6,6 +6,7 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../../settings/presentation/notifiers/settings_notifier.dart';
+import '../../../domain/value_objects/gallery_layout_mode.dart';
 import '../../../domain/value_objects/gallery_sort.dart';
 import '../../notifiers/gallery_notifier.dart';
 
@@ -16,6 +17,8 @@ enum _GalleryViewOption {
   oldest,
   showItemNames,
   hideItemNames,
+  gridLayout,
+  quiltedLayout,
 }
 
 class GalleryViewOptionsMenu extends ConsumerWidget {
@@ -27,6 +30,9 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
     final sort = gallery.sort;
     final showItemNames = ref.watch(
       settingsNotifierProvider.select((settings) => settings.showItemNames),
+    );
+    final layoutMode = ref.watch(
+      settingsNotifierProvider.select((settings) => settings.galleryLayoutMode),
     );
 
     return PopupMenuButton<_GalleryViewOption>(
@@ -85,6 +91,24 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
           icon: HugeIcons.strokeRoundedViewOff,
           selected: !showItemNames,
         ),
+        PopupMenuDivider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+        const PopupMenuItem<_GalleryViewOption>(
+          enabled: false,
+          height: 32,
+          child: Text('Layout'),
+        ),
+        _item(
+          option: _GalleryViewOption.gridLayout,
+          label: 'Grid',
+          icon: HugeIcons.strokeRoundedGridView,
+          selected: layoutMode == GalleryLayoutMode.grid,
+        ),
+        _item(
+          option: _GalleryViewOption.quiltedLayout,
+          label: 'Quilted',
+          icon: HugeIcons.strokeRoundedLayoutGrid,
+          selected: layoutMode == GalleryLayoutMode.quilted,
+        ),
       ],
     );
   }
@@ -110,6 +134,18 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
       case _GalleryViewOption.hideItemNames:
         unawaited(
           ref.read(settingsNotifierProvider.notifier).setShowItemNames(false),
+        );
+      case _GalleryViewOption.gridLayout:
+        unawaited(
+          ref
+              .read(settingsNotifierProvider.notifier)
+              .setGalleryLayoutMode(GalleryLayoutMode.grid),
+        );
+      case _GalleryViewOption.quiltedLayout:
+        unawaited(
+          ref
+              .read(settingsNotifierProvider.notifier)
+              .setGalleryLayoutMode(GalleryLayoutMode.quilted),
         );
     }
   }
