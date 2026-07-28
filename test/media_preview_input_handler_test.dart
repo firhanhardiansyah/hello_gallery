@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,7 @@ void main() {
     var rotateCount = 0;
     var rotationLockCount = 0;
     var loopCount = 0;
+    var filmstripCount = 0;
     var fullscreenCount = 0;
     var closeCount = 0;
     var sidebarCount = 0;
@@ -29,6 +31,7 @@ void main() {
       onRotate: () => rotateCount++,
       onToggleRotationLock: () => rotationLockCount++,
       onToggleLoop: () => loopCount++,
+      onToggleFilmstrip: () => filmstripCount++,
       onToggleSidebar: () => sidebarCount++,
       onToggleTopBar: () => topBarCount++,
       onToggleFullscreen: () => fullscreenCount++,
@@ -49,6 +52,7 @@ void main() {
     primaryModifierPressed = true;
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyR));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyL));
+    handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyG));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyT));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyF));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.escape));
@@ -72,12 +76,56 @@ void main() {
     expect(rotateCount, 3);
     expect(rotationLockCount, 3);
     expect(loopCount, 1);
+    expect(filmstripCount, 1);
     expect(fullscreenCount, 1);
     expect(closeCount, 1);
     expect(sidebarCount, 2);
     expect(topBarCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);
+  });
+
+  testWidgets('uses unclaimed pointer scroll for media navigation', (
+    tester,
+  ) async {
+    var nextCount = 0;
+    final handler = MediaPreviewInputHandler(
+      onPrevious: _noop,
+      onNext: () => nextCount++,
+      onSeekBackward: _noop,
+      onSeekForward: _noop,
+      onTogglePlay: _noop,
+      onToggleMute: _noop,
+      onRotate: _noop,
+      onToggleRotationLock: _noop,
+      onToggleLoop: _noop,
+      onToggleFilmstrip: _noop,
+      onToggleSidebar: _noop,
+      onToggleTopBar: _noop,
+      onToggleFullscreen: _noop,
+      onClose: _noop,
+      onEscape: _noop,
+      onRequestFocus: _noop,
+    );
+    addTearDown(handler.dispose);
+
+    await tester.pumpWidget(
+      Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerSignal: handler.handlePointerSignal,
+        child: const SizedBox.expand(),
+      ),
+    );
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(
+        position: Offset(10, 10),
+        scrollDelta: Offset(0, 30),
+        kind: PointerDeviceKind.mouse,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(nextCount, 1);
   });
 }
 

@@ -16,9 +16,11 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.isFullscreen,
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
+    required this.filmstripVisible,
     required this.onTogglePlayback,
     required this.onRotate,
     required this.onToggleRotationLock,
+    required this.onToggleFilmstrip,
     required this.onToggleFullscreen,
     required this.onInteraction,
     super.key,
@@ -31,9 +33,11 @@ class VideoPreviewOverlays extends StatelessWidget {
   final bool isFullscreen;
   final int rotationQuarterTurns;
   final bool isRotationLocked;
+  final bool filmstripVisible;
   final VoidCallback onTogglePlayback;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
+  final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onInteraction;
 
@@ -58,8 +62,10 @@ class VideoPreviewOverlays extends StatelessWidget {
           visible: controlsVisible,
           isFullscreen: isFullscreen,
           isRotationLocked: isRotationLocked,
+          filmstripVisible: filmstripVisible,
           onRotate: onRotate,
           onToggleRotationLock: onToggleRotationLock,
+          onToggleFilmstrip: onToggleFilmstrip,
           onInteraction: onInteraction,
           onToggleFullscreen: onToggleFullscreen,
         ),
@@ -174,8 +180,10 @@ class _VideoControlsOverlay extends StatelessWidget {
     required this.visible,
     required this.isFullscreen,
     required this.isRotationLocked,
+    required this.filmstripVisible,
     required this.onRotate,
     required this.onToggleRotationLock,
+    required this.onToggleFilmstrip,
     required this.onInteraction,
     required this.onToggleFullscreen,
   });
@@ -184,8 +192,10 @@ class _VideoControlsOverlay extends StatelessWidget {
   final bool visible;
   final bool isFullscreen;
   final bool isRotationLocked;
+  final bool filmstripVisible;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
+  final VoidCallback onToggleFilmstrip;
   final VoidCallback onInteraction;
   final VoidCallback onToggleFullscreen;
 
@@ -207,8 +217,10 @@ class _VideoControlsOverlay extends StatelessWidget {
             state: state,
             isFullscreen: isFullscreen,
             isRotationLocked: isRotationLocked,
+            filmstripVisible: filmstripVisible,
             onRotate: onRotate,
             onToggleRotationLock: onToggleRotationLock,
+            onToggleFilmstrip: onToggleFilmstrip,
             onInteraction: onInteraction,
             onToggleFullscreen: onToggleFullscreen,
           ),

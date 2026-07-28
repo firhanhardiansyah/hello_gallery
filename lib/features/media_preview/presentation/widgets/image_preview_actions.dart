@@ -7,16 +7,22 @@ class ImagePreviewActions extends StatelessWidget {
   const ImagePreviewActions({
     required this.visible,
     required this.isRotationLocked,
+    required this.filmstripVisible,
+    required this.bottomInset,
     required this.onRotate,
     required this.onToggleRotationLock,
+    required this.onToggleFilmstrip,
     required this.onInteraction,
     super.key,
   });
 
   final bool visible;
   final bool isRotationLocked;
+  final bool filmstripVisible;
+  final double bottomInset;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
+  final VoidCallback onToggleFilmstrip;
   final VoidCallback onInteraction;
 
   static const _controlSize = 44.0;
@@ -24,7 +30,7 @@ class ImagePreviewActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Positioned(
     right: AppSpacing.lg,
-    bottom: AppSpacing.lg,
+    bottom: bottomInset,
     child: AnimatedOpacity(
       duration: const Duration(milliseconds: 150),
       opacity: visible ? 1 : 0,
@@ -46,12 +52,7 @@ class ImagePreviewActions extends StatelessWidget {
                 icon: HugeIcons.strokeRoundedRotateClockwise,
                 onPressed: onRotate,
               ),
-              Container(
-                width: 1,
-                height: _controlSize / 2,
-                color: context.appColors.onMediaMuted.withValues(alpha: 0.35),
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              ),
+              _divider(context),
               _button(
                 context: context,
                 tooltip: isRotationLocked ? 'Unlock rotation' : 'Lock rotation',
@@ -63,11 +64,30 @@ class ImagePreviewActions extends StatelessWidget {
                     : null,
                 onPressed: onToggleRotationLock,
               ),
+              _divider(context),
+              _button(
+                context: context,
+                tooltip: filmstripVisible
+                    ? 'Hide media list (G)'
+                    : 'Show media list (G)',
+                icon: HugeIcons.strokeRoundedGalleryHorizontalEnd,
+                color: filmstripVisible
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                onPressed: onToggleFilmstrip,
+              ),
             ],
           ),
         ),
       ),
     ),
+  );
+
+  Widget _divider(BuildContext context) => Container(
+    width: 1,
+    height: _controlSize / 2,
+    color: context.appColors.onMediaMuted.withValues(alpha: 0.35),
+    margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
   );
 
   Widget _button({

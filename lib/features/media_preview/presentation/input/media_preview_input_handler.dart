@@ -18,6 +18,7 @@ final class MediaPreviewInputHandler {
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleLoop,
+    required this.onToggleFilmstrip,
     required this.onToggleSidebar,
     required this.onToggleTopBar,
     required this.onToggleFullscreen,
@@ -37,6 +38,7 @@ final class MediaPreviewInputHandler {
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleLoop;
+  final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleTopBar;
   final VoidCallback onToggleFullscreen;
@@ -71,12 +73,21 @@ final class MediaPreviewInputHandler {
   void handlePointerSignal(PointerSignalEvent event) {
     if (_disposed) return;
     if (event is! PointerScrollEvent) return;
+    GestureBinding.instance.pointerSignalResolver.register(
+      event,
+      _handleResolvedPointerSignal,
+    );
+  }
+
+  void _handleResolvedPointerSignal(PointerEvent event) {
+    if (event is! PointerScrollEvent) return;
     switch (_scrollInput.handle(event.scrollDelta)) {
       case < 0:
         onPrevious();
       case > 0:
         onNext();
     }
+    event.respond(allowPlatformDefault: false);
   }
 
   bool _handleGlobalKey(KeyEvent event) {
@@ -160,6 +171,8 @@ final class MediaPreviewInputHandler {
         }
       case LogicalKeyboardKey.keyL:
         onToggleLoop();
+      case LogicalKeyboardKey.keyG:
+        onToggleFilmstrip();
       case LogicalKeyboardKey.keyS:
         onToggleSidebar();
       case LogicalKeyboardKey.keyT:

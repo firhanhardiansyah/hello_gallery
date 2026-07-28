@@ -7,6 +7,7 @@ import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort
 
 import '../input/media_preview_input_handler.dart';
 import '../notifiers/media_preview_notifier.dart';
+import '../widgets/filmstrip/media_preview_filmstrip_controller.dart';
 import '../widgets/media_preview_view.dart';
 
 class MediaPreviewPage extends ConsumerStatefulWidget {
@@ -45,10 +46,13 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
 
 class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   final _focusNode = FocusNode();
+  final _filmstripController = MediaPreviewFilmstripController();
   late final MediaPreviewInputHandler _inputHandler;
   Timer? _hideTimer;
   bool _controlsVisible = true;
   bool _controlsHiddenByNavigation = false;
+  bool _filmstripEnabled = true;
+  int? _filmstripNavigationTargetIndex;
   int _silentNavigationCount = 0;
 
   MediaPreviewNotifier get _controller =>
@@ -67,6 +71,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onRotate: _rotateActiveMedia,
       onToggleRotationLock: _toggleRotationLock,
       onToggleLoop: _toggleLoop,
+      onToggleFilmstrip: _toggleFilmstrip,
       onToggleSidebar: _toggleSidebar,
       onToggleTopBar: _toggleTopBar,
       onToggleFullscreen: _toggleFullscreen,
@@ -84,6 +89,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   void dispose() {
     _inputHandler.dispose();
+    _filmstripController.dispose();
     _hideTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
@@ -149,6 +155,34 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     unawaited(_controller.toggleLoop());
   }
 
+  void _toggleFilmstrip() {
+    final showFilmstrip = !(_filmstripEnabled && _controlsVisible);
+    _showControls(userInitiated: true);
+    setState(() => _filmstripEnabled = showFilmstrip);
+    if (!showFilmstrip) return;
+    final activeIndex = ref.read(mediaPreviewNotifierProvider).activeIndex;
+    _filmstripController.reveal(activeIndex, animated: false, force: true);
+  }
+
+  void _selectFromFilmstrip(int index) {
+    _filmstripNavigationTargetIndex = index;
+    _showControls(userInitiated: true);
+    unawaited(_selectMediaFromFilmstrip(index));
+  }
+
+  Future<void> _selectMediaFromFilmstrip(int index) async {
+    try {
+      await _controller.select(index);
+    } finally {
+      if (_filmstripNavigationTargetIndex == index) {
+        _filmstripNavigationTargetIndex = null;
+      }
+      if (mounted) {
+        _showControls(userInitiated: true);
+      }
+    }
+  }
+
   void _seekBy(Duration delta) {
     _showControls(userInitiated: true);
     unawaited(_controller.seekBy(delta));
@@ -192,6 +226,10 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       mediaPreviewNotifierProvider.select((value) => value.activeIndex),
       (previous, activeIndex) {
         if (previous != activeIndex) {
+          if (_filmstripNavigationTargetIndex == activeIndex) {
+            _showControls(userInitiated: true);
+            return;
+          }
           _suppressControlsDuringNavigation();
         }
       },
@@ -207,6 +245,10 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
         }
       },
     );
+    final filmstripVisible = _filmstripEnabled && _controlsVisible;
+    if (filmstripVisible && state.items.isNotEmpty) {
+      _filmstripController.reveal(state.activeIndex, animated: false);
+    }
     return Focus(
       focusNode: _focusNode,
       child: Listener(
@@ -223,9 +265,13 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             isFullscreen: widget.isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: state.isRotationLocked,
+            filmstripVisible: filmstripVisible,
+            filmstripController: _filmstripController,
             onInteraction: () => _showControls(userInitiated: true),
             onRotate: _rotateActiveMedia,
             onToggleRotationLock: _toggleRotationLock,
+            onToggleFilmstrip: _toggleFilmstrip,
+            onSelectMedia: _selectFromFilmstrip,
             onToggleFullscreen: _toggleFullscreen,
           ),
         ),
