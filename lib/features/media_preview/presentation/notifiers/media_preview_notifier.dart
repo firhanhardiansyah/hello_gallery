@@ -254,6 +254,10 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     ]);
     await player.open(Media(item.path), play: false);
     if (generation != _openGeneration) return;
+    // Reapply after libmpv has read the source color metadata. Some target
+    // properties are resolved against the active video's transfer function.
+    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+    if (generation != _openGeneration) return;
     await player.setPlaylistMode(
       state.isLooping ? PlaylistMode.single : PlaylistMode.none,
     );

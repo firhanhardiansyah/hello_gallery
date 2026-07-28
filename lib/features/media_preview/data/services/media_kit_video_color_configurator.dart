@@ -9,14 +9,16 @@ final class MediaKitVideoColorConfigurator {
   final MediaPlaybackConfig config;
 
   static const sdrToneMappingProperties = <String, String>{
-    'target-trc': 'srgb',
+    'target-trc': 'gamma2.2',
     'target-prim': 'bt.709',
-    'target-peak': '100',
-    'tone-mapping': 'bt.2390',
-    'tone-mapping-param': '0.5',
-    'hdr-reference-white': '100',
+    'target-peak': '203',
+    'tone-mapping': 'hable',
+    'tone-mapping-param': 'default',
     'hdr-compute-peak': 'yes',
     'inverse-tone-mapping': 'no',
+    'tone-mapping-max-boost': '1.0',
+    'video-output-levels': 'full',
+    'dither-depth': '8',
   };
   static const automaticHdrProperties = <String, String>{
     'target-trc': 'auto',
@@ -24,9 +26,11 @@ final class MediaKitVideoColorConfigurator {
     'target-peak': 'auto',
     'tone-mapping': 'auto',
     'tone-mapping-param': 'default',
-    'hdr-reference-white': 'auto',
     'hdr-compute-peak': 'auto',
     'inverse-tone-mapping': 'no',
+    'tone-mapping-max-boost': '1.0',
+    'video-output-levels': 'auto',
+    'dither-depth': 'auto',
   };
 
   Map<String, String> get properties =>
