@@ -194,12 +194,22 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
   Future<void> seek(Duration position) async => _player?.seek(position);
 
   Future<void> applyPlaybackColorConfig() async {
-    final player = _player;
-    if (player == null) return;
-    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+    if (state.activeItem?.isVideo != true || _player == null) return;
+    final position = state.position;
+    final wasPlaying = state.isPlaying;
+    final wasMuted = state.isMuted;
+    await _openActive(
+      initialPosition: position,
+      playWhenReady: wasPlaying,
+      muted: wasMuted,
+    );
   }
 
-  Future<void> _openActive() async {
+  Future<void> _openActive({
+    Duration initialPosition = Duration.zero,
+    bool playWhenReady = true,
+    bool muted = false,
+  }) async {
     final generation = ++_openGeneration;
     state = state.copyWith(
       isPlaying: false,
@@ -214,11 +224,11 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     if (item == null || !item.isVideo) return;
     final player = Player();
     _player = player;
+    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+    if (generation != _openGeneration) return;
     _videoController = VideoController(player);
     // Notify the UI immediately that a new native video surface is available.
     state = state.copyWith();
-    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
-    if (generation != _openGeneration) return;
     _subscriptions.addAll([
       player.stream.playing.listen((playing) {
         state = state.copyWith(isPlaying: playing);
@@ -247,7 +257,14 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     await player.setPlaylistMode(
       state.isLooping ? PlaylistMode.single : PlaylistMode.none,
     );
-    await player.play();
+    if (initialPosition > Duration.zero) {
+      await player.seek(initialPosition);
+    }
+    if (muted) {
+      await player.setVolume(0);
+      state = state.copyWith(isMuted: true);
+    }
+    if (playWhenReady) await player.play();
   }
 
   Future<void> _disposePlayer() async {

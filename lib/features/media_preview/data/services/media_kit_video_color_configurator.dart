@@ -11,12 +11,22 @@ final class MediaKitVideoColorConfigurator {
   static const sdrToneMappingProperties = <String, String>{
     'target-trc': 'srgb',
     'target-prim': 'bt.709',
+    'target-peak': '100',
     'tone-mapping': 'bt.2390',
+    'tone-mapping-param': '0.5',
+    'hdr-reference-white': '100',
+    'hdr-compute-peak': 'yes',
+    'inverse-tone-mapping': 'no',
   };
   static const automaticHdrProperties = <String, String>{
     'target-trc': 'auto',
     'target-prim': 'auto',
+    'target-peak': 'auto',
     'tone-mapping': 'auto',
+    'tone-mapping-param': 'default',
+    'hdr-reference-white': 'auto',
+    'hdr-compute-peak': 'auto',
+    'inverse-tone-mapping': 'no',
   };
 
   Map<String, String> get properties =>
@@ -33,7 +43,6 @@ final class MediaKitVideoColorConfigurator {
         debugPrint(
           'Could not configure video color property ${property.key}: $error',
         );
-        return;
       }
     }
   }

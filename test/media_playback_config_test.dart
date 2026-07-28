@@ -14,6 +14,10 @@ void main() {
       configurator.properties,
       MediaKitVideoColorConfigurator.sdrToneMappingProperties,
     );
+    expect(configurator.properties['target-peak'], '100');
+    expect(configurator.properties['hdr-reference-white'], '100');
+    expect(configurator.properties['hdr-compute-peak'], 'yes');
+    expect(configurator.properties['inverse-tone-mapping'], 'no');
   });
 
   test('restores automatic native color output when HDR is enabled', () {
@@ -24,6 +28,8 @@ void main() {
       configurator.properties,
       MediaKitVideoColorConfigurator.automaticHdrProperties,
     );
+    expect(configurator.properties['target-peak'], 'auto');
+    expect(configurator.properties['hdr-reference-white'], 'auto');
   });
 
   test('toggles HDR playback at runtime', () {
