@@ -20,6 +20,7 @@ void main() {
     var rotateCount = 0;
     var rotationLockCount = 0;
     var filmstripCount = 0;
+    var hdrCount = 0;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -34,10 +35,12 @@ void main() {
               isFullscreen: false,
               isRotationLocked: false,
               filmstripVisible: true,
+              hdrPlaybackEnabled: false,
               onInteraction: _noop,
               onRotate: () => rotateCount++,
               onToggleRotationLock: () => rotationLockCount++,
               onToggleFilmstrip: () => filmstripCount++,
+              onToggleHdrPlayback: () => hdrCount++,
               onToggleFullscreen: () => fullscreenCount++,
             ),
           ),
@@ -57,6 +60,7 @@ void main() {
     final rotateButton = find.byTooltip('Rotate clockwise');
     final rotationLockButton = find.byTooltip('Lock rotation');
     final filmstripButton = find.byTooltip('Hide media list (G)');
+    final hdrButton = find.byTooltip('Enable HDR playback');
     final fullscreenButton = find.byTooltip('Fullscreen');
     expect(
       tester.getCenter(loopButton).dx,
@@ -72,6 +76,10 @@ void main() {
     );
     expect(
       tester.getCenter(filmstripButton).dx,
+      lessThan(tester.getCenter(hdrButton).dx),
+    );
+    expect(
+      tester.getCenter(hdrButton).dx,
       lessThan(tester.getCenter(fullscreenButton).dx),
     );
     expect(container.read(mediaPreviewNotifierProvider).isLooping, isTrue);
@@ -81,6 +89,8 @@ void main() {
     expect(rotationLockCount, 1);
     await tester.tap(filmstripButton);
     expect(filmstripCount, 1);
+    await tester.tap(hdrButton);
+    expect(hdrCount, 1);
     await tester.tap(fullscreenButton);
     expect(fullscreenCount, 1);
   });
@@ -112,10 +122,12 @@ void main() {
               isFullscreen: false,
               isRotationLocked: false,
               filmstripVisible: false,
+              hdrPlaybackEnabled: false,
               onInteraction: _noop,
               onRotate: _noop,
               onToggleRotationLock: _noop,
               onToggleFilmstrip: _noop,
+              onToggleHdrPlayback: _noop,
               onToggleFullscreen: _noop,
             ),
           ),

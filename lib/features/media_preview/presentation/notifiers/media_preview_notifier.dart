@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path/path.dart' as path;
 
-import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import '../../application/providers/media_preview_dependencies.dart';
 import '../states/media_preview_ui_state.dart';
 
 final mediaPreviewNotifierProvider =
@@ -192,6 +193,12 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
 
   Future<void> seek(Duration position) async => _player?.seek(position);
 
+  Future<void> applyPlaybackColorConfig() async {
+    final player = _player;
+    if (player == null) return;
+    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+  }
+
   Future<void> _openActive() async {
     final generation = ++_openGeneration;
     state = state.copyWith(
@@ -210,6 +217,8 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     _videoController = VideoController(player);
     // Notify the UI immediately that a new native video surface is available.
     state = state.copyWith();
+    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+    if (generation != _openGeneration) return;
     _subscriptions.addAll([
       player.stream.playing.listen((playing) {
         state = state.copyWith(isPlaying: playing);

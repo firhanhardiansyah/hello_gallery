@@ -17,10 +17,12 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
     required this.filmstripVisible,
+    required this.hdrPlaybackEnabled,
     required this.onTogglePlayback,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
+    required this.onToggleHdrPlayback,
     required this.onToggleFullscreen,
     required this.onInteraction,
     super.key,
@@ -34,10 +36,12 @@ class VideoPreviewOverlays extends StatelessWidget {
   final int rotationQuarterTurns;
   final bool isRotationLocked;
   final bool filmstripVisible;
+  final bool hdrPlaybackEnabled;
   final VoidCallback onTogglePlayback;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
+  final VoidCallback onToggleHdrPlayback;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onInteraction;
 
@@ -63,9 +67,11 @@ class VideoPreviewOverlays extends StatelessWidget {
           isFullscreen: isFullscreen,
           isRotationLocked: isRotationLocked,
           filmstripVisible: filmstripVisible,
+          hdrPlaybackEnabled: hdrPlaybackEnabled,
           onRotate: onRotate,
           onToggleRotationLock: onToggleRotationLock,
           onToggleFilmstrip: onToggleFilmstrip,
+          onToggleHdrPlayback: onToggleHdrPlayback,
           onInteraction: onInteraction,
           onToggleFullscreen: onToggleFullscreen,
         ),
@@ -181,9 +187,11 @@ class _VideoControlsOverlay extends StatelessWidget {
     required this.isFullscreen,
     required this.isRotationLocked,
     required this.filmstripVisible,
+    required this.hdrPlaybackEnabled,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
+    required this.onToggleHdrPlayback,
     required this.onInteraction,
     required this.onToggleFullscreen,
   });
@@ -193,9 +201,11 @@ class _VideoControlsOverlay extends StatelessWidget {
   final bool isFullscreen;
   final bool isRotationLocked;
   final bool filmstripVisible;
+  final bool hdrPlaybackEnabled;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
+  final VoidCallback onToggleHdrPlayback;
   final VoidCallback onInteraction;
   final VoidCallback onToggleFullscreen;
 
@@ -218,9 +228,11 @@ class _VideoControlsOverlay extends StatelessWidget {
             isFullscreen: isFullscreen,
             isRotationLocked: isRotationLocked,
             filmstripVisible: filmstripVisible,
+            hdrPlaybackEnabled: hdrPlaybackEnabled,
             onRotate: onRotate,
             onToggleRotationLock: onToggleRotationLock,
             onToggleFilmstrip: onToggleFilmstrip,
+            onToggleHdrPlayback: onToggleHdrPlayback,
             onInteraction: onInteraction,
             onToggleFullscreen: onToggleFullscreen,
           ),

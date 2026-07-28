@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 
+import '../../application/providers/media_preview_dependencies.dart';
 import '../input/media_preview_input_handler.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../widgets/filmstrip/media_preview_filmstrip_controller.dart';
@@ -165,6 +166,12 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     _filmstripController.reveal(activeIndex, animated: false, force: true);
   }
 
+  void _toggleHdrPlayback() {
+    _showControls(userInitiated: true);
+    ref.read(mediaPlaybackConfigProvider.notifier).toggleHdr();
+    unawaited(_controller.applyPlaybackColorConfig());
+  }
+
   void _selectFromFilmstrip(int index) {
     _filmstripNavigationTargetIndex = index;
     _showControls(userInitiated: true);
@@ -233,6 +240,9 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaPreviewNotifierProvider);
+    final hdrPlaybackEnabled = ref.watch(
+      mediaPlaybackConfigProvider.select((config) => config.hdrEnabled),
+    );
     final rotationQuarterTurns = state.rotationFor(state.activeItem?.path);
     ref.listen(
       mediaPreviewNotifierProvider.select((value) => value.activeIndex),
@@ -280,11 +290,13 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: state.isRotationLocked,
             filmstripVisible: filmstripVisible,
+            hdrPlaybackEnabled: hdrPlaybackEnabled,
             filmstripController: _filmstripController,
             onInteraction: () => _showControls(userInitiated: true),
             onRotate: _rotateActiveMedia,
             onToggleRotationLock: _toggleRotationLock,
             onToggleFilmstrip: _toggleFilmstrip,
+            onToggleHdrPlayback: _toggleHdrPlayback,
             onSelectMedia: _selectFromFilmstrip,
             onToggleFullscreen: _toggleFullscreen,
           ),

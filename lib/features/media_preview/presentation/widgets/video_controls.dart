@@ -13,10 +13,12 @@ class VideoControls extends ConsumerWidget {
     required this.isFullscreen,
     required this.isRotationLocked,
     required this.filmstripVisible,
+    required this.hdrPlaybackEnabled,
     required this.onInteraction,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
+    required this.onToggleHdrPlayback,
     required this.onToggleFullscreen,
     super.key,
   });
@@ -25,10 +27,12 @@ class VideoControls extends ConsumerWidget {
   final bool isFullscreen;
   final bool isRotationLocked;
   final bool filmstripVisible;
+  final bool hdrPlaybackEnabled;
   final VoidCallback onInteraction;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
+  final VoidCallback onToggleHdrPlayback;
   final VoidCallback onToggleFullscreen;
 
   static const _controlSize = 40.0;
@@ -140,6 +144,19 @@ class VideoControls extends ConsumerWidget {
                     onPressed: () {
                       onInteraction();
                       onToggleFilmstrip();
+                    },
+                  ),
+                  _VideoControlAction(
+                    tooltip: hdrPlaybackEnabled
+                        ? 'Disable HDR playback'
+                        : 'Enable HDR playback',
+                    icon: HugeIcons.strokeRoundedHdr01,
+                    color: hdrPlaybackEnabled
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                    onPressed: () {
+                      onInteraction();
+                      onToggleHdrPlayback();
                     },
                   ),
                   _VideoControlAction(

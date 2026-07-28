@@ -108,4 +108,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Show item names'), findsNothing);
   });
+
+  testWidgets('keeps preview actions out of the top bar', (tester) async {
+    var closeCount = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: GalleryShellTopBar(
+              gallery: const GalleryUiState(
+                loadState: GalleryLoadState.ready(),
+                rootPath: '/gallery',
+                currentPath: '/gallery',
+              ),
+              isPreview: true,
+              isFullscreen: false,
+              previewTitle: 'video.mp4',
+              sidebarVisible: true,
+              windowPlatform: DesktopWindowPlatform.macOS,
+              onToggleSidebar: () {},
+              onClosePreview: () => closeCount++,
+              onGroupMedia: () {},
+              onCreateFolder: () {},
+              selectedItemCount: 0,
+              totalItemCount: 1,
+              onSelectAll: () {},
+              onClearSelection: () {},
+              selectedMediaCount: 0,
+              onDeleteSelectedMedia: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Enable HDR playback'), findsNothing);
+    expect(find.byTooltip('Close detail'), findsNothing);
+    expect(find.byTooltip('Back to gallery'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Back to gallery'));
+    expect(closeCount, 1);
+  });
 }

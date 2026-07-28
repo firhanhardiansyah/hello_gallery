@@ -20,11 +20,13 @@ class MediaPreviewView extends ConsumerWidget {
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
     required this.filmstripVisible,
+    required this.hdrPlaybackEnabled,
     required this.filmstripController,
     required this.onInteraction,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
+    required this.onToggleHdrPlayback,
     required this.onSelectMedia,
     required this.onToggleFullscreen,
     super.key,
@@ -36,11 +38,13 @@ class MediaPreviewView extends ConsumerWidget {
   final int rotationQuarterTurns;
   final bool isRotationLocked;
   final bool filmstripVisible;
+  final bool hdrPlaybackEnabled;
   final MediaPreviewFilmstripController filmstripController;
   final VoidCallback onInteraction;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
+  final VoidCallback onToggleHdrPlayback;
   final ValueChanged<int> onSelectMedia;
   final VoidCallback onToggleFullscreen;
 
@@ -102,10 +106,12 @@ class MediaPreviewView extends ConsumerWidget {
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: isRotationLocked,
             filmstripVisible: filmstripVisible,
+            hdrPlaybackEnabled: hdrPlaybackEnabled,
             onTogglePlayback: togglePlayback,
             onRotate: onRotate,
             onToggleRotationLock: onToggleRotationLock,
             onToggleFilmstrip: onToggleFilmstrip,
+            onToggleHdrPlayback: onToggleHdrPlayback,
             onToggleFullscreen: onToggleFullscreen,
             onInteraction: onInteraction,
           ),

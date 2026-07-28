@@ -104,13 +104,7 @@ class GalleryShellTopBar extends ConsumerWidget {
                         ),
                 ),
 
-                if (isPreview) ...[
-                  IconButton(
-                    tooltip: 'Close detail',
-                    onPressed: onClosePreview,
-                    icon: const HugeIcon(icon: HugeIcons.strokeRoundedCancel01),
-                  ),
-                ] else ...[
+                if (!isPreview) ...[
                   IconButton(
                     tooltip: 'New folder',
                     onPressed:
