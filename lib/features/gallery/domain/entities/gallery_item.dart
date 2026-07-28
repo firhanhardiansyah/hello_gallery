@@ -43,4 +43,16 @@ class MediaItem extends GalleryItem {
 
   @override
   GalleryItemType get type => mediaType;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MediaItem &&
+          this.path == other.path &&
+          modifiedAt == other.modifiedAt &&
+          mediaType == other.mediaType &&
+          sizeBytes == other.sizeBytes;
+
+  @override
+  int get hashCode => Object.hash(this.path, modifiedAt, mediaType, sizeBytes);
 }

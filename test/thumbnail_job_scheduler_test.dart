@@ -6,6 +6,26 @@ import 'package:hello_gallery/features/thumbnail/application/services/thumbnail_
 import 'package:hello_gallery/features/thumbnail/domain/repositories/thumbnail_repository.dart';
 
 void main() {
+  test('uses file metadata as stable video thumbnail identity', () {
+    final first = _video('video.mp4');
+    final equivalent = _video('video.mp4');
+    final modified = MediaItem(
+      path: first.path,
+      name: first.name,
+      modifiedAt: first.modifiedAt.add(const Duration(seconds: 1)),
+      mediaType: first.mediaType,
+      sizeBytes: first.sizeBytes,
+    );
+
+    expect(equivalent, first);
+    expect(videoThumbnailProvider(equivalent), videoThumbnailProvider(first));
+    expect(modified, isNot(first));
+    expect(
+      videoThumbnailProvider(modified),
+      isNot(videoThumbnailProvider(first)),
+    );
+  });
+
   test('cancels a queued thumbnail when its card is disposed', () async {
     final repository = _FakeThumbnailRepository();
     final scheduler = ThumbnailJobScheduler(repository)..setScrolling(true);
@@ -83,6 +103,45 @@ void main() {
     expect(firstThumbnail.hasValue, isTrue);
     expect(firstThumbnail.requireValue, '${items.first.path}.jpg');
   });
+
+  testWidgets(
+    'restores a disposed thumbnail synchronously from the resolved path cache',
+    (tester) async {
+      final repository = _FakeThumbnailRepository();
+      final scheduler = ThumbnailJobScheduler(repository);
+      final firstContainer = ProviderContainer(
+        overrides: [thumbnailJobSchedulerProvider.overrideWithValue(scheduler)],
+      );
+      final item = _video('cached.mp4');
+      final firstSubscription = firstContainer.listen(
+        videoThumbnailProvider(item),
+        (_, _) {},
+      );
+
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(firstSubscription.read().requireValue, '${item.path}.jpg');
+      firstSubscription.close();
+      firstContainer.dispose();
+
+      final equivalentItem = _video('cached.mp4');
+      final secondContainer = ProviderContainer(
+        overrides: [thumbnailJobSchedulerProvider.overrideWithValue(scheduler)],
+      );
+      final secondSubscription = secondContainer.listen(
+        videoThumbnailProvider(equivalentItem),
+        (_, _) {},
+      );
+
+      final restoredThumbnail = secondSubscription.read();
+      expect(restoredThumbnail.hasValue, isTrue);
+      expect(restoredThumbnail.requireValue, '${item.path}.jpg');
+      expect(repository.generatedPaths, [item.path]);
+      secondSubscription.close();
+      secondContainer.dispose();
+    },
+  );
 }
 
 MediaItem _video(String name) => MediaItem(

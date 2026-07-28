@@ -14,28 +14,39 @@ final thumbnailJobSchedulerProvider = Provider(
 );
 
 final videoThumbnailProvider = FutureProvider.autoDispose
-    .family<String?, MediaItem>((ref, item) async {
+    .family<String?, MediaItem>((ref, item) {
       final scheduler = ref.read(thumbnailJobSchedulerProvider);
-      ThumbnailRequest? activeRequest;
-      var disposed = false;
-      ref.onDispose(() {
-        disposed = true;
-        activeRequest?.cancel();
-      });
-
-      while (!disposed) {
-        final request = scheduler.getThumbnail(item);
-        activeRequest = request;
-        final thumbnailPath = await request.result;
-        if (!request.wasCancelled) return thumbnailPath;
-        if (disposed) break;
-        await Future<void>.delayed(const Duration(milliseconds: 120));
-      }
-      return null;
+      final resolvedThumbnail = scheduler.findResolvedThumbnail(item);
+      if (resolvedThumbnail != null) return resolvedThumbnail;
+      return _loadVideoThumbnail(ref, scheduler, item);
     });
 
+Future<String?> _loadVideoThumbnail(
+  Ref ref,
+  ThumbnailJobScheduler scheduler,
+  MediaItem item,
+) async {
+  ThumbnailRequest? activeRequest;
+  var disposed = false;
+  ref.onDispose(() {
+    disposed = true;
+    activeRequest?.cancel();
+  });
+
+  while (!disposed) {
+    final request = scheduler.getThumbnail(item);
+    activeRequest = request;
+    final thumbnailPath = await request.result;
+    if (!request.wasCancelled) return thumbnailPath;
+    if (disposed) break;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+  }
+  return null;
+}
+
 final cachedVideoThumbnailProvider = FutureProvider.autoDispose
-    .family<String?, MediaItem>(
-      (ref, item) =>
-          ref.read(thumbnailJobSchedulerProvider).findCachedThumbnail(item),
-    );
+    .family<String?, MediaItem>((ref, item) {
+      final scheduler = ref.read(thumbnailJobSchedulerProvider);
+      final resolvedThumbnail = scheduler.findResolvedThumbnail(item);
+      return resolvedThumbnail ?? scheduler.findCachedThumbnail(item);
+    });

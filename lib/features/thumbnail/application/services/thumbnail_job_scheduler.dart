@@ -12,23 +12,43 @@ final class ThumbnailJobScheduler {
   ThumbnailJobScheduler(this._repository);
 
   static const _maximumQueuedJobs = 40;
+  static const _maximumResolvedThumbnails = 2048;
 
   final ThumbnailRepository _repository;
   final Queue<_ThumbnailJob> _queue = Queue();
   final Map<String, _ThumbnailJob> _pending = {};
+  final LinkedHashMap<String, String> _resolvedThumbnails = LinkedHashMap();
   Timer? _resumeTimer;
   int _activeJobs = 0;
   bool _isScrolling = false;
 
   int get _maximumConcurrentJobs => Platform.isWindows ? 2 : 1;
 
-  Future<String?> findCachedThumbnail(MediaItem item) {
-    return _repository.findCachedThumbnail(item);
+  String? findResolvedThumbnail(MediaItem item) {
+    final key = _itemKey(item);
+    final thumbnailPath = _resolvedThumbnails.remove(key);
+    if (thumbnailPath != null) {
+      _resolvedThumbnails[key] = thumbnailPath;
+    }
+    return thumbnailPath;
+  }
+
+  Future<String?> findCachedThumbnail(MediaItem item) async {
+    final resolvedThumbnail = findResolvedThumbnail(item);
+    if (resolvedThumbnail != null) return resolvedThumbnail;
+    final thumbnailPath = await _repository.findCachedThumbnail(item);
+    if (thumbnailPath != null) _rememberResolvedThumbnail(item, thumbnailPath);
+    return thumbnailPath;
   }
 
   Future<void> invalidate(MediaItem item) async {
-    final job = _pending[item.path];
-    if (job != null) _cancel(job);
+    _resolvedThumbnails.remove(_itemKey(item));
+    final jobs = _pending.values
+        .where((job) => job.item.path == item.path)
+        .toList();
+    for (final job in jobs) {
+      _cancel(job);
+    }
     await _repository.removeCachedThumbnail(item);
   }
 
@@ -40,7 +60,16 @@ final class ThumbnailJobScheduler {
         isCancelled: () => false,
       );
     }
-    final job = _pending.putIfAbsent(item.path, () {
+    final resolvedThumbnail = findResolvedThumbnail(item);
+    if (resolvedThumbnail != null) {
+      return ThumbnailRequest._(
+        Future.value(resolvedThumbnail),
+        () {},
+        isCancelled: () => false,
+      );
+    }
+    final key = _itemKey(item);
+    final job = _pending.putIfAbsent(key, () {
       final created = _ThumbnailJob(item);
       _queue.add(created);
       _trimQueue();
@@ -85,8 +114,9 @@ final class ThumbnailJobScheduler {
       unawaited(
         _processJob(job).whenComplete(() {
           _activeJobs--;
-          if (identical(_pending[job.item.path], job)) {
-            _pending.remove(job.item.path);
+          final key = _itemKey(job.item);
+          if (identical(_pending[key], job)) {
+            _pending.remove(key);
           }
           _processPendingJobs();
         }),
@@ -98,6 +128,9 @@ final class ThumbnailJobScheduler {
     try {
       await SchedulerBinding.instance.endOfFrame;
       final thumbnail = await _repository.getThumbnail(job.item);
+      if (thumbnail != null) {
+        _rememberResolvedThumbnail(job.item, thumbnail);
+      }
       if (!job.completer.isCompleted) {
         job.completer.complete(job.cancelled ? null : thumbnail);
       }
@@ -118,11 +151,25 @@ final class ThumbnailJobScheduler {
     if (job.cancelled) return;
     job.cancelled = true;
     if (!job.active) _queue.remove(job);
-    if (identical(_pending[job.item.path], job)) {
-      _pending.remove(job.item.path);
+    final key = _itemKey(job.item);
+    if (identical(_pending[key], job)) {
+      _pending.remove(key);
     }
     if (!job.completer.isCompleted) job.completer.complete(null);
   }
+
+  void _rememberResolvedThumbnail(MediaItem item, String thumbnailPath) {
+    final key = _itemKey(item);
+    _resolvedThumbnails.remove(key);
+    _resolvedThumbnails[key] = thumbnailPath;
+    while (_resolvedThumbnails.length > _maximumResolvedThumbnails) {
+      _resolvedThumbnails.remove(_resolvedThumbnails.keys.first);
+    }
+  }
+
+  String _itemKey(MediaItem item) =>
+      '${item.path}\u0000${item.sizeBytes}\u0000'
+      '${item.modifiedAt.microsecondsSinceEpoch}';
 }
 
 final class _ThumbnailJob {
