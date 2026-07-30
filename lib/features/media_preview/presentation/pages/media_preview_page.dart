@@ -269,7 +269,9 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
         }
       },
     );
-    final filmstripVisible = _filmstripEnabled;
+    final isVideoPreview = state.activeItem?.isVideo == true;
+    final filmstripVisible =
+        _filmstripEnabled && (!isVideoPreview || _controlsVisible);
     if (filmstripVisible && state.items.isNotEmpty) {
       _filmstripController.reveal(state.activeIndex, animated: false);
     }
