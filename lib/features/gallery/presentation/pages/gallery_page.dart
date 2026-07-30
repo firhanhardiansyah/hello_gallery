@@ -36,7 +36,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   bool _isModalOpen = false;
   MediaPreviewSelection? _preview;
   bool _isFullscreen = false;
-  bool _fullscreenTopBarVisible = false;
+  bool _previewTopBarVisible = true;
   bool? _sidebarBeforeFullscreen;
   late final GalleryInputHandler _inputHandler;
   late final GalleryPageInputActions _inputActions;
@@ -216,7 +216,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     setState(() {
       if (preview == null) {
         _preview = null;
-        _fullscreenTopBarVisible = false;
+        _previewTopBarVisible = true;
         if (_isFullscreen) {
           _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
         }
@@ -226,8 +226,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       if (_preview == null && _isFullscreen) {
         _sidebarBeforeFullscreen = _sidebarVisible;
         _sidebarVisible = false;
-        _fullscreenTopBarVisible = false;
       }
+      if (_preview == null) _previewTopBarVisible = true;
       _preview = preview;
     });
   }
@@ -340,7 +340,6 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     if (!mounted) return;
     setState(() {
       _isFullscreen = target;
-      _fullscreenTopBarVisible = false;
       if (target && _preview != null) {
         _sidebarBeforeFullscreen = _sidebarVisible;
         _sidebarVisible = false;
@@ -351,11 +350,18 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     });
   }
 
-  void _toggleFullscreenTopBar() {
-    if (!_isFullscreen || _preview == null) return;
+  void _togglePreviewTopBar() {
+    if (_preview == null) return;
     setState(() {
-      _fullscreenTopBarVisible = !_fullscreenTopBarVisible;
+      _previewTopBarVisible = !_previewTopBarVisible;
     });
+  }
+
+  void _syncPreviewTopBarVisibility(bool visible) {
+    if (!mounted || _preview == null || _previewTopBarVisible == visible) {
+      return;
+    }
+    setState(() => _previewTopBarVisible = visible);
   }
 
   @override
@@ -566,52 +572,63 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
     required MediaPreviewUiState? previewState,
     required List<MediaItem> selectedMediaItems,
   }) {
-    return Column(
+    final topBar = GalleryShellTopBar(
+      gallery: gallery,
+      isPreview: _preview != null,
+      isFullscreen: _isFullscreen,
+      previewTitle: previewState?.activeItem?.name,
+      sidebarVisible: _sidebarVisible,
+      onToggleSidebar: _toggleSidebar,
+      onClosePreview: _previewCoordinator.close,
+      onCreateFolder: () {
+        final currentPath = gallery.currentPath;
+        if (currentPath == null) return;
+        _folderActions.create(
+          context: context,
+          rootPath: rootPath,
+          currentPath: currentPath,
+        );
+      },
+      onGroupMedia: () {
+        final currentPath = gallery.currentPath;
+        if (currentPath == null) return;
+        _mediaActions.openGroupDialog(
+          context: context,
+          rootPath: rootPath,
+          currentPath: currentPath,
+        );
+      },
+      selectedItemCount: _selection.selectedPaths.length,
+      totalItemCount: gallery.visibleItems.length,
+      onSelectAll: _inputActions.selectAll,
+      onClearSelection: _inputActions.clearSelection,
+      selectedMediaCount: selectedMediaItems.length,
+      onDeleteSelectedMedia: () => _mediaActions.delete(
+        context: context,
+        rootPath: rootPath,
+        items: selectedMediaItems,
+      ),
+    );
+    final content = _buildActiveContent(
+      rootPath: rootPath,
+      settings: settings,
+      gallery: gallery,
+    );
+    if (_preview == null) {
+      return Column(
+        children: [
+          topBar,
+          Expanded(child: content),
+        ],
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        if (_preview == null || !_isFullscreen || _fullscreenTopBarVisible)
-          GalleryShellTopBar(
-            gallery: gallery,
-            isPreview: _preview != null,
-            isFullscreen: _isFullscreen,
-            previewTitle: previewState?.activeItem?.name,
-            sidebarVisible: _sidebarVisible,
-            onToggleSidebar: _toggleSidebar,
-            onClosePreview: _previewCoordinator.close,
-            onCreateFolder: () {
-              final currentPath = gallery.currentPath;
-              if (currentPath == null) return;
-              _folderActions.create(
-                context: context,
-                rootPath: rootPath,
-                currentPath: currentPath,
-              );
-            },
-            onGroupMedia: () {
-              final currentPath = gallery.currentPath;
-              if (currentPath == null) return;
-              _mediaActions.openGroupDialog(
-                context: context,
-                rootPath: rootPath,
-                currentPath: currentPath,
-              );
-            },
-            selectedItemCount: _selection.selectedPaths.length,
-            totalItemCount: gallery.visibleItems.length,
-            onSelectAll: _inputActions.selectAll,
-            onClearSelection: _inputActions.clearSelection,
-            selectedMediaCount: selectedMediaItems.length,
-            onDeleteSelectedMedia: () => _mediaActions.delete(
-              context: context,
-              rootPath: rootPath,
-              items: selectedMediaItems,
-            ),
-          ),
-        Expanded(
-          child: _buildActiveContent(
-            rootPath: rootPath,
-            settings: settings,
-            gallery: gallery,
-          ),
+        content,
+        PreviewShellTopBarOverlay(
+          visible: _previewTopBarVisible,
+          child: topBar,
         ),
       ],
     );
@@ -634,7 +651,8 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
         embedded: true,
         sidebarVisible: _sidebarVisible,
         onToggleSidebar: _toggleSidebar,
-        onToggleTopBar: _toggleFullscreenTopBar,
+        onToggleTopBar: _togglePreviewTopBar,
+        onControlsVisibilityChanged: _syncPreviewTopBarVisibility,
         onClose: _previewCoordinator.close,
         isFullscreen: _isFullscreen,
         onToggleFullscreen: _toggleFullscreen,

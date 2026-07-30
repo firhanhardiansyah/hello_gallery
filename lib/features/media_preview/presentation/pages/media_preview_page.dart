@@ -22,6 +22,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
     this.sidebarVisible = true,
     this.onToggleSidebar,
     this.onToggleTopBar,
+    this.onControlsVisibilityChanged,
     this.onClose,
     this.isFullscreen = false,
     this.onToggleFullscreen,
@@ -37,6 +38,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
   final bool sidebarVisible;
   final VoidCallback? onToggleSidebar;
   final VoidCallback? onToggleTopBar;
+  final ValueChanged<bool>? onControlsVisibilityChanged;
   final VoidCallback? onClose;
   final bool isFullscreen;
   final VoidCallback? onToggleFullscreen;
@@ -104,6 +106,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     if (!_controlsVisible && mounted) {
       setState(() => _controlsVisible = true);
     }
+    widget.onControlsVisibilityChanged?.call(true);
     final state = ref.read(mediaPreviewNotifierProvider);
     if (!restartTimer ||
         !state.isPlaying ||
@@ -115,6 +118,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       final latest = ref.read(mediaPreviewNotifierProvider);
       if (latest.isPlaying && latest.activeItem?.isVideo == true) {
         setState(() => _controlsVisible = false);
+        widget.onControlsVisibilityChanged?.call(false);
       }
     });
   }
@@ -227,6 +231,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     if (_controlsVisible && mounted) {
       setState(() => _controlsVisible = false);
     }
+    widget.onControlsVisibilityChanged?.call(false);
     _silentNavigationCount++;
     unawaited(
       Future<void>(() async {
