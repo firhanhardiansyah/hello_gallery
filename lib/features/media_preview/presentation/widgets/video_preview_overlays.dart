@@ -14,12 +14,14 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.thumbnailPath,
     required this.state,
     required this.controlsVisible,
+    required this.playbackButtonVisible,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
     required this.filmstripVisible,
     required this.hdrPlaybackEnabled,
     required this.onTogglePlayback,
+    required this.onControlsHoverChanged,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
@@ -33,12 +35,14 @@ class VideoPreviewOverlays extends StatelessWidget {
   final String? thumbnailPath;
   final MediaPreviewUiState state;
   final bool controlsVisible;
+  final bool playbackButtonVisible;
   final bool isFullscreen;
   final int rotationQuarterTurns;
   final bool isRotationLocked;
   final bool filmstripVisible;
   final bool hdrPlaybackEnabled;
   final VoidCallback onTogglePlayback;
+  final ValueChanged<bool> onControlsHoverChanged;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
@@ -59,7 +63,7 @@ class VideoPreviewOverlays extends StatelessWidget {
         ),
         _VideoPlaybackButton(
           isPlaying: state.isPlaying,
-          visible: controlsVisible,
+          visible: playbackButtonVisible,
           onPressed: onTogglePlayback,
         ),
         _VideoControlsOverlay(
@@ -69,11 +73,13 @@ class VideoPreviewOverlays extends StatelessWidget {
           isRotationLocked: isRotationLocked,
           filmstripVisible: filmstripVisible,
           hdrPlaybackEnabled: hdrPlaybackEnabled,
+          onTogglePlayback: onTogglePlayback,
           onRotate: onRotate,
           onToggleRotationLock: onToggleRotationLock,
           onToggleFilmstrip: onToggleFilmstrip,
           onToggleHdrPlayback: onToggleHdrPlayback,
           onInteraction: onInteraction,
+          onHoverChanged: onControlsHoverChanged,
           onToggleFullscreen: onToggleFullscreen,
         ),
       ],
@@ -250,11 +256,13 @@ class _VideoControlsOverlay extends StatelessWidget {
     required this.isRotationLocked,
     required this.filmstripVisible,
     required this.hdrPlaybackEnabled,
+    required this.onTogglePlayback,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
     required this.onToggleHdrPlayback,
     required this.onInteraction,
+    required this.onHoverChanged,
     required this.onToggleFullscreen,
   });
 
@@ -264,11 +272,13 @@ class _VideoControlsOverlay extends StatelessWidget {
   final bool isRotationLocked;
   final bool filmstripVisible;
   final bool hdrPlaybackEnabled;
+  final VoidCallback onTogglePlayback;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleHdrPlayback;
   final VoidCallback onInteraction;
+  final ValueChanged<bool> onHoverChanged;
   final VoidCallback onToggleFullscreen;
 
   @override
@@ -285,18 +295,24 @@ class _VideoControlsOverlay extends StatelessWidget {
         opacity: visible ? 1 : 0,
         child: IgnorePointer(
           ignoring: !visible,
-          child: VideoControls(
-            state: state,
-            isFullscreen: isFullscreen,
-            isRotationLocked: isRotationLocked,
-            filmstripVisible: filmstripVisible,
-            hdrPlaybackEnabled: hdrPlaybackEnabled,
-            onRotate: onRotate,
-            onToggleRotationLock: onToggleRotationLock,
-            onToggleFilmstrip: onToggleFilmstrip,
-            onToggleHdrPlayback: onToggleHdrPlayback,
-            onInteraction: onInteraction,
-            onToggleFullscreen: onToggleFullscreen,
+          child: MouseRegion(
+            key: const ValueKey('video-controls-mouse-region'),
+            onEnter: (_) => onHoverChanged(true),
+            onExit: (_) => onHoverChanged(false),
+            child: VideoControls(
+              state: state,
+              isFullscreen: isFullscreen,
+              isRotationLocked: isRotationLocked,
+              filmstripVisible: filmstripVisible,
+              hdrPlaybackEnabled: hdrPlaybackEnabled,
+              onTogglePlayback: onTogglePlayback,
+              onRotate: onRotate,
+              onToggleRotationLock: onToggleRotationLock,
+              onToggleFilmstrip: onToggleFilmstrip,
+              onToggleHdrPlayback: onToggleHdrPlayback,
+              onInteraction: onInteraction,
+              onToggleFullscreen: onToggleFullscreen,
+            ),
           ),
         ),
       ),

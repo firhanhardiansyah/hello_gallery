@@ -48,11 +48,17 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
 }
 
 class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
+  static const _controlsAutoHideDelay = Duration(seconds: 3);
+  static const _playbackButtonDisplayDuration = Duration(milliseconds: 800);
+
   final _focusNode = FocusNode();
   final _filmstripController = MediaPreviewFilmstripController();
   late final MediaPreviewInputHandler _inputHandler;
   Timer? _hideTimer;
+  Timer? _playbackButtonTimer;
   bool _controlsVisible = true;
+  bool _playbackButtonVisible = false;
+  bool _controlsHovered = false;
   bool _controlsHiddenByNavigation = false;
   bool _filmstripEnabled = true;
   int? _filmstripNavigationTargetIndex;
@@ -95,6 +101,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     _inputHandler.dispose();
     _filmstripController.dispose();
     _hideTimer?.cancel();
+    _playbackButtonTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
   }
@@ -113,13 +120,35 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
         state.activeItem?.isVideo != true) {
       return;
     }
-    _hideTimer = Timer(const Duration(milliseconds: 500), () {
+    if (_controlsHovered) return;
+    _hideTimer = Timer(_controlsAutoHideDelay, () {
       if (!mounted) return;
       final latest = ref.read(mediaPreviewNotifierProvider);
-      if (latest.isPlaying && latest.activeItem?.isVideo == true) {
+      if (!_controlsHovered &&
+          latest.isPlaying &&
+          latest.activeItem?.isVideo == true) {
         setState(() => _controlsVisible = false);
         widget.onControlsVisibilityChanged?.call(false);
       }
+    });
+  }
+
+  void _setControlsHovered(bool hovered) {
+    _controlsHovered = hovered;
+    if (hovered) {
+      _hideTimer?.cancel();
+      return;
+    }
+    _showControls();
+  }
+
+  void _showPlaybackButtonTemporarily() {
+    _playbackButtonTimer?.cancel();
+    if (!_playbackButtonVisible && mounted) {
+      setState(() => _playbackButtonVisible = true);
+    }
+    _playbackButtonTimer = Timer(_playbackButtonDisplayDuration, () {
+      if (mounted) setState(() => _playbackButtonVisible = false);
     });
   }
 
@@ -145,6 +174,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
 
   void _togglePlay() {
     _showControls(userInitiated: true);
+    _showPlaybackButtonTemporarily();
     unawaited(_controller.togglePlay());
   }
 
@@ -228,8 +258,12 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void _suppressControlsDuringNavigation() {
     _controlsHiddenByNavigation = true;
     _hideTimer?.cancel();
-    if (_controlsVisible && mounted) {
-      setState(() => _controlsVisible = false);
+    _playbackButtonTimer?.cancel();
+    if ((_controlsVisible || _playbackButtonVisible) && mounted) {
+      setState(() {
+        _controlsVisible = false;
+        _playbackButtonVisible = false;
+      });
     }
     widget.onControlsVisibilityChanged?.call(false);
     _silentNavigationCount++;
@@ -293,6 +327,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
           child: MediaPreviewView(
             state: state,
             controlsVisible: _controlsVisible,
+            playbackButtonVisible: _playbackButtonVisible,
             isFullscreen: widget.isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: state.isRotationLocked,
@@ -300,6 +335,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             hdrPlaybackEnabled: hdrPlaybackEnabled,
             filmstripController: _filmstripController,
             onInteraction: () => _showControls(userInitiated: true),
+            onTogglePlayback: _togglePlay,
+            onControlsHoverChanged: _setControlsHovered,
             onRotate: _rotateActiveMedia,
             onToggleRotationLock: _toggleRotationLock,
             onToggleFilmstrip: _toggleFilmstrip,

@@ -16,6 +16,7 @@ class MediaPreviewView extends ConsumerWidget {
   const MediaPreviewView({
     required this.state,
     required this.controlsVisible,
+    required this.playbackButtonVisible,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
@@ -23,6 +24,8 @@ class MediaPreviewView extends ConsumerWidget {
     required this.hdrPlaybackEnabled,
     required this.filmstripController,
     required this.onInteraction,
+    required this.onTogglePlayback,
+    required this.onControlsHoverChanged,
     required this.onRotate,
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
@@ -34,6 +37,7 @@ class MediaPreviewView extends ConsumerWidget {
 
   final MediaPreviewUiState state;
   final bool controlsVisible;
+  final bool playbackButtonVisible;
   final bool isFullscreen;
   final int rotationQuarterTurns;
   final bool isRotationLocked;
@@ -41,6 +45,8 @@ class MediaPreviewView extends ConsumerWidget {
   final bool hdrPlaybackEnabled;
   final MediaPreviewFilmstripController filmstripController;
   final VoidCallback onInteraction;
+  final VoidCallback onTogglePlayback;
+  final ValueChanged<bool> onControlsHoverChanged;
   final VoidCallback onRotate;
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
@@ -59,11 +65,6 @@ class MediaPreviewView extends ConsumerWidget {
     final thumbnailPath = item.isVideo
         ? ref.watch(cachedVideoThumbnailProvider(item)).value
         : null;
-    void togglePlayback() {
-      onInteraction();
-      controller.togglePlay();
-    }
-
     var filmstripBottomInset = AppSpacing.lg;
     if (item.isVideo && controlsVisible) {
       filmstripBottomInset = _videoControlsFilmstripBottomInset;
@@ -74,7 +75,7 @@ class MediaPreviewView extends ConsumerWidget {
       children: [
         MediaPreviewInteractionSurface(
           key: ValueKey(item.path),
-          onTap: item.isVideo ? togglePlayback : null,
+          onTap: item.isVideo ? onTogglePlayback : null,
           onDoubleTap: onToggleFullscreen,
           child: MediaPreviewCanvas(
             itemPath: item.path,
@@ -102,12 +103,14 @@ class MediaPreviewView extends ConsumerWidget {
             thumbnailPath: thumbnailPath,
             state: state,
             controlsVisible: controlsVisible,
+            playbackButtonVisible: playbackButtonVisible,
             isFullscreen: isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: isRotationLocked,
             filmstripVisible: filmstripVisible,
             hdrPlaybackEnabled: hdrPlaybackEnabled,
-            onTogglePlayback: togglePlayback,
+            onTogglePlayback: onTogglePlayback,
+            onControlsHoverChanged: onControlsHoverChanged,
             onRotate: onRotate,
             onToggleRotationLock: onToggleRotationLock,
             onToggleFilmstrip: onToggleFilmstrip,

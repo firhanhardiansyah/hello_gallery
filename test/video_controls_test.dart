@@ -21,6 +21,7 @@ void main() {
     var rotationLockCount = 0;
     var filmstripCount = 0;
     var hdrCount = 0;
+    var playbackCount = 0;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -37,6 +38,7 @@ void main() {
               filmstripVisible: true,
               hdrPlaybackEnabled: false,
               onInteraction: _noop,
+              onTogglePlayback: () => playbackCount++,
               onRotate: () => rotateCount++,
               onToggleRotationLock: () => rotationLockCount++,
               onToggleFilmstrip: () => filmstripCount++,
@@ -50,6 +52,9 @@ void main() {
 
     await tester.tap(find.byTooltip('Loop video'));
     await tester.pump();
+
+    await tester.tap(find.byTooltip('Play'));
+    expect(playbackCount, 1);
 
     expect(
       find.byKey(const ValueKey('video-secondary-controls')),
@@ -124,6 +129,7 @@ void main() {
               filmstripVisible: false,
               hdrPlaybackEnabled: false,
               onInteraction: _noop,
+              onTogglePlayback: _noop,
               onRotate: _noop,
               onToggleRotationLock: _noop,
               onToggleFilmstrip: _noop,
