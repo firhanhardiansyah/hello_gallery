@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/preview_shell_top_bar_overlay.dart';
@@ -44,5 +46,47 @@ void main() {
     );
     expect(opacity.opacity, 0);
     expect(ignorePointer.ignoring, isTrue);
+  });
+
+  testWidgets('stays visible while the pointer hovers over the top bar', (
+    tester,
+  ) async {
+    var visible = true;
+
+    Widget buildOverlay() {
+      return MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              PreviewShellTopBarOverlay(
+                visible: visible,
+                child: const SizedBox(height: 56, child: Text('Top bar')),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(buildOverlay());
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.text('Top bar')));
+    await tester.pump();
+
+    visible = false;
+    await tester.pumpWidget(buildOverlay());
+    await tester.pumpAndSettle();
+
+    AnimatedOpacity opacity() => tester.widget<AnimatedOpacity>(
+      find.byKey(const ValueKey('preview-shell-top-bar-opacity')),
+    );
+    expect(opacity().opacity, 1);
+
+    await mouse.moveTo(const Offset(200, 200));
+    await tester.pumpAndSettle();
+
+    expect(opacity().opacity, 0);
   });
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class PreviewShellTopBarOverlay extends StatelessWidget {
+class PreviewShellTopBarOverlay extends StatefulWidget {
   const PreviewShellTopBarOverlay({
     required this.visible,
     required this.child,
@@ -11,7 +11,17 @@ class PreviewShellTopBarOverlay extends StatelessWidget {
   final Widget child;
 
   @override
+  State<PreviewShellTopBarOverlay> createState() =>
+      _PreviewShellTopBarOverlayState();
+}
+
+class _PreviewShellTopBarOverlayState extends State<PreviewShellTopBarOverlay> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isVisible = widget.visible || _isHovered;
+
     return Positioned(
       top: 0,
       left: 0,
@@ -19,15 +29,20 @@ class PreviewShellTopBarOverlay extends StatelessWidget {
       child: AnimatedSlide(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        offset: visible ? Offset.zero : const Offset(0, -1),
+        offset: isVisible ? Offset.zero : const Offset(0, -1),
         child: AnimatedOpacity(
           key: const ValueKey('preview-shell-top-bar-opacity'),
           duration: const Duration(milliseconds: 150),
-          opacity: visible ? 1 : 0,
+          opacity: isVisible ? 1 : 0,
           child: IgnorePointer(
             key: const ValueKey('preview-shell-top-bar-pointer'),
-            ignoring: !visible,
-            child: child,
+            ignoring: !isVisible,
+            child: MouseRegion(
+              key: const ValueKey('preview-shell-top-bar-mouse-region'),
+              onEnter: (_) => setState(() => _isHovered = true),
+              onExit: (_) => setState(() => _isHovered = false),
+              child: widget.child,
+            ),
           ),
         ),
       ),
