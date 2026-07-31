@@ -9,6 +9,7 @@ import 'package:hello_gallery/features/thumbnail/application/providers/thumbnail
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../application/providers/media_preview_dependencies.dart';
+import '../../constants/media_preview_timing.dart';
 import 'media_preview_filmstrip_controller.dart';
 
 class MediaPreviewFilmstrip extends StatefulWidget {
@@ -54,7 +55,7 @@ class _MediaPreviewFilmstripState extends State<MediaPreviewFilmstrip> {
       _buildSurface = true;
       return;
     }
-    _removeTimer = Timer(const Duration(milliseconds: 180), () {
+    _removeTimer = Timer(MediaPreviewTiming.overlayTransition, () {
       if (mounted && !widget.visible) setState(() => _buildSurface = false);
     });
   }
@@ -68,7 +69,7 @@ class _MediaPreviewFilmstripState extends State<MediaPreviewFilmstrip> {
   @override
   Widget build(BuildContext context) => AnimatedPositioned(
     key: const ValueKey('media-preview-filmstrip-position'),
-    duration: const Duration(milliseconds: 180),
+    duration: MediaPreviewTiming.overlayTransition,
     curve: Curves.easeOut,
     left: 0,
     right: 0,
@@ -77,11 +78,11 @@ class _MediaPreviewFilmstripState extends State<MediaPreviewFilmstrip> {
     child: IgnorePointer(
       ignoring: !widget.visible,
       child: AnimatedSlide(
-        duration: const Duration(milliseconds: 180),
+        duration: MediaPreviewTiming.overlayTransition,
         curve: Curves.easeOut,
         offset: widget.visible ? Offset.zero : const Offset(0, 0.3),
         child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 150),
+          duration: MediaPreviewTiming.overlayFade,
           opacity: widget.visible ? 1 : 0,
           child: _buildSurface
               ? _FilmstripSurface(
@@ -170,7 +171,7 @@ class _FilmstripItem extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
+            duration: MediaPreviewTiming.quickFade,
             width: MediaPreviewFilmstripController.thumbnailWidth,
             height: MediaPreviewFilmstripController.thumbnailHeight,
             decoration: BoxDecoration(

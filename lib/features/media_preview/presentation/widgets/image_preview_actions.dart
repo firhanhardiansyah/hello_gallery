@@ -3,6 +3,8 @@ import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../constants/media_preview_timing.dart';
+
 class ImagePreviewActions extends StatelessWidget {
   const ImagePreviewActions({
     required this.visible,
@@ -32,7 +34,7 @@ class ImagePreviewActions extends StatelessWidget {
     right: AppSpacing.lg,
     bottom: bottomInset,
     child: AnimatedOpacity(
-      duration: const Duration(milliseconds: 150),
+      duration: MediaPreviewTiming.overlayFade,
       opacity: visible ? 1 : 0,
       child: IgnorePointer(
         ignoring: !visible,

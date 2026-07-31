@@ -6,6 +6,7 @@ import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 
 import '../../application/providers/media_preview_dependencies.dart';
+import '../constants/media_preview_timing.dart';
 import '../input/media_preview_input_handler.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../widgets/filmstrip/media_preview_filmstrip_controller.dart';
@@ -48,16 +49,11 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
 }
 
 class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
-  static const _controlsAutoHideDelay = Duration(seconds: 3);
-  static const _playbackButtonDisplayDuration = Duration(milliseconds: 800);
-
   final _focusNode = FocusNode();
   final _filmstripController = MediaPreviewFilmstripController();
   late final MediaPreviewInputHandler _inputHandler;
   Timer? _hideTimer;
-  Timer? _playbackButtonTimer;
   bool _controlsVisible = true;
-  bool _playbackButtonVisible = false;
   bool _controlsHovered = false;
   bool _controlsHiddenByNavigation = false;
   bool _filmstripEnabled = true;
@@ -74,8 +70,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     _inputHandler = MediaPreviewInputHandler(
       onPrevious: () => _navigateHidingControls(_controller.previous),
       onNext: () => _navigateHidingControls(_controller.next),
-      onSeekBackward: () => _seekBy(const Duration(seconds: -3)),
-      onSeekForward: () => _seekBy(const Duration(seconds: 3)),
+      onSeekBackward: () => _seekBy(MediaPreviewTiming.seekBackwardStep),
+      onSeekForward: () => _seekBy(MediaPreviewTiming.seekForwardStep),
       onTogglePlay: _togglePlay,
       onToggleMute: _toggleMute,
       onRotate: _rotateActiveMedia,
@@ -101,7 +97,6 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     _inputHandler.dispose();
     _filmstripController.dispose();
     _hideTimer?.cancel();
-    _playbackButtonTimer?.cancel();
     _focusNode.dispose();
     super.dispose();
   }
@@ -121,7 +116,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       return;
     }
     if (_controlsHovered) return;
-    _hideTimer = Timer(_controlsAutoHideDelay, () {
+    _hideTimer = Timer(MediaPreviewTiming.controlsAutoHide, () {
       if (!mounted) return;
       final latest = ref.read(mediaPreviewNotifierProvider);
       if (!_controlsHovered &&
@@ -140,16 +135,6 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       return;
     }
     _showControls();
-  }
-
-  void _showPlaybackButtonTemporarily() {
-    _playbackButtonTimer?.cancel();
-    if (!_playbackButtonVisible && mounted) {
-      setState(() => _playbackButtonVisible = true);
-    }
-    _playbackButtonTimer = Timer(_playbackButtonDisplayDuration, () {
-      if (mounted) setState(() => _playbackButtonVisible = false);
-    });
   }
 
   void _toggleSidebar() => widget.onToggleSidebar?.call();
@@ -174,7 +159,6 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
 
   void _togglePlay() {
     _showControls(userInitiated: true);
-    _showPlaybackButtonTemporarily();
     unawaited(_controller.togglePlay());
   }
 
@@ -258,19 +242,17 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void _suppressControlsDuringNavigation() {
     _controlsHiddenByNavigation = true;
     _hideTimer?.cancel();
-    _playbackButtonTimer?.cancel();
-    if ((_controlsVisible || _playbackButtonVisible) && mounted) {
-      setState(() {
-        _controlsVisible = false;
-        _playbackButtonVisible = false;
-      });
+    if (_controlsVisible && mounted) {
+      setState(() => _controlsVisible = false);
     }
     widget.onControlsVisibilityChanged?.call(false);
     _silentNavigationCount++;
     unawaited(
       Future<void>(() async {
         // media_kit may emit its final playing event immediately after open.
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(
+          MediaPreviewTiming.navigationEventSuppression,
+        );
         _silentNavigationCount--;
       }),
     );
@@ -327,7 +309,6 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
           child: MediaPreviewView(
             state: state,
             controlsVisible: _controlsVisible,
-            playbackButtonVisible: _playbackButtonVisible,
             isFullscreen: widget.isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: state.isRotationLocked,

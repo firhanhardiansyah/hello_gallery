@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
 
+import '../constants/media_preview_timing.dart';
+
 final class MediaPreviewScrollInput {
   MediaPreviewScrollInput({
     this.navigationThreshold = 24,
-    this.resetDelay = const Duration(milliseconds: 180),
+    this.resetDelay = MediaPreviewTiming.scrollNavigationReset,
   }) : assert(navigationThreshold > 0);
 
   final double navigationThreshold;

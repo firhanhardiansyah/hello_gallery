@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../constants/media_preview_timing.dart';
+
 final class MediaPreviewFilmstripController {
   static const thumbnailWidth = 88.0;
   static const thumbnailHeight = 64.0;
@@ -60,7 +62,7 @@ final class MediaPreviewFilmstripController {
     }
     scrollController.animateTo(
       target,
-      duration: const Duration(milliseconds: 180),
+      duration: MediaPreviewTiming.overlayTransition,
       curve: Curves.easeOut,
     );
   }

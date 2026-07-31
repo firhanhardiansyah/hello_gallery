@@ -16,7 +16,6 @@ class MediaPreviewView extends ConsumerWidget {
   const MediaPreviewView({
     required this.state,
     required this.controlsVisible,
-    required this.playbackButtonVisible,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
@@ -37,7 +36,6 @@ class MediaPreviewView extends ConsumerWidget {
 
   final MediaPreviewUiState state;
   final bool controlsVisible;
-  final bool playbackButtonVisible;
   final bool isFullscreen;
   final int rotationQuarterTurns;
   final bool isRotationLocked;
@@ -103,7 +101,6 @@ class MediaPreviewView extends ConsumerWidget {
             thumbnailPath: thumbnailPath,
             state: state,
             controlsVisible: controlsVisible,
-            playbackButtonVisible: playbackButtonVisible,
             isFullscreen: isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: isRotationLocked,

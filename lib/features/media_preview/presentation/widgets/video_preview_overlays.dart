@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../constants/media_preview_timing.dart';
 import '../states/media_preview_ui_state.dart';
 import 'video_controls.dart';
 
@@ -14,7 +15,6 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.thumbnailPath,
     required this.state,
     required this.controlsVisible,
-    required this.playbackButtonVisible,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
@@ -35,7 +35,6 @@ class VideoPreviewOverlays extends StatelessWidget {
   final String? thumbnailPath;
   final MediaPreviewUiState state;
   final bool controlsVisible;
-  final bool playbackButtonVisible;
   final bool isFullscreen;
   final int rotationQuarterTurns;
   final bool isRotationLocked;
@@ -63,7 +62,7 @@ class VideoPreviewOverlays extends StatelessWidget {
         ),
         _VideoPlaybackButton(
           isPlaying: state.isPlaying,
-          visible: playbackButtonVisible,
+          visible: controlsVisible,
           onPressed: onTogglePlayback,
         ),
         _VideoControlsOverlay(
@@ -104,7 +103,7 @@ class _VideoLoadingOverlay extends StatelessWidget {
   Widget build(BuildContext context) => Positioned.fill(
     child: IgnorePointer(
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 120),
+        duration: MediaPreviewTiming.quickFade,
         opacity: isReady ? 0 : 1,
         child: ColoredBox(
           color: context.appColors.mediaBackground,
@@ -150,8 +149,6 @@ class _VideoPlaybackButton extends StatefulWidget {
   final bool visible;
   final VoidCallback onPressed;
 
-  static const hideDuration = Duration(milliseconds: 250);
-
   @override
   State<_VideoPlaybackButton> createState() => _VideoPlaybackButtonState();
 }
@@ -192,7 +189,7 @@ class _VideoPlaybackButtonState extends State<_VideoPlaybackButton> {
 
   void _startHideTimer() {
     _hideTimer?.cancel();
-    _hideTimer = Timer(_VideoPlaybackButton.hideDuration, () {
+    _hideTimer = Timer(MediaPreviewTiming.playbackFeedback, () {
       if (mounted) {
         setState(() => _buttonVisible = false);
       }
@@ -216,7 +213,7 @@ class _VideoPlaybackButtonState extends State<_VideoPlaybackButton> {
     final isEffectiveVisible = widget.visible && _buttonVisible;
     return Center(
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 150),
+        duration: MediaPreviewTiming.overlayFade,
         opacity: isEffectiveVisible ? 1 : 0,
         child: IgnorePointer(
           ignoring: !isEffectiveVisible,
@@ -287,11 +284,11 @@ class _VideoControlsOverlay extends StatelessWidget {
     right: 0,
     bottom: 0,
     child: AnimatedSlide(
-      duration: const Duration(milliseconds: 180),
+      duration: MediaPreviewTiming.overlayTransition,
       curve: Curves.easeOut,
       offset: visible ? Offset.zero : const Offset(0, 1),
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 150),
+        duration: MediaPreviewTiming.overlayFade,
         opacity: visible ? 1 : 0,
         child: IgnorePointer(
           ignoring: !visible,
