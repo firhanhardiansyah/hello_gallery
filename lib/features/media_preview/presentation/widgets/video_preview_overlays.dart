@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -132,7 +133,7 @@ class _VideoLoadingPlaceholder extends StatelessWidget {
   );
 }
 
-class _VideoPlaybackButton extends StatelessWidget {
+class _VideoPlaybackButton extends StatefulWidget {
   const _VideoPlaybackButton({
     required this.isPlaying,
     required this.visible,
@@ -143,21 +144,82 @@ class _VideoPlaybackButton extends StatelessWidget {
   final bool visible;
   final VoidCallback onPressed;
 
+  static const hideDuration = Duration(milliseconds: 250);
+
+  @override
+  State<_VideoPlaybackButton> createState() => _VideoPlaybackButtonState();
+}
+
+class _VideoPlaybackButtonState extends State<_VideoPlaybackButton> {
+  Timer? _hideTimer;
+  late bool _buttonVisible;
+
+  @override
+  void initState() {
+    super.initState();
+    _buttonVisible = widget.visible;
+    if (widget.visible) {
+      _startHideTimer();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _VideoPlaybackButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.visible != widget.visible) {
+      if (widget.visible) {
+        _buttonVisible = true;
+        _startHideTimer();
+      } else {
+        _cancelHideTimer();
+        if (_buttonVisible) {
+          setState(() => _buttonVisible = false);
+        }
+      }
+    } else if (widget.visible && oldWidget.isPlaying != widget.isPlaying) {
+      if (!_buttonVisible) {
+        setState(() => _buttonVisible = true);
+      }
+      _startHideTimer();
+    }
+  }
+
+  void _startHideTimer() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(_VideoPlaybackButton.hideDuration, () {
+      if (mounted) {
+        setState(() => _buttonVisible = false);
+      }
+    });
+  }
+
+  void _cancelHideTimer() {
+    _hideTimer?.cancel();
+    _hideTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _cancelHideTimer();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final appColors = context.appColors;
+    final isEffectiveVisible = widget.visible && _buttonVisible;
     return Center(
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 150),
-        opacity: visible ? 1 : 0,
+        opacity: isEffectiveVisible ? 1 : 0,
         child: IgnorePointer(
-          ignoring: !visible,
+          ignoring: !isEffectiveVisible,
           child: IconButton.filled(
-            tooltip: isPlaying ? 'Pause' : 'Play',
-            onPressed: onPressed,
+            tooltip: widget.isPlaying ? 'Pause' : 'Play',
+            onPressed: widget.onPressed,
             style: IconButton.styleFrom(
               backgroundColor: appColors.mediaControlSurface.withValues(
-                alpha: 0.3,
+                alpha: 0.5,
               ),
               foregroundColor: appColors.onMedia,
               minimumSize: const Size.square(72),
@@ -168,7 +230,7 @@ class _VideoPlaybackButton extends StatelessWidget {
               ),
             ),
             icon: HugeIcon(
-              icon: isPlaying
+              icon: widget.isPlaying
                   ? HugeIcons.strokeRoundedPause
                   : HugeIcons.strokeRoundedPlay,
               size: 42,
