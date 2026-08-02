@@ -4,6 +4,7 @@ import 'package:hello_gallery/features/settings/domain/entities/gallery_view_pre
 import 'package:hello_gallery/features/settings/domain/entities/theme_preferences.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_appearance_mode.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_item_extent.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_layout_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,6 +46,7 @@ void main() {
 
     expect(preferences.showItemNames, isTrue);
     expect(preferences.layoutMode, GalleryLayoutMode.grid);
+    expect(preferences.itemExtent, GalleryItemExtent.defaultValue);
   });
 
   test('gallery view preferences persist display options', () async {
@@ -54,12 +56,14 @@ void main() {
       const GalleryViewPreferences(
         showItemNames: false,
         layoutMode: GalleryLayoutMode.quilted,
+        itemExtent: 400,
       ),
     );
 
     final preferences = await repository.readGalleryViewPreferences();
     expect(preferences.showItemNames, isFalse);
     expect(preferences.layoutMode, GalleryLayoutMode.quilted);
+    expect(preferences.itemExtent, 400);
   });
 
   test('masonry gallery layout can be restored from storage', () async {

@@ -22,6 +22,8 @@ void main() {
       onBack: _noop,
       onGamepadBack: _noop,
       onToggleSelectAll: _noop,
+      onIncreaseItemSize: _noop,
+      onDecreaseItemSize: _noop,
       onToggleSidebar: () => sidebarCount++,
       onToggleFullscreen: () => fullscreenCount++,
       onNavigateBack: () => navigationBackCount++,
@@ -66,6 +68,8 @@ void main() {
       onBack: _noop,
       onGamepadBack: _noop,
       onToggleSelectAll: () => toggleCount++,
+      onIncreaseItemSize: _noop,
+      onDecreaseItemSize: _noop,
       onToggleSidebar: _noop,
       onToggleFullscreen: _noop,
       onNavigateBack: _noop,
@@ -94,6 +98,53 @@ void main() {
     expect(toggleCount, 2);
   });
 
+  testWidgets('resizes gallery items with Control or Command plus and minus', (
+    tester,
+  ) async {
+    var increaseCount = 0;
+    var decreaseCount = 0;
+    final handler = GalleryInputHandler(
+      isEnabled: () => true,
+      isNavigationEnabled: () => true,
+      onMoveUp: _noop,
+      onMoveDown: _noop,
+      onMoveLeft: _noop,
+      onMoveRight: _noop,
+      onActivate: _noop,
+      onBack: _noop,
+      onGamepadBack: _noop,
+      onToggleSelectAll: _noop,
+      onIncreaseItemSize: () => increaseCount++,
+      onDecreaseItemSize: () => decreaseCount++,
+      onToggleSidebar: _noop,
+      onToggleFullscreen: _noop,
+      onNavigateBack: _noop,
+      onNavigateForward: _noop,
+    );
+
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.equal)),
+      KeyEventResult.ignored,
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.equal)),
+      KeyEventResult.handled,
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    expect(
+      handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.minus)),
+      KeyEventResult.handled,
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+
+    expect(increaseCount, 1);
+    expect(decreaseCount, 1);
+  });
+
   test('keeps keyboard and gamepad back actions separate', () {
     var keyboardBackCount = 0;
     var gamepadBackCount = 0;
@@ -108,6 +159,8 @@ void main() {
       onBack: () => keyboardBackCount++,
       onGamepadBack: () => gamepadBackCount++,
       onToggleSelectAll: _noop,
+      onIncreaseItemSize: _noop,
+      onDecreaseItemSize: _noop,
       onToggleSidebar: _noop,
       onToggleFullscreen: _noop,
       onNavigateBack: _noop,
@@ -135,6 +188,8 @@ void main() {
       onBack: _noop,
       onGamepadBack: _noop,
       onToggleSelectAll: _noop,
+      onIncreaseItemSize: _noop,
+      onDecreaseItemSize: _noop,
       onToggleSidebar: _noop,
       onToggleFullscreen: _noop,
       onNavigateBack: () => backCount++,

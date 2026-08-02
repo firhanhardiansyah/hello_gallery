@@ -5,6 +5,7 @@ import '../../domain/entities/gallery_view_preferences.dart';
 import '../../domain/entities/theme_preferences.dart';
 import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
+import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
 import '../states/settings_ui_state.dart';
 
@@ -37,6 +38,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         colorTheme: theme.colorTheme,
         showItemNames: galleryView.showItemNames,
         galleryLayoutMode: galleryView.layoutMode,
+        galleryItemExtent: galleryView.itemExtent,
       );
     } on Object catch (error) {
       state = state.copyWith(loadState: SettingsLoadState.error('$error'));
@@ -78,11 +80,26 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
     await _saveGalleryViewPreferences();
   }
 
+  Future<void> increaseGalleryItemExtent() => _setGalleryItemExtent(
+    GalleryItemExtent.increase(state.galleryItemExtent),
+  );
+
+  Future<void> decreaseGalleryItemExtent() => _setGalleryItemExtent(
+    GalleryItemExtent.decrease(state.galleryItemExtent),
+  );
+
+  Future<void> _setGalleryItemExtent(double itemExtent) async {
+    if (itemExtent == state.galleryItemExtent) return;
+    state = state.copyWith(galleryItemExtent: itemExtent);
+    await _saveGalleryViewPreferences();
+  }
+
   Future<void> _saveGalleryViewPreferences() {
     return ref.read(saveGalleryViewPreferencesProvider)(
       GalleryViewPreferences(
         showItemNames: state.showItemNames,
         layoutMode: state.galleryLayoutMode,
+        itemExtent: state.galleryItemExtent,
       ),
     );
   }

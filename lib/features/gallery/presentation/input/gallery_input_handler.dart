@@ -19,6 +19,8 @@ class GalleryInputHandler {
     required this.onBack,
     required this.onGamepadBack,
     required this.onToggleSelectAll,
+    required this.onIncreaseItemSize,
+    required this.onDecreaseItemSize,
     required this.onToggleSidebar,
     required this.onToggleFullscreen,
     required this.onNavigateBack,
@@ -35,6 +37,8 @@ class GalleryInputHandler {
   final VoidCallback onBack;
   final VoidCallback onGamepadBack;
   final VoidCallback onToggleSelectAll;
+  final VoidCallback onIncreaseItemSize;
+  final VoidCallback onDecreaseItemSize;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onNavigateBack;
@@ -77,9 +81,19 @@ class GalleryInputHandler {
       );
     }
     if (!isEnabled()) return KeyEventResult.ignored;
+    final keyboard = HardwareKeyboard.instance;
+    final hasPlatformModifier =
+        keyboard.isControlPressed || keyboard.isMetaPressed;
+    if (hasPlatformModifier && _isIncreaseItemSizeKey(event.logicalKey)) {
+      onIncreaseItemSize();
+      return KeyEventResult.handled;
+    }
+    if (hasPlatformModifier && _isDecreaseItemSizeKey(event.logicalKey)) {
+      onDecreaseItemSize();
+      return KeyEventResult.handled;
+    }
     if (event.logicalKey == LogicalKeyboardKey.keyA) {
-      final keyboard = HardwareKeyboard.instance;
-      if (!keyboard.isControlPressed && !keyboard.isMetaPressed) {
+      if (!hasPlatformModifier) {
         return KeyEventResult.ignored;
       }
       onToggleSelectAll();
@@ -108,6 +122,15 @@ class GalleryInputHandler {
     }
     return KeyEventResult.handled;
   }
+
+  bool _isIncreaseItemSizeKey(LogicalKeyboardKey key) =>
+      key == LogicalKeyboardKey.add ||
+      key == LogicalKeyboardKey.equal ||
+      key == LogicalKeyboardKey.numpadAdd;
+
+  bool _isDecreaseItemSizeKey(LogicalKeyboardKey key) =>
+      key == LogicalKeyboardKey.minus ||
+      key == LogicalKeyboardKey.numpadSubtract;
 
   void handlePointerDown(PointerDownEvent event) {
     if (event.kind != PointerDeviceKind.mouse) return;

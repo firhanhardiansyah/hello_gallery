@@ -11,6 +11,7 @@ import '../../../../thumbnail/application/services/thumbnail_job_scheduler.dart'
 import '../../../application/providers/gallery_dependencies.dart';
 import '../../../application/services/folder_preview_job_scheduler.dart';
 import '../../../domain/entities/gallery_item.dart';
+import '../../../domain/value_objects/gallery_item_extent.dart';
 import '../../../domain/value_objects/gallery_layout_mode.dart';
 import '../../states/gallery_ui_state.dart';
 import '../../states/media_drag_payload.dart';
@@ -24,7 +25,6 @@ typedef MediaFolderDrop =
 abstract final class _GalleryGridLayout {
   static const padding = AppSpacing.md;
   static const spacing = AppSpacing.xs;
-  static const maxCrossAxisExtent = 320.0;
   static const childAspectRatio = 3 / 4;
 }
 
@@ -43,6 +43,7 @@ class GalleryBody extends ConsumerStatefulWidget {
     required this.onMediaDropped,
     this.showItemNames = true,
     this.layoutMode = GalleryLayoutMode.grid,
+    this.maxCrossAxisExtent = GalleryItemExtent.defaultValue,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.onRenameMedia,
@@ -63,6 +64,7 @@ class GalleryBody extends ConsumerStatefulWidget {
   final MediaFolderDrop onMediaDropped;
   final bool showItemNames;
   final GalleryLayoutMode layoutMode;
+  final double maxCrossAxisExtent;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
   final ValueChanged<MediaItem>? onRenameMedia;
@@ -167,7 +169,9 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   @override
   Widget build(BuildContext context) {
     return switch (widget.state.loadState) {
-      GalleryInitial() || GalleryLoading() => const _LoadingGrid(),
+      GalleryInitial() || GalleryLoading() => _LoadingGrid(
+        maxCrossAxisExtent: widget.maxCrossAxisExtent,
+      ),
       GalleryEmpty() => const Center(
         child: Text('No supported media in this folder.'),
       ),
@@ -244,8 +248,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
       padding: const EdgeInsets.all(_GalleryGridLayout.padding),
       addAutomaticKeepAlives: false,
       scrollCacheExtent: const ScrollCacheExtent.pixels(240),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: widget.maxCrossAxisExtent,
         childAspectRatio: _GalleryGridLayout.childAspectRatio,
         crossAxisSpacing: _GalleryGridLayout.spacing,
         mainAxisSpacing: _GalleryGridLayout.spacing,
@@ -273,9 +277,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   void _updateGridMetrics(double availableWidth) {
     final gridWidth = availableWidth - _GalleryGridLayout.padding * 2;
     final columns =
-        (gridWidth /
-                (_GalleryGridLayout.maxCrossAxisExtent +
-                    _GalleryGridLayout.spacing))
+        (gridWidth / (widget.maxCrossAxisExtent + _GalleryGridLayout.spacing))
             .ceil()
             .clamp(1, 1000);
     final itemCrossAxisExtent =
@@ -388,15 +390,17 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
 }
 
 class _LoadingGrid extends StatelessWidget {
-  const _LoadingGrid();
+  const _LoadingGrid({required this.maxCrossAxisExtent});
+
+  final double maxCrossAxisExtent;
 
   @override
   Widget build(BuildContext context) {
     final appColors = context.appColors;
     return GridView.builder(
       padding: const EdgeInsets.all(_GalleryGridLayout.padding),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: _GalleryGridLayout.maxCrossAxisExtent,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: maxCrossAxisExtent,
         childAspectRatio: _GalleryGridLayout.childAspectRatio,
         crossAxisSpacing: _GalleryGridLayout.spacing,
         mainAxisSpacing: _GalleryGridLayout.spacing,

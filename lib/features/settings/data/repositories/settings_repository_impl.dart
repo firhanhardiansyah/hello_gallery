@@ -5,6 +5,7 @@ import '../../domain/repositories/settings_repository.dart';
 import '../../domain/entities/theme_preferences.dart';
 import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
+import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
 
 final class SettingsRepositoryImpl implements SettingsRepository {
@@ -14,6 +15,7 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   static const _colorThemeKey = 'color_theme';
   static const _showItemNamesKey = 'show_item_names';
   static const _galleryLayoutModeKey = 'gallery_layout_mode';
+  static const _galleryItemExtentKey = 'gallery_item_extent';
 
   @override
   Future<String?> readRootPath() async {
@@ -69,6 +71,9 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       layoutMode: GalleryLayoutMode.fromStorage(
         preferences.getString(_galleryLayoutModeKey),
       ),
+      itemExtent: GalleryItemExtent.normalize(
+        preferences.getDouble(_galleryItemExtentKey),
+      ),
     );
   }
 
@@ -80,6 +85,7 @@ final class SettingsRepositoryImpl implements SettingsRepository {
     await Future.wait([
       storage.setBool(_showItemNamesKey, preferences.showItemNames),
       storage.setString(_galleryLayoutModeKey, preferences.layoutMode.name),
+      storage.setDouble(_galleryItemExtentKey, preferences.itemExtent),
     ]);
   }
 }

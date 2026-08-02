@@ -64,6 +64,12 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       onBack: _inputActions.handleBack,
       onGamepadBack: _inputActions.handleGamepadBack,
       onToggleSelectAll: _inputActions.toggleSelectAll,
+      onIncreaseItemSize: () => unawaited(
+        ref.read(settingsNotifierProvider.notifier).increaseGalleryItemExtent(),
+      ),
+      onDecreaseItemSize: () => unawaited(
+        ref.read(settingsNotifierProvider.notifier).decreaseGalleryItemExtent(),
+      ),
       onToggleSidebar: _toggleSidebar,
       onToggleFullscreen: () => unawaited(_toggleFullscreen()),
       onNavigateBack: _handleHistoryNavigationBack,
@@ -666,6 +672,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       keyboardFocusVisible: _selection.keyboardFocusVisible,
       showItemNames: settings.showItemNames,
       layoutMode: settings.galleryLayoutMode,
+      maxCrossAxisExtent: settings.galleryItemExtent,
       selectedPaths: _selection.selectedPaths,
       onSelectionChanged: _inputActions.changeSelection,
       onClearSelection: _inputActions.clearSelection,
