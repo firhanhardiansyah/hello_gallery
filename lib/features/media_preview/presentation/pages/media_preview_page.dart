@@ -10,6 +10,7 @@ import '../constants/media_preview_timing.dart';
 import '../input/media_preview_input_handler.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../widgets/filmstrip/media_preview_filmstrip_controller.dart';
+import '../widgets/media_preview_pointer_region.dart';
 import '../widgets/media_preview_view.dart';
 
 class MediaPreviewPage extends ConsumerStatefulWidget {
@@ -135,6 +136,15 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       return;
     }
     _showControls();
+  }
+
+  void _hideControlsAfterPreviewExit() {
+    if (!mounted) return;
+    _hideTimer?.cancel();
+    if (_controlsVisible) {
+      setState(() => _controlsVisible = false);
+    }
+    widget.onControlsVisibilityChanged?.call(false);
   }
 
   void _toggleSidebar() => widget.onToggleSidebar?.call();
@@ -300,12 +310,12 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       focusNode: _focusNode,
       child: Listener(
         onPointerSignal: _inputHandler.handlePointerSignal,
-        child: MouseRegion(
+        child: MediaPreviewPointerRegion(
           cursor: state.isPlaying && !_controlsVisible
               ? SystemMouseCursors.none
               : MouseCursor.defer,
-          onEnter: (_) => _showControls(userInitiated: true),
-          onHover: (_) => _showControls(userInitiated: true),
+          onActivity: () => _showControls(userInitiated: true),
+          onExitIdle: _hideControlsAfterPreviewExit,
           child: MediaPreviewView(
             state: state,
             controlsVisible: _controlsVisible,
