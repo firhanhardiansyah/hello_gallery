@@ -149,7 +149,7 @@ void main() {
     );
 
     expect(selectionBorder, preview);
-    expect(selectionDecoration.borderRadius, BorderRadius.zero);
+    expect(selectionDecoration.borderRadius, BorderRadius.circular(8));
     expect(selectionBorder.bottom, lessThan(label.top));
     expect(
       find.byKey(const ValueKey('gallery-card-selection-check')),

@@ -27,5 +27,6 @@ void main() {
     expect(find.text('Layout'), findsOneWidget);
     expect(find.text('Grid'), findsOneWidget);
     expect(find.text('Quilted'), findsOneWidget);
+    expect(find.text('Masonry'), findsOneWidget);
   });
 }

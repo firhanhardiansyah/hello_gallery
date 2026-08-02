@@ -1,6 +1,7 @@
 enum GalleryLayoutMode {
   grid,
-  quilted;
+  quilted,
+  masonry;
 
   static GalleryLayoutMode fromStorage(String? value) {
     return GalleryLayoutMode.values.firstWhere(

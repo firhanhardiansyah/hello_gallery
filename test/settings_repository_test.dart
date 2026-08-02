@@ -61,4 +61,13 @@ void main() {
     expect(preferences.showItemNames, isFalse);
     expect(preferences.layoutMode, GalleryLayoutMode.quilted);
   });
+
+  test('masonry gallery layout can be restored from storage', () async {
+    SharedPreferences.setMockInitialValues({'gallery_layout_mode': 'masonry'});
+
+    final preferences = await SettingsRepositoryImpl()
+        .readGalleryViewPreferences();
+
+    expect(preferences.layoutMode, GalleryLayoutMode.masonry);
+  });
 }

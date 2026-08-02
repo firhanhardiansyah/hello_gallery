@@ -19,6 +19,7 @@ enum _GalleryViewOption {
   hideItemNames,
   gridLayout,
   quiltedLayout,
+  masonryLayout,
 }
 
 class GalleryViewOptionsMenu extends ConsumerWidget {
@@ -109,6 +110,12 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
           icon: HugeIcons.strokeRoundedLayoutGrid,
           selected: layoutMode == GalleryLayoutMode.quilted,
         ),
+        _item(
+          option: _GalleryViewOption.masonryLayout,
+          label: 'Masonry',
+          icon: HugeIcons.strokeRoundedGrid,
+          selected: layoutMode == GalleryLayoutMode.masonry,
+        ),
       ],
     );
   }
@@ -146,6 +153,12 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
           ref
               .read(settingsNotifierProvider.notifier)
               .setGalleryLayoutMode(GalleryLayoutMode.quilted),
+        );
+      case _GalleryViewOption.masonryLayout:
+        unawaited(
+          ref
+              .read(settingsNotifierProvider.notifier)
+              .setGalleryLayoutMode(GalleryLayoutMode.masonry),
         );
     }
   }

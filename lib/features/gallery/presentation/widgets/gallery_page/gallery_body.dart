@@ -24,7 +24,7 @@ typedef MediaFolderDrop =
 abstract final class _GalleryGridLayout {
   static const padding = AppSpacing.md;
   static const spacing = AppSpacing.xs;
-  static const maxCrossAxisExtent = 260.0;
+  static const maxCrossAxisExtent = 320.0;
   static const childAspectRatio = 3 / 4;
 }
 
@@ -75,6 +75,7 @@ class GalleryBody extends ConsumerStatefulWidget {
 class _GalleryBodyState extends ConsumerState<GalleryBody> {
   late final ThumbnailJobScheduler _thumbnailScheduler;
   late final FolderPreviewJobScheduler _folderPreviewScheduler;
+  final _itemKeys = <String, GlobalKey>{};
   int _reportedColumnCount = 1;
   double _itemMainExtent = 0;
 
@@ -96,6 +97,10 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         oldWidget.state.loadState != widget.state.loadState) {
       _resumePreviewSchedulersImmediately();
     }
+    final visiblePaths = widget.state.visibleItems
+        .map((item) => item.path)
+        .toSet();
+    _itemKeys.removeWhere((path, _) => !visiblePaths.contains(path));
   }
 
   @override
@@ -126,6 +131,19 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
       0,
       widget.state.visibleItems.length - 1,
     );
+    if (widget.layoutMode == GalleryLayoutMode.masonry) {
+      final itemContext =
+          _itemKeys[widget.state.visibleItems[index].path]?.currentContext;
+      if (itemContext != null) {
+        Scrollable.ensureVisible(
+          itemContext,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        );
+      }
+      return;
+    }
     if (!widget.scrollController.hasClients) return;
     final position = widget.scrollController.position;
     final row = index ~/ _reportedColumnCount;
@@ -182,8 +200,23 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
 
   Widget _buildGrid(List<GalleryItem> visibleItems) {
     final key = PageStorageKey<String>(
-      'gallery-grid:${widget.state.currentPath}',
+      'gallery-grid:${widget.state.currentPath}:${widget.layoutMode.name}',
     );
+    if (widget.layoutMode == GalleryLayoutMode.masonry) {
+      return MasonryGridView.count(
+        key: key,
+        controller: widget.scrollController,
+        padding: const EdgeInsets.all(_GalleryGridLayout.padding),
+        cacheExtent: 240,
+        crossAxisCount: _reportedColumnCount,
+        mainAxisSpacing: _GalleryGridLayout.spacing,
+        crossAxisSpacing: _GalleryGridLayout.spacing,
+        addAutomaticKeepAlives: false,
+        itemCount: visibleItems.length,
+        itemBuilder: (context, index) =>
+            _buildItem(context, index, visibleItems),
+      );
+    }
     if (widget.layoutMode == GalleryLayoutMode.quilted &&
         _reportedColumnCount > 1) {
       return GridView.custom(
@@ -286,61 +319,69 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
               ? selectedMedia
               : [item]
         : const <MediaItem>[];
-    return ExcludeFocus(
-      child: GalleryCard(
-        key: ValueKey(item.path),
-        item: item,
-        selected: selected,
-        focused: focused,
-        showItemName: widget.showItemNames,
-        onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
-            ? () => widget.onRenameFolder!(item.path)
-            : null,
-        onDeleteFolder: item is GalleryFolder && widget.onDeleteFolder != null
-            ? () => widget.onDeleteFolder!(item.path)
-            : null,
-        onRenameMedia:
-            item is MediaItem &&
-                widget.onRenameMedia != null &&
-                (!selected || widget.selectedPaths.length == 1)
-            ? () => widget.onRenameMedia!(item)
-            : null,
-        onDeleteMedia: item is MediaItem && widget.onDeleteMedia != null
-            ? () => widget.onDeleteMedia!(mediaDeleteTargets)
-            : null,
-        onMediaContextMenuOpened: item is MediaItem && !selected
-            ? () =>
-                  widget.onSelectionChanged(index, toggle: false, extend: false)
-            : null,
-        dragPayload: dragPayload,
-        onDragStarted: () {
-          if (!selected) {
-            widget.onSelectionChanged(index, toggle: false, extend: false);
-          }
-        },
-        onMediaDropped: item is GalleryFolder
-            ? (payload) => widget.onMediaDropped(payload, item.path)
-            : null,
-        onTap: () {
-          final keyboard = HardwareKeyboard.instance;
-          final toggle = keyboard.isControlPressed || keyboard.isMetaPressed;
-          final extend = keyboard.isShiftPressed;
-          if (toggle || extend) {
-            widget.onSelectionChanged(index, toggle: toggle, extend: extend);
-            return;
-          }
-          if (widget.selectedPaths.isNotEmpty) {
-            widget.onSelectionChanged(index, toggle: true, extend: false);
-            return;
-          }
-          widget.onClearSelection();
-          switch (item) {
-            case GalleryFolder():
-              widget.onFolderSelected(item.path);
-            case MediaItem():
-              widget.onMediaSelected(item);
-          }
-        },
+    return KeyedSubtree(
+      key: _itemKeys.putIfAbsent(item.path, GlobalKey.new),
+      child: ExcludeFocus(
+        child: GalleryCard(
+          key: ValueKey(item.path),
+          item: item,
+          selected: selected,
+          focused: focused,
+          showItemName: widget.showItemNames,
+          useOriginalAspectRatio:
+              widget.layoutMode == GalleryLayoutMode.masonry,
+          onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
+              ? () => widget.onRenameFolder!(item.path)
+              : null,
+          onDeleteFolder: item is GalleryFolder && widget.onDeleteFolder != null
+              ? () => widget.onDeleteFolder!(item.path)
+              : null,
+          onRenameMedia:
+              item is MediaItem &&
+                  widget.onRenameMedia != null &&
+                  (!selected || widget.selectedPaths.length == 1)
+              ? () => widget.onRenameMedia!(item)
+              : null,
+          onDeleteMedia: item is MediaItem && widget.onDeleteMedia != null
+              ? () => widget.onDeleteMedia!(mediaDeleteTargets)
+              : null,
+          onMediaContextMenuOpened: item is MediaItem && !selected
+              ? () => widget.onSelectionChanged(
+                  index,
+                  toggle: false,
+                  extend: false,
+                )
+              : null,
+          dragPayload: dragPayload,
+          onDragStarted: () {
+            if (!selected) {
+              widget.onSelectionChanged(index, toggle: false, extend: false);
+            }
+          },
+          onMediaDropped: item is GalleryFolder
+              ? (payload) => widget.onMediaDropped(payload, item.path)
+              : null,
+          onTap: () {
+            final keyboard = HardwareKeyboard.instance;
+            final toggle = keyboard.isControlPressed || keyboard.isMetaPressed;
+            final extend = keyboard.isShiftPressed;
+            if (toggle || extend) {
+              widget.onSelectionChanged(index, toggle: toggle, extend: extend);
+              return;
+            }
+            if (widget.selectedPaths.isNotEmpty) {
+              widget.onSelectionChanged(index, toggle: true, extend: false);
+              return;
+            }
+            widget.onClearSelection();
+            switch (item) {
+              case GalleryFolder():
+                widget.onFolderSelected(item.path);
+              case MediaItem():
+                widget.onMediaSelected(item);
+            }
+          },
+        ),
       ),
     );
   }

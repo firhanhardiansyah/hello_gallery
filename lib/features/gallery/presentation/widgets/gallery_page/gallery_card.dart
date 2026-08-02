@@ -8,16 +8,17 @@ import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart
 import 'package:hugeicons/hugeicons.dart';
 import 'package:path/path.dart' as path;
 
+import '../../../../thumbnail/application/providers/media_dimensions_dependencies.dart';
 import '../../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../../application/providers/gallery_dependencies.dart';
 import '../../states/media_drag_payload.dart';
 import '../folder_management/folder_context_menu.dart';
 import '../media_management/media_context_menu.dart';
 
-const _galleryCardBorderRadius = BorderRadius.zero;
+const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
 const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));
 
-class GalleryCard extends StatelessWidget {
+class GalleryCard extends ConsumerWidget {
   const GalleryCard({
     required this.item,
     required this.onTap,
@@ -25,6 +26,7 @@ class GalleryCard extends StatelessWidget {
     this.selected = false,
     this.focused = false,
     this.showItemName = true,
+    this.useOriginalAspectRatio = false,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.onRenameMedia,
@@ -42,6 +44,7 @@ class GalleryCard extends StatelessWidget {
   final bool selected;
   final bool focused;
   final bool showItemName;
+  final bool useOriginalAspectRatio;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
   final VoidCallback? onRenameMedia;
@@ -52,12 +55,22 @@ class GalleryCard extends StatelessWidget {
   final ValueChanged<MediaDragPayload>? onMediaDropped;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final previewAspectRatio = useOriginalAspectRatio
+        ? switch (item) {
+            final MediaItem media =>
+              ref.watch(mediaAspectRatioProvider(media)).value ??
+                  fallbackMediaAspectRatio,
+            GalleryFolder() => fallbackMediaAspectRatio,
+          }
+        : null;
+
     Widget buildCard({bool dropHighlighted = false}) => _GalleryCardSurface(
       item: item,
       selected: selected,
       focused: focused,
       showItemName: showItemName,
+      previewAspectRatio: previewAspectRatio,
       dropHighlighted: dropHighlighted,
       onTap: onTap,
       onDoubleTap: onDoubleTap,
@@ -134,6 +147,7 @@ class _GalleryCardSurface extends StatelessWidget {
     required this.selected,
     required this.focused,
     required this.showItemName,
+    required this.previewAspectRatio,
     required this.dropHighlighted,
     required this.onTap,
     required this.onDoubleTap,
@@ -143,6 +157,7 @@ class _GalleryCardSurface extends StatelessWidget {
   final bool selected;
   final bool focused;
   final bool showItemName;
+  final double? previewAspectRatio;
   final bool dropHighlighted;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
@@ -162,65 +177,7 @@ class _GalleryCardSurface extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Stack(
-                key: const ValueKey('gallery-card-preview'),
-                fit: StackFit.expand,
-                children: [
-                  _Preview(item: item),
-                  if (selected)
-                    _PreviewBorder(
-                      key: const ValueKey('gallery-card-selection-border'),
-                      color: colorScheme.primary,
-                      backgroundColor: colorScheme.primary.withValues(
-                        alpha: 0.08,
-                      ),
-                    )
-                  else if (focused)
-                    _PreviewBorder(
-                      key: const ValueKey('gallery-card-focus-border'),
-                      color: colorScheme.primary,
-                    ),
-                  if (dropHighlighted)
-                    _PreviewBorder(
-                      key: const ValueKey('gallery-card-drop-border'),
-                      color: colorScheme.primary,
-                      backgroundColor: colorScheme.primaryContainer.withValues(
-                        alpha: 0.3,
-                      ),
-                    ),
-                  if (selected)
-                    Positioned(
-                      top: AppSpacing.sm,
-                      right: AppSpacing.sm,
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          key: const ValueKey('gallery-card-selection-check'),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            shape: BoxShape.circle,
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x33000000),
-                                blurRadius: 4,
-                                offset: Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.xs),
-                            child: HugeIcon(
-                              icon: HugeIcons.strokeRoundedTick02,
-                              color: colorScheme.onPrimary,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _buildPreviewSection(colorScheme),
 
             if (showItemName)
               Padding(
@@ -270,6 +227,68 @@ class _GalleryCardSurface extends StatelessWidget {
       excludeSemantics: true,
       child: surface,
     );
+  }
+
+  Widget _buildPreviewSection(ColorScheme colorScheme) {
+    final preview = Stack(
+      key: const ValueKey('gallery-card-preview'),
+      fit: StackFit.expand,
+      children: [
+        _Preview(item: item),
+        if (selected)
+          _PreviewBorder(
+            key: const ValueKey('gallery-card-selection-border'),
+            color: colorScheme.primary,
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
+          )
+        else if (focused)
+          _PreviewBorder(
+            key: const ValueKey('gallery-card-focus-border'),
+            color: colorScheme.primary,
+          ),
+        if (dropHighlighted)
+          _PreviewBorder(
+            key: const ValueKey('gallery-card-drop-border'),
+            color: colorScheme.primary,
+            backgroundColor: colorScheme.primaryContainer.withValues(
+              alpha: 0.3,
+            ),
+          ),
+        if (selected)
+          Positioned(
+            top: AppSpacing.sm,
+            right: AppSpacing.sm,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                key: const ValueKey('gallery-card-selection-check'),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedTick02,
+                    color: colorScheme.onPrimary,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+    final aspectRatio = previewAspectRatio;
+    return aspectRatio == null
+        ? Expanded(child: preview)
+        : AspectRatio(aspectRatio: aspectRatio, child: preview);
   }
 }
 
