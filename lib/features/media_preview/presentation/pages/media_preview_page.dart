@@ -117,11 +117,19 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
         state.activeItem?.isVideo != true) {
       return;
     }
-    if (_controlsHovered) return;
+    _scheduleControlsAutoHide();
+  }
+
+  void _scheduleControlsAutoHide() {
+    _hideTimer?.cancel();
+    if (!_controlsVisible || _controlsHovered) return;
+    final state = ref.read(mediaPreviewNotifierProvider);
+    if (!state.isPlaying || state.activeItem?.isVideo != true) return;
     _hideTimer = Timer(MediaPreviewTiming.controlsAutoHide, () {
       if (!mounted) return;
       final latest = ref.read(mediaPreviewNotifierProvider);
-      if (!_controlsHovered &&
+      if (_controlsVisible &&
+          !_controlsHovered &&
           latest.isPlaying &&
           latest.activeItem?.isVideo == true) {
         setState(() => _controlsVisible = false);
@@ -131,12 +139,13 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   }
 
   void _setControlsHovered(bool hovered) {
+    if (_controlsHovered == hovered) return;
     _controlsHovered = hovered;
     if (hovered) {
       _hideTimer?.cancel();
       return;
     }
-    _showControls();
+    _scheduleControlsAutoHide();
   }
 
   void _hideControlsAfterPreviewExit() {
