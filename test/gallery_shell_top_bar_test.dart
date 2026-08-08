@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hello_gallery/app/theme/app_theme.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/features/gallery/presentation/states/gallery_ui_state.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_shell_top_bar.dart';
 import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
+import 'package:hello_gallery/core/widgets/media_overlay_icon_button.dart';
+import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
 void main() {
   testWidgets('replaces gallery actions with selection information', (
@@ -15,6 +19,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          theme: buildAppTheme(
+            colorTheme: AppColorTheme.indigo,
+            brightness: Brightness.light,
+          ),
           home: Scaffold(
             body: GalleryShellTopBar(
               gallery: const GalleryUiState(
@@ -66,6 +74,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          theme: buildAppTheme(
+            colorTheme: AppColorTheme.indigo,
+            brightness: Brightness.light,
+          ),
           home: Scaffold(
             body: GalleryShellTopBar(
               gallery: const GalleryUiState(
@@ -114,6 +126,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
+          theme: buildAppTheme(
+            colorTheme: AppColorTheme.indigo,
+            brightness: Brightness.light,
+          ),
           home: Scaffold(
             body: GalleryShellTopBar(
               gallery: const GalleryUiState(
@@ -145,8 +161,71 @@ void main() {
     expect(find.byTooltip('Enable HDR playback'), findsNothing);
     expect(find.byTooltip('Close detail'), findsNothing);
     expect(find.byTooltip('Back to gallery'), findsOneWidget);
+    expect(find.byType(MediaOverlayIconButton), findsNWidgets(3));
+    expect(
+      tester
+          .widget<DesktopWindowTitleBar>(find.byType(DesktopWindowTitleBar))
+          .backgroundColor,
+      Colors.transparent,
+    );
+    final title = tester.widget<Text>(
+      find.byKey(const ValueKey('preview-title')),
+    );
+    expect(title.style?.color, AppColorTokens.light.onMedia);
+    expect(
+      find.byKey(const ValueKey('gallery-shell-top-bar-border')),
+      findsNothing,
+    );
 
     await tester.tap(find.byTooltip('Back to gallery'));
     expect(closeCount, 1);
+  });
+
+  testWidgets('uses light Windows caption icons over preview media', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: buildAppTheme(
+            colorTheme: AppColorTheme.indigo,
+            brightness: Brightness.light,
+          ),
+          home: Scaffold(
+            body: GalleryShellTopBar(
+              gallery: const GalleryUiState(
+                loadState: GalleryLoadState.ready(),
+                rootPath: '/gallery',
+                currentPath: '/gallery',
+              ),
+              isPreview: true,
+              isFullscreen: false,
+              previewTitle: 'video.mp4',
+              sidebarVisible: true,
+              windowPlatform: DesktopWindowPlatform.windows,
+              onToggleSidebar: () {},
+              onClosePreview: () {},
+              onGroupMedia: () {},
+              onCreateFolder: () {},
+              selectedItemCount: 0,
+              totalItemCount: 1,
+              onSelectAll: () {},
+              onClearSelection: () {},
+              selectedMediaCount: 0,
+              onDeleteSelectedMedia: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<DesktopWindowsCaptionControls>(
+            find.byType(DesktopWindowsCaptionControls),
+          )
+          .brightness,
+      Brightness.dark,
+    );
   });
 }

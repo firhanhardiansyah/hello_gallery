@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hello_gallery/app/theme/app_theme.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/preview_shell_top_bar_overlay.dart';
+import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
 void main() {
   testWidgets('animates and blocks interaction while the top bar is hidden', (
@@ -12,6 +14,10 @@ void main() {
 
     Widget buildOverlay({required bool visible}) {
       return MaterialApp(
+        theme: buildAppTheme(
+          colorTheme: AppColorTheme.indigo,
+          brightness: Brightness.light,
+        ),
         home: Scaffold(
           body: Stack(
             children: [
@@ -32,6 +38,14 @@ void main() {
     }
 
     await tester.pumpWidget(buildOverlay(visible: true));
+    final gradientDecoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.byKey(const ValueKey('preview-shell-top-bar-gradient')),
+                )
+                .decoration
+            as BoxDecoration;
+    expect(gradientDecoration.gradient, isA<LinearGradient>());
     await tester.tap(find.text('Top bar action'));
     expect(tapCount, 1);
 
@@ -55,6 +69,10 @@ void main() {
 
     Widget buildOverlay() {
       return MaterialApp(
+        theme: buildAppTheme(
+          colorTheme: AppColorTheme.indigo,
+          brightness: Brightness.light,
+        ),
         home: Scaffold(
           body: Stack(
             children: [

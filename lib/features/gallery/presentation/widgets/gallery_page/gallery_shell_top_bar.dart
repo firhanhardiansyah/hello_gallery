@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -53,6 +54,93 @@ class GalleryShellTopBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isSelecting = !isPreview && selectedItemCount > 0;
     final platform = windowPlatform ?? currentDesktopWindowPlatform;
+    final titleBar = DesktopWindowTitleBar(
+      platform: platform,
+      backgroundColor: isPreview
+          ? Colors.transparent
+          : Theme.of(context).scaffoldBackgroundColor,
+      reserveMacOSWindowButtons: !sidebarVisible,
+      showWindowsCaptionControls: !isFullscreen,
+      windowsCaptionControls: isPreview
+          ? const DesktopWindowsCaptionControls(brightness: Brightness.dark)
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        child: Row(
+          children: [
+            GalleryNavigationControls(
+              sidebarVisible: sidebarVisible,
+              onToggleSidebar: onToggleSidebar,
+              backTooltip: isPreview ? 'Back to gallery' : 'Back',
+              onBack: isPreview
+                  ? onClosePreview
+                  : gallery.canGoBack
+                  ? ref.read(galleryNotifierProvider.notifier).goBack
+                  : null,
+              onForward: !isPreview && gallery.canGoForward
+                  ? ref.read(galleryNotifierProvider.notifier).goForward
+                  : null,
+              overlayStyle: isPreview,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            if (isSelecting)
+              ..._buildSelectionActions(context)
+            else ...[
+              Expanded(
+                child: isPreview
+                    ? Text(
+                        previewTitle ?? 'Media detail',
+                        key: const ValueKey('preview-title'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: context.appColors.onMedia,
+                              shadows: [
+                                Shadow(
+                                  color: context.appColors.shadow,
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                      )
+                    : GalleryBreadcrumb(
+                        rootPath: gallery.rootPath,
+                        currentPath: gallery.currentPath,
+                        onPathSelected: ref
+                            .read(galleryNotifierProvider.notifier)
+                            .openDirectory,
+                      ),
+              ),
+
+              if (!isPreview) ...[
+                IconButton(
+                  tooltip: 'New folder',
+                  onPressed:
+                      gallery.currentPath != null && gallery.canManageDirectory
+                      ? onCreateFolder
+                      : null,
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolderAdd),
+                ),
+                IconButton(
+                  tooltip: 'Group media',
+                  onPressed: gallery.isReady ? onGroupMedia : null,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedFolderMoveIn,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                const GalleryViewOptionsMenu(),
+                const SizedBox(width: AppSpacing.xs),
+                const AppearanceThemeMenu(),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+    if (isPreview) return titleBar;
     return DecoratedBox(
       key: const ValueKey('gallery-shell-top-bar-border'),
       position: DecorationPosition.foreground,
@@ -61,78 +149,7 @@ class GalleryShellTopBar extends ConsumerWidget {
           bottom: BorderSide(color: Theme.of(context).dividerColor, width: .3),
         ),
       ),
-      child: DesktopWindowTitleBar(
-        platform: platform,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        reserveMacOSWindowButtons: !sidebarVisible,
-        showWindowsCaptionControls: !isFullscreen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          child: Row(
-            children: [
-              GalleryNavigationControls(
-                sidebarVisible: sidebarVisible,
-                onToggleSidebar: onToggleSidebar,
-                backTooltip: isPreview ? 'Back to gallery' : 'Back',
-                onBack: isPreview
-                    ? onClosePreview
-                    : gallery.canGoBack
-                    ? ref.read(galleryNotifierProvider.notifier).goBack
-                    : null,
-                onForward: !isPreview && gallery.canGoForward
-                    ? ref.read(galleryNotifierProvider.notifier).goForward
-                    : null,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              if (isSelecting)
-                ..._buildSelectionActions(context)
-              else ...[
-                Expanded(
-                  child: isPreview
-                      ? Text(
-                          previewTitle ?? 'Media detail',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        )
-                      : GalleryBreadcrumb(
-                          rootPath: gallery.rootPath,
-                          currentPath: gallery.currentPath,
-                          onPathSelected: ref
-                              .read(galleryNotifierProvider.notifier)
-                              .openDirectory,
-                        ),
-                ),
-
-                if (!isPreview) ...[
-                  IconButton(
-                    tooltip: 'New folder',
-                    onPressed:
-                        gallery.currentPath != null &&
-                            gallery.canManageDirectory
-                        ? onCreateFolder
-                        : null,
-                    icon: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedFolderAdd,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Group media',
-                    onPressed: gallery.isReady ? onGroupMedia : null,
-                    icon: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedFolderMoveIn,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  const GalleryViewOptionsMenu(),
-                  const SizedBox(width: AppSpacing.xs),
-                  const AppearanceThemeMenu(),
-                ],
-              ],
-            ],
-          ),
-        ),
-      ),
+      child: titleBar,
     );
   }
 

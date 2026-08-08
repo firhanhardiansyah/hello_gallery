@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
+import 'package:hello_gallery/core/widgets/media_overlay_icon_button.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 class GalleryNavigationControls extends StatelessWidget {
@@ -8,6 +10,7 @@ class GalleryNavigationControls extends StatelessWidget {
     required this.backTooltip,
     required this.onBack,
     required this.onForward,
+    this.overlayStyle = false,
     super.key,
   });
 
@@ -16,31 +19,57 @@ class GalleryNavigationControls extends StatelessWidget {
   final String backTooltip;
   final VoidCallback? onBack;
   final VoidCallback? onForward;
+  final bool overlayStyle;
 
   @override
-  Widget build(BuildContext context) => Row(
-    key: const ValueKey('gallery-navigation-controls'),
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      IconButton(
+  Widget build(BuildContext context) {
+    final buttons = <Widget>[
+      _buildButton(
         tooltip: sidebarVisible ? 'Hide sidebar' : 'Show sidebar',
         onPressed: onToggleSidebar,
-        icon: HugeIcon(
-          icon: sidebarVisible
-              ? HugeIcons.strokeRoundedSidebarLeft
-              : HugeIcons.strokeRoundedPanelLeftOpen,
-        ),
+        icon: sidebarVisible
+            ? HugeIcons.strokeRoundedSidebarLeft
+            : HugeIcons.strokeRoundedPanelLeftOpen,
       ),
-      IconButton(
+      _buildButton(
         tooltip: backTooltip,
         onPressed: onBack,
-        icon: const HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft02),
+        icon: HugeIcons.strokeRoundedArrowLeft02,
       ),
-      IconButton(
+      _buildButton(
         tooltip: 'Forward',
         onPressed: onForward,
-        icon: const HugeIcon(icon: HugeIcons.strokeRoundedArrowRight02),
+        icon: HugeIcons.strokeRoundedArrowRight02,
       ),
-    ],
-  );
+    ];
+    return Row(
+      key: const ValueKey('gallery-navigation-controls'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < buttons.length; index++) ...[
+          if (overlayStyle && index > 0) const SizedBox(width: AppSpacing.xs),
+          buttons[index],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildButton({
+    required String tooltip,
+    required VoidCallback? onPressed,
+    required List<List<dynamic>> icon,
+  }) {
+    if (overlayStyle) {
+      return MediaOverlayIconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: icon,
+      );
+    }
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: HugeIcon(icon: icon),
+    );
+  }
 }

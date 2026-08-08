@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/app/theme/app_theme.dart';
+import 'package:hello_gallery/core/widgets/media_overlay_icon_button.dart';
 import 'package:hello_gallery/features/media_preview/presentation/notifiers/media_preview_notifier.dart';
 import 'package:hello_gallery/features/media_preview/presentation/states/media_preview_ui_state.dart';
 import 'package:hello_gallery/features/media_preview/presentation/widgets/video_controls.dart';
@@ -61,6 +62,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('00:00 / 01:00'), findsOneWidget);
+    expect(find.byType(MediaOverlayIconButton), findsNWidgets(2));
     final loopButton = find.byTooltip('Loop video');
     final rotateButton = find.byTooltip('Rotate clockwise');
     final rotationLockButton = find.byTooltip('Lock rotation');

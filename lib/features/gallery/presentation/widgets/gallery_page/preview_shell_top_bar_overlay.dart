@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hello_gallery/core/theme/app_color_tokens.dart';
+import 'package:hello_gallery/core/theme/app_spacing.dart';
 
 class PreviewShellTopBarOverlay extends StatefulWidget {
   const PreviewShellTopBarOverlay({
@@ -41,7 +43,23 @@ class _PreviewShellTopBarOverlayState extends State<PreviewShellTopBarOverlay> {
               key: const ValueKey('preview-shell-top-bar-mouse-region'),
               onEnter: (_) => setState(() => _isHovered = true),
               onExit: (_) => setState(() => _isHovered = false),
-              child: widget.child,
+              child: DecoratedBox(
+                key: const ValueKey('preview-shell-top-bar-gradient'),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      context.appColors.mediaOverlay.withValues(alpha: 0.58),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: widget.child,
+                ),
+              ),
             ),
           ),
         ),

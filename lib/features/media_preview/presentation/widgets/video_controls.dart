@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
+import 'package:hello_gallery/core/widgets/media_overlay_icon_button.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../notifiers/media_preview_notifier.dart';
@@ -177,18 +178,12 @@ class VideoControls extends ConsumerWidget {
     required VoidCallback onPressed,
     Color? color,
   }) {
-    final appColors = context.appColors;
-
-    return IconButton(
+    return MediaOverlayIconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      style: IconButton.styleFrom(
-        fixedSize: const Size.square(_controlSize),
-        backgroundColor: _surfaceColor(context),
-        hoverColor: appColors.mediaControlSurface.withValues(alpha: 0.2),
-        highlightColor: appColors.mediaControlSurface.withValues(alpha: 0.3),
-      ),
-      icon: HugeIcon(icon: icon, color: color ?? appColors.onMedia),
+      icon: icon,
+      color: color,
+      size: _controlSize,
     );
   }
 

@@ -157,7 +157,9 @@ class _DesktopDragToMoveAreaState extends State<DesktopDragToMoveArea> {
 }
 
 class DesktopWindowsCaptionControls extends StatefulWidget {
-  const DesktopWindowsCaptionControls({super.key});
+  const DesktopWindowsCaptionControls({this.brightness, super.key});
+
+  final Brightness? brightness;
 
   @override
   State<DesktopWindowsCaptionControls> createState() =>
@@ -195,7 +197,7 @@ class _DesktopWindowsCaptionControlsState
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
+    final brightness = widget.brightness ?? Theme.of(context).brightness;
     return Row(
       key: const ValueKey('windows-caption-controls'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
