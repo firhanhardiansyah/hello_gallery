@@ -85,6 +85,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onClose: _closePreview,
       onEscape: _closePreview,
       onRequestFocus: _focusNode.requestFocus,
+      onGamepadInteraction: _scheduleGamepadAutoHide,
     )..start();
     Future.microtask(() async {
       if (!mounted) return;
@@ -145,6 +146,15 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       setState(() => _controlsVisible = false);
     }
     widget.onControlsVisibilityChanged?.call(false);
+  }
+
+  void _scheduleGamepadAutoHide() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(MediaPreviewTiming.controlsAutoHide, () {
+      if (!mounted) return;
+      if (_controlsVisible) setState(() => _controlsVisible = false);
+      widget.onControlsVisibilityChanged?.call(false);
+    });
   }
 
   void _toggleSidebar() => widget.onToggleSidebar?.call();

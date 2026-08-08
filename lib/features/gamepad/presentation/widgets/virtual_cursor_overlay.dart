@@ -8,9 +8,16 @@ import 'package:gamepads/gamepads.dart';
 import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 
 class VirtualCursorOverlay extends StatefulWidget {
-  const VirtualCursorOverlay({required this.child, super.key});
+  const VirtualCursorOverlay({
+    required this.child,
+    this.gamepadEvents,
+    this.idleTimeout = const Duration(seconds: 3),
+    super.key,
+  });
 
   final Widget child;
+  final Stream<NormalizedGamepadEvent>? gamepadEvents;
+  final Duration idleTimeout;
 
   @override
   State<VirtualCursorOverlay> createState() => _VirtualCursorOverlayState();
@@ -37,28 +44,22 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
   bool _pointerAdded = false;
   bool _visible = false;
   bool _usingGamepadPointer = false;
-  DateTime _lastActivity = DateTime.now();
+  Duration _lastActivity = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick)..start();
-    _subscription = Gamepads.normalizedEvents.listen(_onGamepadEvent);
+    _subscription = (widget.gamepadEvents ?? Gamepads.normalizedEvents).listen(
+      _onGamepadEvent,
+    );
   }
 
   @override
   void dispose() {
     _ticker.dispose();
     unawaited(_subscription?.cancel());
-    if (_pointerAdded) {
-      GestureBinding.instance.handlePointerEvent(
-        const PointerRemovedEvent(
-          pointer: _deviceId,
-          device: _deviceId,
-          kind: PointerDeviceKind.mouse,
-        ),
-      );
-    }
+    _removeVirtualPointer();
     super.dispose();
   }
 
@@ -103,8 +104,8 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     if (x == 0 && y == 0 && scrollX == 0 && scrollY == 0) {
       if (_visible &&
           !_primaryPressed &&
-          DateTime.now().difference(_lastActivity) >
-              const Duration(seconds: 3)) {
+          elapsed - _lastActivity > widget.idleTimeout) {
+        _removeVirtualPointer();
         setState(() => _visible = false);
       }
       return;
@@ -119,7 +120,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     );
     final actualDelta = next - _position;
     _position = next;
-    _lastActivity = DateTime.now();
+    _lastActivity = elapsed;
     if (!_visible) setState(() => _visible = true);
     if (actualDelta != Offset.zero) _dispatchMove(actualDelta);
     if (scrollX != 0 || scrollY != 0) {
@@ -144,7 +145,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     if (_viewportSize.isEmpty) return;
     _activateGamepadPointer();
     _position = Offset(_viewportSize.width / 2, _viewportSize.height / 2);
-    _lastActivity = DateTime.now();
+    _lastActivity = _lastTick ?? Duration.zero;
     setState(() => _visible = true);
     _dispatchMove(Offset.zero);
   }
@@ -154,7 +155,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     _activateGamepadPointer();
     _ensurePointerAdded();
     _primaryPressed = pressed;
-    _lastActivity = DateTime.now();
+    _lastActivity = _lastTick ?? Duration.zero;
     if (!_visible) setState(() => _visible = true);
     final globalPosition = _globalPosition;
     GestureBinding.instance.handlePointerEvent(
@@ -213,6 +214,19 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
     _pointerAdded = true;
     GestureBinding.instance.handlePointerEvent(
       PointerAddedEvent(
+        pointer: _deviceId,
+        device: _deviceId,
+        position: _globalPosition,
+        kind: PointerDeviceKind.mouse,
+      ),
+    );
+  }
+
+  void _removeVirtualPointer() {
+    if (!_pointerAdded) return;
+    _pointerAdded = false;
+    GestureBinding.instance.handlePointerEvent(
+      PointerRemovedEvent(
         pointer: _deviceId,
         device: _deviceId,
         position: _globalPosition,

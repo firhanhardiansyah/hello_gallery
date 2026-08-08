@@ -20,6 +20,7 @@ void main() {
     var topBarCount = 0;
     var escapeCount = 0;
     var focusCount = 0;
+    var gamepadInteractionCount = 0;
     var primaryModifierPressed = false;
     final handler = MediaPreviewInputHandler(
       onPrevious: _noop,
@@ -38,6 +39,7 @@ void main() {
       onClose: () => closeCount++,
       onEscape: () => escapeCount++,
       onRequestFocus: () => focusCount++,
+      onGamepadInteraction: () => gamepadInteractionCount++,
       isPrimaryModifierPressed: () => primaryModifierPressed,
     );
     addTearDown(handler.dispose);
@@ -59,6 +61,8 @@ void main() {
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.b));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.touchpad));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.dpadLeft));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.a));
     handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.rightTrigger));
     handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.rightTrigger));
     handler.handleGamepadEvent(
@@ -71,7 +75,7 @@ void main() {
     handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.leftTrigger));
 
     expect(nextCount, 1);
-    expect(seekBackwardCount, 1);
+    expect(seekBackwardCount, 2);
     expect(muteCount, 1);
     expect(rotateCount, 3);
     expect(rotationLockCount, 3);
@@ -83,6 +87,7 @@ void main() {
     expect(topBarCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);
+    expect(gamepadInteractionCount, 6);
   });
 
   testWidgets('uses unclaimed pointer scroll for media navigation', (
@@ -106,6 +111,7 @@ void main() {
       onClose: _noop,
       onEscape: _noop,
       onRequestFocus: _noop,
+      onGamepadInteraction: _noop,
     );
     addTearDown(handler.dispose);
 

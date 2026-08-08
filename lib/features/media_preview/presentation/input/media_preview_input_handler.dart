@@ -25,6 +25,7 @@ final class MediaPreviewInputHandler {
     required this.onClose,
     required this.onEscape,
     required this.onRequestFocus,
+    required this.onGamepadInteraction,
     bool Function()? isPrimaryModifierPressed,
   }) : _isPrimaryModifierPressed =
            isPrimaryModifierPressed ?? _defaultPrimaryModifierPressed;
@@ -45,6 +46,7 @@ final class MediaPreviewInputHandler {
   final VoidCallback onClose;
   final VoidCallback onEscape;
   final VoidCallback onRequestFocus;
+  final VoidCallback onGamepadInteraction;
   final bool Function() _isPrimaryModifierPressed;
 
   final _scrollInput = MediaPreviewScrollInput();
@@ -102,14 +104,16 @@ final class MediaPreviewInputHandler {
     if (button == GamepadButton.leftTrigger ||
         axis == GamepadAxis.leftTrigger) {
       final pressed = event.value >= 0.5;
-      if (pressed && !_leftTriggerPressed) onToggleRotationLock();
+      if (pressed && !_leftTriggerPressed) {
+        _runGamepadAction(onToggleRotationLock);
+      }
       _leftTriggerPressed = pressed;
       return;
     }
     if (button == GamepadButton.rightTrigger ||
         axis == GamepadAxis.rightTrigger) {
       final pressed = event.value >= 0.5;
-      if (pressed && !_rightTriggerPressed) onRotate();
+      if (pressed && !_rightTriggerPressed) _runGamepadAction(onRotate);
       _rightTriggerPressed = pressed;
       return;
     }
@@ -120,13 +124,13 @@ final class MediaPreviewInputHandler {
       case GamepadButton.dpadDown:
         onNext();
       case GamepadButton.dpadLeft:
-        onSeekBackward();
+        _runGamepadAction(onSeekBackward);
       case GamepadButton.dpadRight:
-        onSeekForward();
+        _runGamepadAction(onSeekForward);
       case GamepadButton.a:
-        onTogglePlay();
+        _runGamepadAction(onTogglePlay);
       case GamepadButton.x:
-        onToggleMute();
+        _runGamepadAction(onToggleMute);
       case GamepadButton.y:
       case GamepadButton.start:
         onToggleFullscreen();
@@ -144,6 +148,11 @@ final class MediaPreviewInputHandler {
       case GamepadButton.rightStick:
         return;
     }
+  }
+
+  void _runGamepadAction(VoidCallback action) {
+    action();
+    onGamepadInteraction();
   }
 
   KeyEventResult handleKeyEvent(KeyEvent event) {
