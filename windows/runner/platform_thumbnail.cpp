@@ -3,6 +3,9 @@
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
 #include <propkey.h>
 #include <shobjidl.h>
 #include <wincodec.h>
@@ -129,6 +132,33 @@ std::vector<uint8_t> GetShellThumbnail(const std::string& path, int size) {
 
 std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
     const std::string& path) {
+  const HRESULT startup_result = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+  if (SUCCEEDED(startup_result)) {
+    ComPtr<IMFSourceReader> reader;
+    ComPtr<IMFMediaType> media_type;
+    const std::wstring wide_path = Utf8ToWide(path);
+    if (SUCCEEDED(MFCreateSourceReaderFromURL(wide_path.c_str(), nullptr,
+                                              &reader)) &&
+        SUCCEEDED(reader->GetNativeMediaType(
+            MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, &media_type))) {
+      UINT32 width = 0;
+      UINT32 height = 0;
+      if (SUCCEEDED(MFGetAttributeSize(media_type.Get(), MF_MT_FRAME_SIZE,
+                                       &width, &height)) &&
+          width > 0 && height > 0) {
+        UINT32 rotation = MFVideoRotationFormat_0;
+        if (SUCCEEDED(media_type->GetUINT32(MF_MT_VIDEO_ROTATION, &rotation)) &&
+            (rotation == MFVideoRotationFormat_90 ||
+             rotation == MFVideoRotationFormat_270)) {
+          std::swap(width, height);
+        }
+        MFShutdown();
+        return std::pair<uint64_t, uint64_t>(width, height);
+      }
+    }
+    MFShutdown();
+  }
+
   ComPtr<IShellItem2> shell_item;
   const std::wstring wide_path = Utf8ToWide(path);
   if (FAILED(SHCreateItemFromParsingName(wide_path.c_str(), nullptr,
@@ -142,6 +172,12 @@ std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
       FAILED(shell_item->GetUInt64(PKEY_Video_FrameHeight, &height)) ||
       width == 0 || height == 0) {
     return std::nullopt;
+  }
+  UINT32 orientation = 1;
+  if (SUCCEEDED(
+          shell_item->GetUInt32(PKEY_Photo_Orientation, &orientation)) &&
+      orientation >= 5 && orientation <= 8) {
+    std::swap(width, height);
   }
   return std::pair<uint64_t, uint64_t>(width, height);
 }

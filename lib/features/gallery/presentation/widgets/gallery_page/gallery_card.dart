@@ -17,6 +17,7 @@ import '../media_management/media_context_menu.dart';
 
 const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
 const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));
+const _maximumMasonryLandscapeAspectRatio = 4 / 3;
 
 class GalleryCard extends ConsumerStatefulWidget {
   const GalleryCard({
@@ -95,9 +96,12 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
     final resolvedAspectRatio = useOriginalAspectRatio && item is MediaItem
         ? ref.watch(mediaAspectRatioProvider(item)).value
         : null;
-    if (resolvedAspectRatio != null &&
+    final displayAspectRatio = resolvedAspectRatio == null
+        ? null
+        : _masonryDisplayAspectRatio(resolvedAspectRatio);
+    if (displayAspectRatio != null &&
         (!_hasBuilt || !widget.deferAspectRatioUpdates)) {
-      _displayedAspectRatio = resolvedAspectRatio;
+      _displayedAspectRatio = displayAspectRatio;
     }
     final previewAspectRatio = useOriginalAspectRatio
         ? switch (item) {
@@ -180,6 +184,14 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
       );
     }
     return result;
+  }
+
+  double _masonryDisplayAspectRatio(double sourceAspectRatio) {
+    if (sourceAspectRatio <= 1 ||
+        sourceAspectRatio <= _maximumMasonryLandscapeAspectRatio) {
+      return sourceAspectRatio;
+    }
+    return _maximumMasonryLandscapeAspectRatio;
   }
 }
 

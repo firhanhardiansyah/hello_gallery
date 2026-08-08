@@ -60,31 +60,34 @@ void main() {
     expect(dimensions?.aspectRatio, closeTo(9 / 16, 0.0001));
   });
 
-  test('prefers native video dimensions over the thumbnail', () async {
-    var fallbackReadCount = 0;
-    final repository = MediaDimensionsRepositoryImpl(
-      reader: (_) async {
-        fallbackReadCount++;
-        return const MediaDimensions(width: 1080, height: 1920);
-      },
-      videoReader: (_) async =>
-          const MediaDimensions(width: 1920, height: 1080),
-    );
-    final item = MediaItem(
-      path: '/gallery/video.mp4',
-      name: 'video.mp4',
-      modifiedAt: DateTime(2026),
-      mediaType: GalleryItemType.video,
-    );
+  test(
+    'keeps native portrait orientation over a landscape thumbnail',
+    () async {
+      var fallbackReadCount = 0;
+      final repository = MediaDimensionsRepositoryImpl(
+        reader: (_) async {
+          fallbackReadCount++;
+          return const MediaDimensions(width: 1920, height: 1080);
+        },
+        videoReader: (_) async =>
+            const MediaDimensions(width: 1080, height: 1920),
+      );
+      final item = MediaItem(
+        path: '/gallery/video.mp4',
+        name: 'video.mp4',
+        modifiedAt: DateTime(2026),
+        mediaType: GalleryItemType.video,
+      );
 
-    final dimensions = await repository.getDimensions(
-      item,
-      videoThumbnailPath: '/cache/video.jpg',
-    );
+      final dimensions = await repository.getDimensions(
+        item,
+        videoThumbnailPath: '/cache/video.jpg',
+      );
 
-    expect(dimensions?.aspectRatio, closeTo(16 / 9, 0.0001));
-    expect(fallbackReadCount, 0);
-  });
+      expect(dimensions?.aspectRatio, closeTo(9 / 16, 0.0001));
+      expect(fallbackReadCount, 0);
+    },
+  );
 
   test('reads dimensions without decoding the full image in the UI', () async {
     final directory = await Directory.systemTemp.createTemp(

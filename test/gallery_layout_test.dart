@@ -119,7 +119,7 @@ void main() {
     final landscape = tester.getRect(find.byType(GalleryCard).at(0));
     final portrait = tester.getRect(find.byType(GalleryCard).at(1));
     expect(landscape.width, closeTo(portrait.width, 0.01));
-    expect(landscape.width / landscape.height, closeTo(2, 0.01));
+    expect(landscape.width / landscape.height, closeTo(4 / 3, 0.01));
     expect(portrait.width / portrait.height, closeTo(0.5, 0.01));
   });
 
@@ -167,6 +167,6 @@ void main() {
     await tester.pumpWidget(card(deferAspectRatioUpdates: false));
     await tester.pump();
     final afterScroll = tester.getRect(preview);
-    expect(afterScroll.width / afterScroll.height, closeTo(2, 0.01));
+    expect(afterScroll.width / afterScroll.height, closeTo(4 / 3, 0.01));
   });
 }
