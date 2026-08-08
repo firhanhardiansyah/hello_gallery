@@ -140,16 +140,17 @@ std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
     if (SUCCEEDED(MFCreateSourceReaderFromURL(wide_path.c_str(), nullptr,
                                               &reader)) &&
         SUCCEEDED(reader->GetNativeMediaType(
-            MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, &media_type))) {
+            static_cast<DWORD>(MF_SOURCE_READER_FIRST_VIDEO_STREAM), 0,
+            &media_type))) {
       UINT32 width = 0;
       UINT32 height = 0;
       if (SUCCEEDED(MFGetAttributeSize(media_type.Get(), MF_MT_FRAME_SIZE,
                                        &width, &height)) &&
           width > 0 && height > 0) {
-        UINT32 rotation = MFVideoRotationFormat_0;
+        UINT32 rotation = static_cast<UINT32>(MFVideoRotationFormat_0);
         if (SUCCEEDED(media_type->GetUINT32(MF_MT_VIDEO_ROTATION, &rotation)) &&
-            (rotation == MFVideoRotationFormat_90 ||
-             rotation == MFVideoRotationFormat_270)) {
+            (rotation == static_cast<UINT32>(MFVideoRotationFormat_90) ||
+             rotation == static_cast<UINT32>(MFVideoRotationFormat_270))) {
           std::swap(width, height);
         }
         MFShutdown();
@@ -173,7 +174,7 @@ std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
       width == 0 || height == 0) {
     return std::nullopt;
   }
-  UINT32 orientation = 1;
+  ULONG orientation = 1;
   if (SUCCEEDED(
           shell_item->GetUInt32(PKEY_Photo_Orientation, &orientation)) &&
       orientation >= 5 && orientation <= 8) {
