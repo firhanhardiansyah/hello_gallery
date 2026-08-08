@@ -18,7 +18,7 @@ import '../media_management/media_context_menu.dart';
 const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
 const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));
 
-class GalleryCard extends ConsumerWidget {
+class GalleryCard extends ConsumerStatefulWidget {
   const GalleryCard({
     required this.item,
     required this.onTap,
@@ -27,6 +27,7 @@ class GalleryCard extends ConsumerWidget {
     this.focused = false,
     this.showItemName = true,
     this.useOriginalAspectRatio = false,
+    this.deferAspectRatioUpdates = false,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.onRenameMedia,
@@ -45,6 +46,7 @@ class GalleryCard extends ConsumerWidget {
   final bool focused;
   final bool showItemName;
   final bool useOriginalAspectRatio;
+  final bool deferAspectRatioUpdates;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
   final VoidCallback? onRenameMedia;
@@ -55,15 +57,55 @@ class GalleryCard extends ConsumerWidget {
   final ValueChanged<MediaDragPayload>? onMediaDropped;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GalleryCard> createState() => _GalleryCardState();
+}
+
+class _GalleryCardState extends ConsumerState<GalleryCard> {
+  double? _displayedAspectRatio;
+  bool _hasBuilt = false;
+
+  @override
+  void didUpdateWidget(covariant GalleryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item != widget.item ||
+        oldWidget.useOriginalAspectRatio != widget.useOriginalAspectRatio) {
+      _displayedAspectRatio = null;
+      _hasBuilt = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    final onTap = widget.onTap;
+    final onDoubleTap = widget.onDoubleTap;
+    final selected = widget.selected;
+    final focused = widget.focused;
+    final showItemName = widget.showItemName;
+    final useOriginalAspectRatio = widget.useOriginalAspectRatio;
+    final onRenameFolder = widget.onRenameFolder;
+    final onDeleteFolder = widget.onDeleteFolder;
+    final onRenameMedia = widget.onRenameMedia;
+    final onDeleteMedia = widget.onDeleteMedia;
+    final onMediaContextMenuOpened = widget.onMediaContextMenuOpened;
+    final dragPayload = widget.dragPayload;
+    final onDragStarted = widget.onDragStarted;
+    final onMediaDropped = widget.onMediaDropped;
+
+    final resolvedAspectRatio = useOriginalAspectRatio && item is MediaItem
+        ? ref.watch(mediaAspectRatioProvider(item)).value
+        : null;
+    if (resolvedAspectRatio != null &&
+        (!_hasBuilt || !widget.deferAspectRatioUpdates)) {
+      _displayedAspectRatio = resolvedAspectRatio;
+    }
     final previewAspectRatio = useOriginalAspectRatio
         ? switch (item) {
-            final MediaItem media =>
-              ref.watch(mediaAspectRatioProvider(media)).value ??
-                  fallbackMediaAspectRatio,
+            MediaItem() => _displayedAspectRatio ?? fallbackMediaAspectRatio,
             GalleryFolder() => fallbackMediaAspectRatio,
           }
         : null;
+    _hasBuilt = true;
 
     Widget buildCard({bool dropHighlighted = false}) => _GalleryCardSurface(
       item: item,
@@ -85,8 +127,8 @@ class GalleryCard extends ConsumerWidget {
           onSecondaryTapDown: (details) => showFolderContextMenu(
             context: context,
             globalPosition: details.globalPosition,
-            onRename: onRenameFolder!,
-            onMoveToTrash: onDeleteFolder!,
+            onRename: onRenameFolder,
+            onMoveToTrash: onDeleteFolder,
           ),
           child: child,
         );
@@ -100,7 +142,7 @@ class GalleryCard extends ConsumerWidget {
               context: context,
               globalPosition: details.globalPosition,
               onRename: onRenameMedia,
-              onMoveToTrash: onDeleteMedia!,
+              onMoveToTrash: onDeleteMedia,
             );
           },
           child: child,
@@ -115,7 +157,7 @@ class GalleryCard extends ConsumerWidget {
         onWillAcceptWithDetails: (details) => details.data.items.any(
           (media) => !path.equals(path.dirname(media.path), folder.path),
         ),
-        onAcceptWithDetails: (details) => onMediaDropped!(details.data),
+        onAcceptWithDetails: (details) => onMediaDropped(details.data),
         builder: (context, candidates, rejected) =>
             withContextMenu(buildCard(dropHighlighted: candidates.isNotEmpty)),
       );

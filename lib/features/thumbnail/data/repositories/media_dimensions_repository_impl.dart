@@ -13,14 +13,18 @@ import '../../domain/value_objects/media_dimensions.dart';
 typedef MediaDimensionsReader = Future<MediaDimensions?> Function(String path);
 
 final class MediaDimensionsRepositoryImpl implements MediaDimensionsRepository {
-  MediaDimensionsRepositoryImpl({MediaDimensionsReader? reader})
-    : _reader = reader ?? _readDimensionsInBackground;
+  MediaDimensionsRepositoryImpl({
+    MediaDimensionsReader? reader,
+    MediaDimensionsReader? videoReader,
+  }) : _reader = reader ?? _readDimensionsInBackground,
+       _videoReader = videoReader ?? _readNoDimensions;
 
   static const _maximumConcurrentReads = 2;
   static const _maximumQueuedReads = 48;
   static const _maximumCachedDimensions = 4096;
 
   final MediaDimensionsReader _reader;
+  final MediaDimensionsReader _videoReader;
   final Queue<_DimensionsJob> _queue = Queue();
   final Map<String, _DimensionsJob> _pending = {};
   final LinkedHashMap<String, MediaDimensions> _cache = LinkedHashMap();
@@ -31,8 +35,6 @@ final class MediaDimensionsRepositoryImpl implements MediaDimensionsRepository {
     MediaItem item, {
     String? videoThumbnailPath,
   }) {
-    final sourcePath = item.isVideo ? videoThumbnailPath : item.path;
-    if (sourcePath == null) return Future.value();
     final key = _cacheKey(item);
     final cached = _cache.remove(key);
     if (cached != null) {
@@ -42,7 +44,11 @@ final class MediaDimensionsRepositoryImpl implements MediaDimensionsRepository {
     final pending = _pending[key];
     if (pending != null) return pending.completer.future;
 
-    final job = _DimensionsJob(key: key, sourcePath: sourcePath);
+    final job = _DimensionsJob(
+      key: key,
+      item: item,
+      fallbackSourcePath: item.isVideo ? videoThumbnailPath : item.path,
+    );
     _pending[key] = job;
     _queue.add(job);
     _trimQueue();
@@ -66,12 +72,20 @@ final class MediaDimensionsRepositoryImpl implements MediaDimensionsRepository {
 
   Future<void> _read(_DimensionsJob job) async {
     try {
-      final dimensions = await _reader(job.sourcePath);
+      final nativeDimensions = job.item.isVideo
+          ? await _videoReader(job.item.path)
+          : null;
+      final fallbackSourcePath = job.fallbackSourcePath;
+      final dimensions =
+          nativeDimensions ??
+          (fallbackSourcePath == null
+              ? null
+              : await _reader(fallbackSourcePath));
       if (dimensions != null) _remember(job.key, dimensions);
       if (!job.completer.isCompleted) job.completer.complete(dimensions);
     } catch (error, stackTrace) {
       debugPrint(
-        'Could not read media dimensions for ${job.sourcePath}: $error',
+        'Could not read media dimensions for ${job.item.path}: $error',
       );
       debugPrintStack(stackTrace: stackTrace);
       if (!job.completer.isCompleted) job.completer.complete(null);
@@ -102,15 +116,22 @@ final class MediaDimensionsRepositoryImpl implements MediaDimensionsRepository {
 }
 
 final class _DimensionsJob {
-  _DimensionsJob({required this.key, required this.sourcePath});
+  _DimensionsJob({
+    required this.key,
+    required this.item,
+    required this.fallbackSourcePath,
+  });
 
   final String key;
-  final String sourcePath;
+  final MediaItem item;
+  final String? fallbackSourcePath;
   final completer = Completer<MediaDimensions?>();
 }
 
 Future<MediaDimensions?> _readDimensionsInBackground(String path) =>
     compute(_readDimensions, path);
+
+Future<MediaDimensions?> _readNoDimensions(String path) => Future.value();
 
 Future<MediaDimensions?> _readDimensions(String path) async {
   const maximumHeaderBytes = 4 * 1024 * 1024;
@@ -124,7 +145,15 @@ Future<MediaDimensions?> _readDimensions(String path) async {
         image.findDecoderForNamedImage(path) ?? image.findDecoderForData(bytes);
     final info = decoder?.startDecode(bytes);
     if (info == null || info.width <= 0 || info.height <= 0) return null;
-    return MediaDimensions(width: info.width, height: info.height);
+    var width = info.width;
+    var height = info.height;
+    final orientation = image.decodeJpgExif(bytes)?.imageIfd.orientation;
+    if (orientation != null && orientation >= 5 && orientation <= 8) {
+      final originalWidth = width;
+      width = height;
+      height = originalWidth;
+    }
+    return MediaDimensions(width: width, height: height);
   } finally {
     await handle.close();
   }

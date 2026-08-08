@@ -3,6 +3,7 @@ export 'actions/gallery_media_actions.dart';
 export 'actions/gallery_media_cache_invalidator.dart';
 export 'coordinators/gallery_auto_sync_coordinator.dart';
 export 'coordinators/gallery_preview_coordinator.dart';
+export 'coordinators/gallery_scroll_restorer.dart';
 export 'input/gallery_input_handler.dart';
 export 'input/gallery_page_input_actions.dart';
 export 'notifiers/gallery_notifier.dart';

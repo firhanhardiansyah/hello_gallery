@@ -1,4 +1,5 @@
 import Cocoa
+import AVFoundation
 import FlutterMacOS
 import QuickLookThumbnailing
 
@@ -190,19 +191,34 @@ class MainFlutterWindow: NSWindow {
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     channel.setMethodCallHandler { call, result in
-      guard call.method == "getThumbnail" else {
+      guard call.method == "getThumbnail" || call.method == "getDimensions" else {
         result(FlutterMethodNotImplemented)
         return
       }
       guard
         let arguments = call.arguments as? [String: Any],
-        let filePath = arguments["path"] as? String,
-        let size = arguments["size"] as? Int
+        let filePath = arguments["path"] as? String
       else {
         result(
           FlutterError(
             code: "invalid_arguments",
-            message: "Missing or invalid path or size",
+            message: "Missing or invalid path",
+            details: nil
+          )
+        )
+        return
+      }
+
+      if call.method == "getDimensions" {
+        self.readVideoDimensions(at: filePath, result: result)
+        return
+      }
+
+      guard let size = arguments["size"] as? Int else {
+        result(
+          FlutterError(
+            code: "invalid_arguments",
+            message: "Missing or invalid size",
             details: nil
           )
         )
@@ -243,5 +259,28 @@ class MainFlutterWindow: NSWindow {
       }
     }
     platformThumbnailChannel = channel
+  }
+
+  private func readVideoDimensions(
+    at filePath: String,
+    result: @escaping FlutterResult
+  ) {
+    DispatchQueue.global(qos: .utility).async {
+      let asset = AVURLAsset(url: URL(fileURLWithPath: filePath))
+      guard let track = asset.tracks(withMediaType: .video).first else {
+        DispatchQueue.main.async { result(nil) }
+        return
+      }
+      let transformedSize = track.naturalSize.applying(track.preferredTransform)
+      let width = Int(abs(transformedSize.width).rounded())
+      let height = Int(abs(transformedSize.height).rounded())
+      DispatchQueue.main.async {
+        guard width > 0, height > 0 else {
+          result(nil)
+          return
+        }
+        result(["width": width, "height": height])
+      }
+    }
   }
 }

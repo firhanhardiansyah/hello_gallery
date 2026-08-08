@@ -80,6 +80,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   final _itemKeys = <String, GlobalKey>{};
   int _reportedColumnCount = 1;
   double _itemMainExtent = 0;
+  bool _isScrolling = false;
 
   @override
   void initState() {
@@ -120,9 +121,11 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     if (notification is ScrollStartNotification) {
       _thumbnailScheduler.setScrolling(true);
       _folderPreviewScheduler.setScrolling(true);
+      if (!_isScrolling) setState(() => _isScrolling = true);
     } else if (notification is ScrollEndNotification) {
       _thumbnailScheduler.setScrolling(false);
       _folderPreviewScheduler.setScrolling(false);
+      if (_isScrolling) setState(() => _isScrolling = false);
     }
     return false;
   }
@@ -211,7 +214,6 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         key: key,
         controller: widget.scrollController,
         padding: const EdgeInsets.all(_GalleryGridLayout.padding),
-        cacheExtent: 240,
         crossAxisCount: _reportedColumnCount,
         mainAxisSpacing: _GalleryGridLayout.spacing,
         crossAxisSpacing: _GalleryGridLayout.spacing,
@@ -332,6 +334,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           showItemName: widget.showItemNames,
           useOriginalAspectRatio:
               widget.layoutMode == GalleryLayoutMode.masonry,
+          deferAspectRatioUpdates:
+              widget.layoutMode == GalleryLayoutMode.masonry && _isScrolling,
           onRenameFolder: item is GalleryFolder && widget.onRenameFolder != null
               ? () => widget.onRenameFolder!(item.path)
               : null,

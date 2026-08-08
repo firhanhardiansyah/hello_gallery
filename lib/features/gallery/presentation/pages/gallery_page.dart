@@ -43,6 +43,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   late final GalleryFolderActions _folderActions;
   late final GalleryMediaActions _mediaActions;
   late final GalleryPreviewCoordinator _previewCoordinator;
+  late final GalleryScrollRestorer _scrollRestorer;
   late final GalleryAutoSyncCoordinator _autoSyncCoordinator;
   GallerySelectionState _selection = const GallerySelectionState();
   int _gridColumnCount = 1;
@@ -53,6 +54,11 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   void initState() {
     super.initState();
     _initializeActions();
+    _scrollRestorer = GalleryScrollRestorer(
+      scrollController: _scrollController,
+      isMounted: () => mounted,
+      isPreviewActive: () => _preview != null,
+    );
     _inputHandler = GalleryInputHandler(
       isEnabled: _isGalleryInputEnabled,
       isNavigationEnabled: _isHistoryNavigationEnabled,
@@ -92,6 +98,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
   @override
   void dispose() {
     _inputHandler.dispose();
+    _scrollRestorer.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -219,6 +226,9 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   void _setPreview(MediaPreviewSelection? preview) {
     if (!mounted) return;
+    final isOpeningPreview = preview != null && _preview == null;
+    final isClosingPreview = preview == null && _preview != null;
+    if (isOpeningPreview) _scrollRestorer.captureBeforePreview();
     setState(() {
       if (preview == null) {
         _preview = null;
@@ -236,6 +246,7 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
       if (_preview == null) _previewTopBarVisible = true;
       _preview = preview;
     });
+    if (isClosingPreview) _scrollRestorer.restoreAfterPreview();
   }
 
   void _openPreviewRoute(String mediaPath) {

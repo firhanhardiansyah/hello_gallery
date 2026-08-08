@@ -3,6 +3,7 @@
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include <propkey.h>
 #include <shobjidl.h>
 #include <wincodec.h>
 #include <windows.h>
@@ -11,8 +12,10 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -23,7 +26,7 @@ constexpr UINT kThumbnailReadyMessage = WM_APP + 0x51;
 
 struct PendingThumbnailResult {
   std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
-  std::vector<uint8_t> bytes;
+  flutter::EncodableValue value;
 };
 
 std::wstring Utf8ToWide(const std::string& value) {
@@ -124,6 +127,25 @@ std::vector<uint8_t> GetShellThumbnail(const std::string& path, int size) {
   return bytes;
 }
 
+std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
+    const std::string& path) {
+  ComPtr<IShellItem2> shell_item;
+  const std::wstring wide_path = Utf8ToWide(path);
+  if (FAILED(SHCreateItemFromParsingName(wide_path.c_str(), nullptr,
+                                         IID_PPV_ARGS(&shell_item)))) {
+    return std::nullopt;
+  }
+
+  ULONGLONG width = 0;
+  ULONGLONG height = 0;
+  if (FAILED(shell_item->GetUInt64(PKEY_Video_FrameWidth, &width)) ||
+      FAILED(shell_item->GetUInt64(PKEY_Video_FrameHeight, &height)) ||
+      width == 0 || height == 0) {
+    return std::nullopt;
+  }
+  return std::pair<uint64_t, uint64_t>(width, height);
+}
+
 }  // namespace
 
 void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
@@ -134,7 +156,9 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
           &flutter::StandardMethodCodec::GetInstance());
   channel->SetMethodCallHandler(
       [window](const auto& call, auto result) {
-        if (call.method_name() != "getThumbnail") {
+        const bool is_thumbnail = call.method_name() == "getThumbnail";
+        const bool is_dimensions = call.method_name() == "getDimensions";
+        if (!is_thumbnail && !is_dimensions) {
           result->NotImplemented();
           return;
         }
@@ -145,30 +169,60 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
           return;
         }
         const auto path_it = arguments->find(flutter::EncodableValue("path"));
-        const auto size_it = arguments->find(flutter::EncodableValue("size"));
-        if (path_it == arguments->end() || size_it == arguments->end()) {
-          result->Error("invalid_arguments", "Missing path or size");
+        if (path_it == arguments->end()) {
+          result->Error("invalid_arguments", "Missing path");
           return;
         }
         const auto* path = std::get_if<std::string>(&path_it->second);
-        const auto* size = std::get_if<int32_t>(&size_it->second);
-        if (path == nullptr || size == nullptr) {
-          result->Error("invalid_arguments", "Invalid path or size");
+        if (path == nullptr) {
+          result->Error("invalid_arguments", "Invalid path");
           return;
         }
         const auto requested_path = *path;
-        const auto requested_size = std::clamp(*size, 64, 1024);
-        std::thread([window, requested_path, requested_size,
+
+        int requested_size = 0;
+        if (is_thumbnail) {
+          const auto size_it =
+              arguments->find(flutter::EncodableValue("size"));
+          if (size_it == arguments->end()) {
+            result->Error("invalid_arguments", "Missing size");
+            return;
+          }
+          const auto* size = std::get_if<int32_t>(&size_it->second);
+          if (size == nullptr) {
+            result->Error("invalid_arguments", "Invalid size");
+            return;
+          }
+          requested_size = std::clamp(*size, 64, 1024);
+        }
+
+        std::thread([window, requested_path, requested_size, is_thumbnail,
                      result = std::move(result)]() mutable {
           const HRESULT com_result =
               CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-          auto bytes = GetShellThumbnail(requested_path, requested_size);
+          flutter::EncodableValue value;
+          if (is_thumbnail) {
+            auto bytes = GetShellThumbnail(requested_path, requested_size);
+            if (!bytes.empty()) {
+              value = flutter::EncodableValue(std::move(bytes));
+            }
+          } else if (const auto dimensions =
+                         GetVideoDimensions(requested_path)) {
+            flutter::EncodableMap result_map;
+            result_map[flutter::EncodableValue("width")] =
+                flutter::EncodableValue(
+                    static_cast<int64_t>(dimensions->first));
+            result_map[flutter::EncodableValue("height")] =
+                flutter::EncodableValue(
+                    static_cast<int64_t>(dimensions->second));
+            value = flutter::EncodableValue(std::move(result_map));
+          }
           if (SUCCEEDED(com_result)) {
             CoUninitialize();
           }
           auto pending = std::make_unique<PendingThumbnailResult>();
           pending->result = std::move(result);
-          pending->bytes = std::move(bytes);
+          pending->value = std::move(value);
           if (PostMessage(window, kThumbnailReadyMessage,
                           reinterpret_cast<WPARAM>(pending.get()), 0)) {
             pending.release();
@@ -183,10 +237,6 @@ bool HandlePlatformThumbnailMessage(UINT message, WPARAM wparam) {
   }
   std::unique_ptr<PendingThumbnailResult> pending(
       reinterpret_cast<PendingThumbnailResult*>(wparam));
-  if (pending->bytes.empty()) {
-    pending->result->Success();
-  } else {
-    pending->result->Success(flutter::EncodableValue(pending->bytes));
-  }
+  pending->result->Success(pending->value);
   return true;
 }

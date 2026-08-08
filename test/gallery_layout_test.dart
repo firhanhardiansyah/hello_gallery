@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -116,7 +118,55 @@ void main() {
     expect(find.byType(MasonryGridView), findsOneWidget);
     final landscape = tester.getRect(find.byType(GalleryCard).at(0));
     final portrait = tester.getRect(find.byType(GalleryCard).at(1));
+    expect(landscape.width, closeTo(portrait.width, 0.01));
     expect(landscape.width / landscape.height, closeTo(2, 0.01));
     expect(portrait.width / portrait.height, closeTo(0.5, 0.01));
+  });
+
+  testWidgets('defers masonry ratio changes while scrolling', (tester) async {
+    final ratio = Completer<double>();
+    final item = MediaItem(
+      path: '/gallery/landscape.jpg',
+      name: 'landscape.jpg',
+      modifiedAt: DateTime(2026),
+      mediaType: GalleryItemType.image,
+    );
+
+    Widget card({required bool deferAspectRatioUpdates}) => ProviderScope(
+      overrides: [
+        mediaAspectRatioProvider.overrideWith((ref, item) => ratio.future),
+      ],
+      child: MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 200,
+            child: GalleryCard(
+              key: const ValueKey('stable-masonry-card'),
+              item: item,
+              showItemName: false,
+              useOriginalAspectRatio: true,
+              deferAspectRatioUpdates: deferAspectRatioUpdates,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(card(deferAspectRatioUpdates: true));
+    await tester.pump();
+    final preview = find.byKey(const ValueKey('gallery-card-preview'));
+    final initial = tester.getRect(preview);
+    expect(initial.width / initial.height, closeTo(0.75, 0.01));
+
+    ratio.complete(2);
+    await tester.pump();
+    final whileScrolling = tester.getRect(preview);
+    expect(whileScrolling, initial);
+
+    await tester.pumpWidget(card(deferAspectRatioUpdates: false));
+    await tester.pump();
+    final afterScroll = tester.getRect(preview);
+    expect(afterScroll.width / afterScroll.height, closeTo(2, 0.01));
   });
 }

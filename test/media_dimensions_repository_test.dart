@@ -60,6 +60,32 @@ void main() {
     expect(dimensions?.aspectRatio, closeTo(9 / 16, 0.0001));
   });
 
+  test('prefers native video dimensions over the thumbnail', () async {
+    var fallbackReadCount = 0;
+    final repository = MediaDimensionsRepositoryImpl(
+      reader: (_) async {
+        fallbackReadCount++;
+        return const MediaDimensions(width: 1080, height: 1920);
+      },
+      videoReader: (_) async =>
+          const MediaDimensions(width: 1920, height: 1080),
+    );
+    final item = MediaItem(
+      path: '/gallery/video.mp4',
+      name: 'video.mp4',
+      modifiedAt: DateTime(2026),
+      mediaType: GalleryItemType.video,
+    );
+
+    final dimensions = await repository.getDimensions(
+      item,
+      videoThumbnailPath: '/cache/video.jpg',
+    );
+
+    expect(dimensions?.aspectRatio, closeTo(16 / 9, 0.0001));
+    expect(fallbackReadCount, 0);
+  });
+
   test('reads dimensions without decoding the full image in the UI', () async {
     final directory = await Directory.systemTemp.createTemp(
       'hello-gallery-dimensions-',
@@ -81,5 +107,28 @@ void main() {
     );
 
     expect(dimensions, const MediaDimensions(width: 640, height: 320));
+  });
+
+  test('applies JPEG EXIF orientation to image dimensions', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'hello-gallery-oriented-dimensions-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/portrait.jpg');
+    final source = image.Image(width: 640, height: 320);
+    source.exif.imageIfd.orientation = 6;
+    await file.writeAsBytes(image.encodeJpg(source));
+    final item = MediaItem(
+      path: file.path,
+      name: 'portrait.jpg',
+      modifiedAt: DateTime(2026),
+      mediaType: GalleryItemType.image,
+    );
+
+    final dimensions = await MediaDimensionsRepositoryImpl().getDimensions(
+      item,
+    );
+
+    expect(dimensions, const MediaDimensions(width: 320, height: 640));
   });
 }
