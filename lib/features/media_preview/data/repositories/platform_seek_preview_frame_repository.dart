@@ -19,7 +19,7 @@ final class PlatformSeekPreviewFrameRepository
   static const channelName = 'hello_gallery/platform_thumbnail';
   static const _maximumMemoryEntries = 32;
   static const _maximumDiskEntries = 512;
-  static const _extractorVersion = 'native-seek-preview-v2';
+  static const _extractorVersion = 'native-seek-preview-v3';
 
   final MethodChannel _channel;
   final Future<Directory> Function() _getCacheDirectory;

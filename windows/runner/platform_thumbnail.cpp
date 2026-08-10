@@ -202,13 +202,10 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
   std::vector<uint8_t> encoded;
   do {
     ComPtr<IMFAttributes> attributes;
-    if (FAILED(MFCreateAttributes(&attributes, 3))) {
+    if (FAILED(MFCreateAttributes(&attributes, 1))) {
       break;
     }
     attributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
-    attributes->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING,
-                          TRUE);
-    attributes->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, TRUE);
 
     ComPtr<IMFSourceReader> reader;
     const std::wstring wide_path = Utf8ToWide(path);
@@ -218,6 +215,11 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
     }
     constexpr DWORD video_stream =
         static_cast<DWORD>(MF_SOURCE_READER_FIRST_VIDEO_STREAM);
+    if (FAILED(reader->SetStreamSelection(
+            static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS), FALSE)) ||
+        FAILED(reader->SetStreamSelection(video_stream, TRUE))) {
+      break;
+    }
     ComPtr<IMFMediaType> native_type;
     if (FAILED(reader->GetNativeMediaType(video_stream, 0, &native_type))) {
       break;
@@ -240,23 +242,29 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
                                            output_type.Get()))) {
       break;
     }
-    reader->SetStreamSelection(video_stream, TRUE);
-
     PROPVARIANT seek_position;
     PropVariantInit(&seek_position);
-    seek_position.vt = VT_I8;
-    seek_position.hVal.QuadPart = std::max<int64_t>(0, timestamp_ms) * 10000;
-    const HRESULT seek_result =
-        reader->SetCurrentPosition(GUID_NULL, seek_position);
+    const LONGLONG target_timestamp =
+        std::max<int64_t>(0, timestamp_ms) * 10000;
+    const HRESULT position_result =
+        InitPropVariantFromInt64(target_timestamp, &seek_position);
+    const HRESULT seek_result = SUCCEEDED(position_result)
+                                    ? reader->SetCurrentPosition(
+                                          GUID_NULL, seek_position)
+                                    : position_result;
     PropVariantClear(&seek_position);
     if (FAILED(seek_result)) {
       break;
     }
 
-    const LONGLONG target_timestamp =
-        std::max<int64_t>(0, timestamp_ms) * 10000;
+    constexpr LONGLONG coarse_tolerance = 500 * 10000;
+    const LONGLONG accepted_timestamp = precise
+                                            ? target_timestamp
+                                            : std::max<LONGLONG>(
+                                                  0, target_timestamp -
+                                                         coarse_tolerance);
     ComPtr<IMFSample> sample;
-    const int maximum_attempts = precise ? 180 : 24;
+    const int maximum_attempts = precise ? 600 : 240;
     for (int attempt = 0; attempt < maximum_attempts; ++attempt) {
       DWORD stream_flags = 0;
       LONGLONG sample_timestamp = 0;
@@ -267,10 +275,11 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
            static_cast<DWORD>(MF_SOURCE_READERF_ENDOFSTREAM)) != 0) {
         break;
       }
-      if (candidate != nullptr &&
-          (!precise || sample_timestamp >= target_timestamp)) {
+      if (candidate != nullptr) {
         sample = std::move(candidate);
-        break;
+        if (sample_timestamp >= accepted_timestamp) {
+          break;
+        }
       }
     }
     if (sample == nullptr) {
