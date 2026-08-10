@@ -7,6 +7,7 @@ import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort
 
 import '../../application/providers/media_preview_dependencies.dart';
 import '../constants/media_preview_timing.dart';
+import '../controllers/media_preview_overlay_controller.dart';
 import '../input/media_preview_input_handler.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../widgets/filmstrip/media_preview_filmstrip_controller.dart';
@@ -53,14 +54,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   final _focusNode = FocusNode();
   final _filmstripController = MediaPreviewFilmstripController();
   late final MediaPreviewInputHandler _inputHandler;
-  Timer? _hideTimer;
-  bool _controlsVisible = true;
-  bool _controlsHovered = false;
-  bool _controlsHiddenByNavigation = false;
-  bool _filmstripEnabled = true;
+  late final MediaPreviewOverlayController _overlayController;
   int? _filmstripNavigationTargetIndex;
-  int _hiddenManualNavigationCount = 0;
-  int _silentNavigationCount = 0;
 
   MediaPreviewNotifier get _controller =>
       ref.read(mediaPreviewNotifierProvider.notifier);
@@ -68,6 +63,10 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   void initState() {
     super.initState();
+    _overlayController = MediaPreviewOverlayController(
+      readPreviewState: () => ref.read(mediaPreviewNotifierProvider),
+      onVisibilityChanged: widget.onControlsVisibilityChanged,
+    )..addListener(_handleOverlayChanged);
     _inputHandler = MediaPreviewInputHandler(
       onPrevious: () => _navigateHidingControls(_controller.previous),
       onNext: () => _navigateHidingControls(_controller.next),
@@ -98,73 +97,32 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void dispose() {
     _inputHandler.dispose();
     _filmstripController.dispose();
-    _hideTimer?.cancel();
+    _overlayController
+      ..removeListener(_handleOverlayChanged)
+      ..dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
+  void _handleOverlayChanged() {
+    if (mounted) setState(() {});
+  }
+
   void _showControls({bool restartTimer = true, bool userInitiated = false}) {
-    if (_controlsHiddenByNavigation && !userInitiated) return;
-    if (userInitiated) _controlsHiddenByNavigation = false;
-    _hideTimer?.cancel();
-    if (!_controlsVisible && mounted) {
-      setState(() => _controlsVisible = true);
-    }
-    widget.onControlsVisibilityChanged?.call(true);
-    final state = ref.read(mediaPreviewNotifierProvider);
-    if (!restartTimer ||
-        !state.isPlaying ||
-        state.activeItem?.isVideo != true) {
-      return;
-    }
-    _scheduleControlsAutoHide();
+    _overlayController.showControls(
+      restartTimer: restartTimer,
+      userInitiated: userInitiated,
+    );
   }
 
-  void _scheduleControlsAutoHide() {
-    _hideTimer?.cancel();
-    if (!_controlsVisible || _controlsHovered) return;
-    final state = ref.read(mediaPreviewNotifierProvider);
-    if (!state.isPlaying || state.activeItem?.isVideo != true) return;
-    _hideTimer = Timer(MediaPreviewTiming.controlsAutoHide, () {
-      if (!mounted) return;
-      final latest = ref.read(mediaPreviewNotifierProvider);
-      if (_controlsVisible &&
-          !_controlsHovered &&
-          latest.isPlaying &&
-          latest.activeItem?.isVideo == true) {
-        setState(() => _controlsVisible = false);
-        widget.onControlsVisibilityChanged?.call(false);
-      }
-    });
-  }
+  void _setControlsHovered(bool hovered) =>
+      _overlayController.setControlsHovered(hovered);
 
-  void _setControlsHovered(bool hovered) {
-    if (_controlsHovered == hovered) return;
-    _controlsHovered = hovered;
-    if (hovered) {
-      _hideTimer?.cancel();
-      return;
-    }
-    _scheduleControlsAutoHide();
-  }
+  void _hideControlsAfterPreviewExit() =>
+      _overlayController.hideAfterPointerExit();
 
-  void _hideControlsAfterPreviewExit() {
-    if (!mounted) return;
-    _hideTimer?.cancel();
-    if (_controlsVisible) {
-      setState(() => _controlsVisible = false);
-    }
-    widget.onControlsVisibilityChanged?.call(false);
-  }
-
-  void _scheduleGamepadAutoHide() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(MediaPreviewTiming.controlsAutoHide, () {
-      if (!mounted) return;
-      if (_controlsVisible) setState(() => _controlsVisible = false);
-      widget.onControlsVisibilityChanged?.call(false);
-    });
-  }
+  void _scheduleGamepadAutoHide() =>
+      _overlayController.scheduleGamepadAutoHide();
 
   void _toggleSidebar() => widget.onToggleSidebar?.call();
 
@@ -205,9 +163,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   }
 
   void _toggleFilmstrip() {
-    final showFilmstrip = !_filmstripEnabled;
     _showControls(userInitiated: true);
-    setState(() => _filmstripEnabled = showFilmstrip);
+    final showFilmstrip = _overlayController.toggleFilmstrip();
     if (!showFilmstrip) return;
     final activeIndex = ref.read(mediaPreviewNotifierProvider).activeIndex;
     _filmstripController.reveal(activeIndex, animated: false, force: true);
@@ -253,38 +210,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   }
 
   void _navigateHidingControls(Future<void> Function() navigate) {
-    _hiddenManualNavigationCount++;
-    _suppressControlsDuringNavigation();
-    unawaited(_completeHiddenManualNavigation(navigate));
-  }
-
-  Future<void> _completeHiddenManualNavigation(
-    Future<void> Function() navigate,
-  ) async {
-    try {
-      await navigate();
-    } finally {
-      _hiddenManualNavigationCount--;
-    }
-  }
-
-  void _suppressControlsDuringNavigation() {
-    _controlsHiddenByNavigation = true;
-    _hideTimer?.cancel();
-    if (_controlsVisible && mounted) {
-      setState(() => _controlsVisible = false);
-    }
-    widget.onControlsVisibilityChanged?.call(false);
-    _silentNavigationCount++;
-    unawaited(
-      Future<void>(() async {
-        // media_kit may emit its final playing event immediately after open.
-        await Future<void>.delayed(
-          MediaPreviewTiming.navigationEventSuppression,
-        );
-        _silentNavigationCount--;
-      }),
-    );
+    unawaited(_overlayController.navigateWithoutControls(navigate));
   }
 
   @override
@@ -302,8 +228,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             _showControls(userInitiated: true);
             return;
           }
-          if (_hiddenManualNavigationCount == 0) {
-            _suppressControlsDuringNavigation();
+          if (!_overlayController.isManualNavigationRunning) {
+            _overlayController.suppressControlsDuringNavigation();
           }
         }
       },
@@ -311,7 +237,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     ref.listen(
       mediaPreviewNotifierProvider.select((value) => value.isPlaying),
       (previous, isPlaying) {
-        if (_silentNavigationCount > 0) return;
+        if (_overlayController.isNavigationEventSuppressed) return;
         if (isPlaying) {
           _showControls();
         } else {
@@ -321,7 +247,8 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     );
     final isVideoPreview = state.activeItem?.isVideo == true;
     final filmstripVisible =
-        _filmstripEnabled && (!isVideoPreview || _controlsVisible);
+        _overlayController.filmstripEnabled &&
+        (!isVideoPreview || _overlayController.controlsVisible);
     if (filmstripVisible && state.items.isNotEmpty) {
       _filmstripController.reveal(state.activeIndex, animated: false);
     }
@@ -330,14 +257,14 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       child: Listener(
         onPointerSignal: _inputHandler.handlePointerSignal,
         child: MediaPreviewPointerRegion(
-          cursor: state.isPlaying && !_controlsVisible
+          cursor: state.isPlaying && !_overlayController.controlsVisible
               ? SystemMouseCursors.none
               : MouseCursor.defer,
           onActivity: () => _showControls(userInitiated: true),
           onExitIdle: _hideControlsAfterPreviewExit,
           child: MediaPreviewView(
             state: state,
-            controlsVisible: _controlsVisible,
+            controlsVisible: _overlayController.controlsVisible,
             isFullscreen: widget.isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: state.isRotationLocked,
