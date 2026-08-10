@@ -81,6 +81,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   int _reportedColumnCount = 1;
   double _itemMainExtent = 0;
   bool _isScrolling = false;
+  bool? _pendingScrollingState;
+  bool _scrollingStateUpdateScheduled = false;
 
   @override
   void initState() {
@@ -121,13 +123,27 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     if (notification is ScrollStartNotification) {
       _thumbnailScheduler.setScrolling(true);
       _folderPreviewScheduler.setScrolling(true);
-      if (!_isScrolling) setState(() => _isScrolling = true);
+      _scheduleScrollingStateUpdate(true);
     } else if (notification is ScrollEndNotification) {
       _thumbnailScheduler.setScrolling(false);
       _folderPreviewScheduler.setScrolling(false);
-      if (_isScrolling) setState(() => _isScrolling = false);
+      _scheduleScrollingStateUpdate(false);
     }
     return false;
+  }
+
+  void _scheduleScrollingStateUpdate(bool isScrolling) {
+    _pendingScrollingState = isScrolling;
+    if (_scrollingStateUpdateScheduled) return;
+    _scrollingStateUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollingStateUpdateScheduled = false;
+      if (!mounted) return;
+      final nextState = _pendingScrollingState;
+      _pendingScrollingState = null;
+      if (nextState == null || nextState == _isScrolling) return;
+      setState(() => _isScrolling = nextState);
+    });
   }
 
   void _revealSelection() {
