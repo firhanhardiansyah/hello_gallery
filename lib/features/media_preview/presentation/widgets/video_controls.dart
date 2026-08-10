@@ -188,25 +188,12 @@ class VideoControls extends ConsumerWidget {
   }
 
   Widget _buildDuration(BuildContext context) {
-    final appColors = context.appColors;
-    final includeHours = state.duration.inHours > 0;
-
-    return Container(
+    return _VideoDurationButton(
+      position: state.position,
+      duration: state.duration,
       height: _controlSize,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _surfaceColor(context),
-        borderRadius: BorderRadius.circular(_controlSize / 2),
-      ),
-      child: Text(
-        '${formatVideoDuration(state.position, includeHours: includeHours)} / '
-        '${formatVideoDuration(state.duration, includeHours: includeHours)}',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: appColors.onMedia,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      backgroundColor: _surfaceColor(context),
+      onInteraction: onInteraction,
     );
   }
 
@@ -260,6 +247,86 @@ class VideoControls extends ConsumerWidget {
 
   Color _surfaceColor(BuildContext context) {
     return context.appColors.mediaControlSurface.withValues(alpha: 0.3);
+  }
+}
+
+class _VideoDurationButton extends StatefulWidget {
+  const _VideoDurationButton({
+    required this.position,
+    required this.duration,
+    required this.height,
+    required this.backgroundColor,
+    required this.onInteraction,
+  });
+
+  final Duration position;
+  final Duration duration;
+  final double height;
+  final Color backgroundColor;
+  final VoidCallback onInteraction;
+
+  @override
+  State<_VideoDurationButton> createState() => _VideoDurationButtonState();
+}
+
+class _VideoDurationButtonState extends State<_VideoDurationButton> {
+  bool _showRemaining = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final appColors = context.appColors;
+    final includeHours = widget.duration.inHours > 0;
+    final elapsed = widget.position > widget.duration
+        ? widget.duration
+        : widget.position;
+    final remaining = widget.duration - elapsed;
+    final leadingDuration = _showRemaining
+        ? '-${formatVideoDuration(remaining, includeHours: includeHours)}'
+        : formatVideoDuration(elapsed, includeHours: includeHours);
+    final totalDuration = formatVideoDuration(
+      widget.duration,
+      includeHours: includeHours,
+    );
+    final borderRadius = BorderRadius.circular(widget.height / 2);
+
+    return Semantics(
+      button: true,
+      child: Tooltip(
+        message: _showRemaining ? 'Show elapsed time' : 'Show remaining time',
+        child: Material(
+          key: const ValueKey('video-duration-button'),
+          color: widget.backgroundColor,
+          borderRadius: borderRadius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: borderRadius,
+            hoverColor: appColors.mediaControlSurface.withValues(alpha: 0.2),
+            highlightColor: appColors.mediaControlSurface.withValues(
+              alpha: 0.3,
+            ),
+            onTap: () {
+              widget.onInteraction();
+              setState(() => _showRemaining = !_showRemaining);
+            },
+            child: SizedBox(
+              height: widget.height,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Center(
+                  child: Text(
+                    '$leadingDuration / $totalDuration',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: appColors.onMedia,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

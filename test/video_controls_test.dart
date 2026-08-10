@@ -145,6 +145,67 @@ void main() {
 
     expect(find.text('00:02:00 / 01:01:00'), findsOneWidget);
   });
+
+  testWidgets('toggles elapsed and remaining time from the duration button', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      mediaPreviewNotifierProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+    var interactionCount = 0;
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: buildAppTheme(
+            colorTheme: AppColorTheme.indigo,
+            brightness: Brightness.light,
+          ),
+          home: Scaffold(
+            body: VideoControls(
+              state: const MediaPreviewUiState(
+                position: Duration(seconds: 20),
+                duration: Duration(minutes: 1),
+              ),
+              isFullscreen: false,
+              isRotationLocked: false,
+              filmstripVisible: false,
+              hdrPlaybackEnabled: false,
+              onInteraction: () => interactionCount++,
+              onTogglePlayback: _noop,
+              onRotate: _noop,
+              onToggleRotationLock: _noop,
+              onToggleFilmstrip: _noop,
+              onToggleHdrPlayback: _noop,
+              onToggleFullscreen: _noop,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('00:20 / 01:00'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('video-duration-button')),
+        matching: find.byType(InkWell),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Show remaining time'));
+    await tester.pump();
+    expect(find.text('-00:40 / 01:00'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Show elapsed time'));
+    await tester.pump();
+    expect(find.text('00:20 / 01:00'), findsOneWidget);
+    expect(interactionCount, 2);
+  });
 }
 
 void _noop() {}
