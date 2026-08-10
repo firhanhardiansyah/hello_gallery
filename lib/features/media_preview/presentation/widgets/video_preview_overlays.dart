@@ -67,6 +67,7 @@ class VideoPreviewOverlays extends StatelessWidget {
         ),
         _VideoControlsOverlay(
           state: state,
+          seekPreviewPlaceholderPath: thumbnailPath,
           visible: controlsVisible,
           isFullscreen: isFullscreen,
           isRotationLocked: isRotationLocked,
@@ -248,6 +249,7 @@ class _VideoPlaybackButtonState extends State<_VideoPlaybackButton> {
 class _VideoControlsOverlay extends StatelessWidget {
   const _VideoControlsOverlay({
     required this.state,
+    required this.seekPreviewPlaceholderPath,
     required this.visible,
     required this.isFullscreen,
     required this.isRotationLocked,
@@ -264,6 +266,7 @@ class _VideoControlsOverlay extends StatelessWidget {
   });
 
   final MediaPreviewUiState state;
+  final String? seekPreviewPlaceholderPath;
   final bool visible;
   final bool isFullscreen;
   final bool isRotationLocked;
@@ -298,6 +301,7 @@ class _VideoControlsOverlay extends StatelessWidget {
             onExit: (_) => onHoverChanged(false),
             child: VideoControls(
               state: state,
+              seekPreviewPlaceholderPath: seekPreviewPlaceholderPath,
               isFullscreen: isFullscreen,
               isRotationLocked: isRotationLocked,
               filmstripVisible: filmstripVisible,

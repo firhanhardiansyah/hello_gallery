@@ -7,13 +7,17 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <propkey.h>
+#include <propvarutil.h>
 #include <shobjidl.h>
 #include <wincodec.h>
 #include <windows.h>
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <string>
@@ -130,6 +134,236 @@ std::vector<uint8_t> GetShellThumbnail(const std::string& path, int size) {
   return bytes;
 }
 
+std::vector<uint8_t> EncodeJpeg(IWICImagingFactory* factory,
+                                IWICBitmapSource* source) {
+  ComPtr<IWICFormatConverter> converter;
+  if (FAILED(factory->CreateFormatConverter(&converter)) ||
+      FAILED(converter->Initialize(
+          source, GUID_WICPixelFormat24bppBGR, WICBitmapDitherTypeNone, nullptr,
+          0.0, WICBitmapPaletteTypeCustom))) {
+    return {};
+  }
+
+  ComPtr<IStream> stream;
+  if (FAILED(CreateStreamOnHGlobal(nullptr, TRUE, &stream))) {
+    return {};
+  }
+  ComPtr<IWICBitmapEncoder> encoder;
+  if (FAILED(factory->CreateEncoder(GUID_ContainerFormatJpeg, nullptr,
+                                    &encoder)) ||
+      FAILED(encoder->Initialize(stream.Get(), WICBitmapEncoderNoCache))) {
+    return {};
+  }
+  ComPtr<IWICBitmapFrameEncode> frame;
+  if (FAILED(encoder->CreateNewFrame(&frame, nullptr)) ||
+      FAILED(frame->Initialize(nullptr))) {
+    return {};
+  }
+
+  UINT width = 0;
+  UINT height = 0;
+  if (FAILED(converter->GetSize(&width, &height)) ||
+      FAILED(frame->SetSize(width, height))) {
+    return {};
+  }
+  WICPixelFormatGUID format = GUID_WICPixelFormat24bppBGR;
+  if (FAILED(frame->SetPixelFormat(&format)) ||
+      FAILED(frame->WriteSource(converter.Get(), nullptr)) ||
+      FAILED(frame->Commit()) || FAILED(encoder->Commit())) {
+    return {};
+  }
+
+  STATSTG stat = {};
+  if (FAILED(stream->Stat(&stat, STATFLAG_NONAME)) ||
+      stat.cbSize.QuadPart <= 0) {
+    return {};
+  }
+  LARGE_INTEGER start = {};
+  if (FAILED(stream->Seek(start, STREAM_SEEK_SET, nullptr))) {
+    return {};
+  }
+  std::vector<uint8_t> bytes(static_cast<size_t>(stat.cbSize.QuadPart));
+  ULONG bytes_read = 0;
+  if (FAILED(stream->Read(bytes.data(), static_cast<ULONG>(bytes.size()),
+                          &bytes_read))) {
+    return {};
+  }
+  bytes.resize(bytes_read);
+  return bytes;
+}
+
+std::vector<uint8_t> GetVideoFrame(const std::string& path,
+                                   int64_t timestamp_ms, int maximum_size) {
+  if (FAILED(MFStartup(MF_VERSION, MFSTARTUP_FULL))) {
+    return {};
+  }
+
+  std::vector<uint8_t> encoded;
+  do {
+    ComPtr<IMFAttributes> attributes;
+    if (FAILED(MFCreateAttributes(&attributes, 3))) {
+      break;
+    }
+    attributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+    attributes->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING,
+                          TRUE);
+    attributes->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, TRUE);
+
+    ComPtr<IMFSourceReader> reader;
+    const std::wstring wide_path = Utf8ToWide(path);
+    if (FAILED(MFCreateSourceReaderFromURL(wide_path.c_str(), attributes.Get(),
+                                           &reader))) {
+      break;
+    }
+    constexpr DWORD video_stream =
+        static_cast<DWORD>(MF_SOURCE_READER_FIRST_VIDEO_STREAM);
+    ComPtr<IMFMediaType> native_type;
+    if (FAILED(reader->GetNativeMediaType(video_stream, 0, &native_type))) {
+      break;
+    }
+    UINT32 width = 0;
+    UINT32 height = 0;
+    if (FAILED(MFGetAttributeSize(native_type.Get(), MF_MT_FRAME_SIZE, &width,
+                                  &height)) ||
+        width == 0 || height == 0) {
+      break;
+    }
+    UINT32 rotation = static_cast<UINT32>(MFVideoRotationFormat_0);
+    native_type->GetUINT32(MF_MT_VIDEO_ROTATION, &rotation);
+
+    ComPtr<IMFMediaType> output_type;
+    if (FAILED(MFCreateMediaType(&output_type)) ||
+        FAILED(output_type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video)) ||
+        FAILED(output_type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32)) ||
+        FAILED(reader->SetCurrentMediaType(video_stream, nullptr,
+                                           output_type.Get()))) {
+      break;
+    }
+    reader->SetStreamSelection(video_stream, TRUE);
+
+    PROPVARIANT seek_position;
+    PropVariantInit(&seek_position);
+    seek_position.vt = VT_I8;
+    seek_position.hVal.QuadPart = std::max<int64_t>(0, timestamp_ms) * 10000;
+    const HRESULT seek_result =
+        reader->SetCurrentPosition(GUID_NULL, seek_position);
+    PropVariantClear(&seek_position);
+    if (FAILED(seek_result)) {
+      break;
+    }
+
+    ComPtr<IMFSample> sample;
+    for (int attempt = 0; attempt < 24 && sample == nullptr; ++attempt) {
+      DWORD stream_flags = 0;
+      if (FAILED(reader->ReadSample(video_stream, 0, nullptr, &stream_flags,
+                                    nullptr, &sample)) ||
+          (stream_flags &
+           static_cast<DWORD>(MF_SOURCE_READERF_ENDOFSTREAM)) != 0) {
+        break;
+      }
+    }
+    if (sample == nullptr) {
+      break;
+    }
+
+    ComPtr<IMFMediaBuffer> media_buffer;
+    if (FAILED(sample->ConvertToContiguousBuffer(&media_buffer))) {
+      break;
+    }
+    const UINT stride = width * 4;
+    const size_t pixel_count = static_cast<size_t>(stride) * height;
+    std::vector<uint8_t> pixels(pixel_count);
+
+    ComPtr<IMF2DBuffer> buffer_2d;
+    if (SUCCEEDED(media_buffer.As(&buffer_2d))) {
+      BYTE* scanline = nullptr;
+      LONG pitch = 0;
+      if (FAILED(buffer_2d->Lock2D(&scanline, &pitch))) {
+        break;
+      }
+      for (UINT y = 0; y < height; ++y) {
+        const BYTE* source_row =
+            scanline + (static_cast<ptrdiff_t>(y) * pitch);
+        std::memcpy(pixels.data() + (static_cast<size_t>(y) * stride),
+                    source_row, stride);
+      }
+      buffer_2d->Unlock2D();
+    } else {
+      BYTE* data = nullptr;
+      DWORD maximum_length = 0;
+      DWORD current_length = 0;
+      if (FAILED(media_buffer->Lock(&data, &maximum_length, &current_length))) {
+        break;
+      }
+      const size_t copy_length =
+          std::min(pixel_count, static_cast<size_t>(current_length));
+      std::memcpy(pixels.data(), data, copy_length);
+      media_buffer->Unlock();
+      if (copy_length < pixel_count) {
+        break;
+      }
+    }
+
+    ComPtr<IWICImagingFactory> factory;
+    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr,
+                                CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&factory)))) {
+      break;
+    }
+    ComPtr<IWICBitmap> bitmap;
+    if (FAILED(factory->CreateBitmapFromMemory(
+            width, height, GUID_WICPixelFormat32bppBGR, stride,
+            static_cast<UINT>(pixels.size()), pixels.data(), &bitmap))) {
+      break;
+    }
+    ComPtr<IWICBitmapSource> source;
+    bitmap.As(&source);
+
+    ComPtr<IWICBitmapFlipRotator> rotator;
+    if (rotation == static_cast<UINT32>(MFVideoRotationFormat_90) ||
+        rotation == static_cast<UINT32>(MFVideoRotationFormat_180) ||
+        rotation == static_cast<UINT32>(MFVideoRotationFormat_270)) {
+      WICBitmapTransformOptions transform = WICBitmapTransformRotate0;
+      if (rotation == static_cast<UINT32>(MFVideoRotationFormat_90)) {
+        transform = WICBitmapTransformRotate90;
+      } else if (rotation == static_cast<UINT32>(MFVideoRotationFormat_180)) {
+        transform = WICBitmapTransformRotate180;
+      } else {
+        transform = WICBitmapTransformRotate270;
+      }
+      if (SUCCEEDED(factory->CreateBitmapFlipRotator(&rotator)) &&
+          SUCCEEDED(rotator->Initialize(source.Get(), transform))) {
+        rotator.As(&source);
+      }
+    }
+
+    UINT oriented_width = 0;
+    UINT oriented_height = 0;
+    if (FAILED(source->GetSize(&oriented_width, &oriented_height)) ||
+        oriented_width == 0 || oriented_height == 0) {
+      break;
+    }
+    const double scale = std::min(
+        1.0, static_cast<double>(maximum_size) /
+                 static_cast<double>(std::max(oriented_width, oriented_height)));
+    const UINT target_width = std::max<UINT>(
+        1, static_cast<UINT>(std::lround(oriented_width * scale)));
+    const UINT target_height = std::max<UINT>(
+        1, static_cast<UINT>(std::lround(oriented_height * scale)));
+    ComPtr<IWICBitmapScaler> scaler;
+    if ((target_width != oriented_width || target_height != oriented_height) &&
+        SUCCEEDED(factory->CreateBitmapScaler(&scaler)) &&
+        SUCCEEDED(scaler->Initialize(source.Get(), target_width, target_height,
+                                     WICBitmapInterpolationModeFant))) {
+      scaler.As(&source);
+    }
+    encoded = EncodeJpeg(factory.Get(), source.Get());
+  } while (false);
+
+  MFShutdown();
+  return encoded;
+}
+
 std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
     const std::string& path) {
   const HRESULT startup_result = MFStartup(MF_VERSION, MFSTARTUP_FULL);
@@ -195,7 +429,8 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
       [window](const auto& call, auto result) {
         const bool is_thumbnail = call.method_name() == "getThumbnail";
         const bool is_dimensions = call.method_name() == "getDimensions";
-        if (!is_thumbnail && !is_dimensions) {
+        const bool is_frame = call.method_name() == "getFrame";
+        if (!is_thumbnail && !is_dimensions && !is_frame) {
           result->NotImplemented();
           return;
         }
@@ -218,7 +453,7 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
         const auto requested_path = *path;
 
         int requested_size = 0;
-        if (is_thumbnail) {
+        if (is_thumbnail || is_frame) {
           const auto size_it =
               arguments->find(flutter::EncodableValue("size"));
           if (size_it == arguments->end()) {
@@ -230,16 +465,44 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
             result->Error("invalid_arguments", "Invalid size");
             return;
           }
-          requested_size = std::clamp(*size, 64, 1024);
+          requested_size = std::clamp(*size, is_frame ? 120 : 64,
+                                      is_frame ? 480 : 1024);
         }
 
-        std::thread([window, requested_path, requested_size, is_thumbnail,
+        int64_t timestamp_ms = 0;
+        if (is_frame) {
+          const auto timestamp_it =
+              arguments->find(flutter::EncodableValue("timestampMs"));
+          if (timestamp_it == arguments->end()) {
+            result->Error("invalid_arguments", "Missing timestampMs");
+            return;
+          }
+          if (const auto* timestamp =
+                  std::get_if<int64_t>(&timestamp_it->second)) {
+            timestamp_ms = std::max<int64_t>(0, *timestamp);
+          } else if (const auto* timestamp =
+                         std::get_if<int32_t>(&timestamp_it->second)) {
+            timestamp_ms = std::max<int64_t>(0, *timestamp);
+          } else {
+            result->Error("invalid_arguments", "Invalid timestampMs");
+            return;
+          }
+        }
+
+        std::thread([window, requested_path, requested_size, timestamp_ms,
+                     is_thumbnail, is_frame,
                      result = std::move(result)]() mutable {
           const HRESULT com_result =
               CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
           flutter::EncodableValue value;
           if (is_thumbnail) {
             auto bytes = GetShellThumbnail(requested_path, requested_size);
+            if (!bytes.empty()) {
+              value = flutter::EncodableValue(std::move(bytes));
+            }
+          } else if (is_frame) {
+            auto bytes =
+                GetVideoFrame(requested_path, timestamp_ms, requested_size);
             if (!bytes.empty()) {
               value = flutter::EncodableValue(std::move(bytes));
             }

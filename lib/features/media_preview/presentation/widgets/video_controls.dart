@@ -5,8 +5,10 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/core/widgets/media_overlay_icon_button.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../application/providers/media_preview_dependencies.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../states/media_preview_ui_state.dart';
+import 'video_duration_formatter.dart';
 import 'video_seek_slider.dart';
 
 class VideoControls extends ConsumerWidget {
@@ -23,6 +25,7 @@ class VideoControls extends ConsumerWidget {
     required this.onToggleFilmstrip,
     required this.onToggleHdrPlayback,
     required this.onToggleFullscreen,
+    this.seekPreviewPlaceholderPath,
     super.key,
   });
 
@@ -38,12 +41,15 @@ class VideoControls extends ConsumerWidget {
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleHdrPlayback;
   final VoidCallback onToggleFullscreen;
+  final String? seekPreviewPlaceholderPath;
 
   static const _controlSize = 40.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(mediaPreviewNotifierProvider.notifier);
+    final seekPreviewFrames = ref.watch(seekPreviewFrameRepositoryProvider);
+    final activeItem = state.activeItem;
 
     return Container(
       color: Colors.transparent,
@@ -59,6 +65,12 @@ class VideoControls extends ConsumerWidget {
             duration: state.duration,
             onInteraction: onInteraction,
             onChanged: controller.seek,
+            previewIdentity: activeItem,
+            previewPlaceholderPath: seekPreviewPlaceholderPath,
+            previewFrameLoader: activeItem?.isVideo == true
+                ? (position) =>
+                      seekPreviewFrames.getFrame(activeItem!, position)
+                : null,
           ),
           Row(
             children: [

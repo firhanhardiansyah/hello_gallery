@@ -191,7 +191,10 @@ class MainFlutterWindow: NSWindow {
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     channel.setMethodCallHandler { call, result in
-      guard call.method == "getThumbnail" || call.method == "getDimensions" else {
+      guard
+        call.method == "getThumbnail" || call.method == "getDimensions"
+          || call.method == "getFrame"
+      else {
         result(FlutterMethodNotImplemented)
         return
       }
@@ -221,6 +224,26 @@ class MainFlutterWindow: NSWindow {
             message: "Missing or invalid size",
             details: nil
           )
+        )
+        return
+      }
+
+      if call.method == "getFrame" {
+        guard let timestampMs = arguments["timestampMs"] as? Int else {
+          result(
+            FlutterError(
+              code: "invalid_arguments",
+              message: "Missing or invalid timestampMs",
+              details: nil
+            )
+          )
+          return
+        }
+        self.readVideoFrame(
+          at: filePath,
+          timestampMs: max(0, timestampMs),
+          maximumSize: max(120, min(size, 480)),
+          result: result
         )
         return
       }
@@ -259,6 +282,50 @@ class MainFlutterWindow: NSWindow {
       }
     }
     platformThumbnailChannel = channel
+  }
+
+  private func readVideoFrame(
+    at filePath: String,
+    timestampMs: Int,
+    maximumSize: Int,
+    result: @escaping FlutterResult
+  ) {
+    DispatchQueue.global(qos: .userInitiated).async {
+      let asset = AVURLAsset(url: URL(fileURLWithPath: filePath))
+      let generator = AVAssetImageGenerator(asset: asset)
+      generator.appliesPreferredTrackTransform = true
+      let targetSize = CGFloat(maximumSize)
+      generator.maximumSize = CGSize(width: targetSize, height: targetSize)
+      let tolerance = CMTime(value: 500, timescale: 1000)
+      generator.requestedTimeToleranceBefore = tolerance
+      generator.requestedTimeToleranceAfter = tolerance
+      let requestedTime = CMTime(value: CMTimeValue(timestampMs), timescale: 1000)
+
+      do {
+        let image = try generator.copyCGImage(at: requestedTime, actualTime: nil)
+        let data = NSBitmapImageRep(cgImage: image).representation(
+          using: .jpeg,
+          properties: [.compressionFactor: 0.72]
+        )
+        DispatchQueue.main.async {
+          if let data {
+            result(FlutterStandardTypedData(bytes: data))
+          } else {
+            result(nil)
+          }
+        }
+      } catch {
+        DispatchQueue.main.async {
+          result(
+            FlutterError(
+              code: "frame_failed",
+              message: error.localizedDescription,
+              details: nil
+            )
+          )
+        }
+      }
+    }
   }
 
   private func readVideoDimensions(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hello_gallery/core/theme/app_color_tokens.dart';
-import 'package:hello_gallery/core/theme/app_spacing.dart';
+
+import '../constants/media_preview_timing.dart';
+import '../controllers/seek_preview_controller.dart';
+import 'video_seek_preview_card.dart';
 
 class VideoSeekSlider extends StatefulWidget {
   const VideoSeekSlider({
@@ -8,6 +10,10 @@ class VideoSeekSlider extends StatefulWidget {
     required this.duration,
     required this.onChanged,
     required this.onInteraction,
+    this.previewFrameLoader,
+    this.previewIdentity,
+    this.previewPlaceholderPath,
+    this.previewDebounce = MediaPreviewTiming.seekPreviewDebounce,
     super.key,
   });
 
@@ -15,6 +21,10 @@ class VideoSeekSlider extends StatefulWidget {
   final Duration duration;
   final ValueChanged<Duration> onChanged;
   final VoidCallback onInteraction;
+  final SeekPreviewFrameLoader? previewFrameLoader;
+  final Object? previewIdentity;
+  final String? previewPlaceholderPath;
+  final Duration previewDebounce;
 
   @override
   State<VideoSeekSlider> createState() => _VideoSeekSliderState();
@@ -22,12 +32,36 @@ class VideoSeekSlider extends StatefulWidget {
 
 class _VideoSeekSliderState extends State<VideoSeekSlider> {
   static const _trackHorizontalInset = 24.0;
-  static const _hoverLabelHeight = 28.0;
   static const _hoverLabelGap = 4.0;
 
   final _layerLink = LayerLink();
   final _overlayController = OverlayPortalController();
   double? _hoverDx;
+  SeekPreviewController? _previewController;
+
+  @override
+  void initState() {
+    super.initState();
+    _createPreviewController();
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoSeekSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.previewIdentity != widget.previewIdentity ||
+        (oldWidget.previewFrameLoader == null) !=
+            (widget.previewFrameLoader == null) ||
+        oldWidget.previewDebounce != widget.previewDebounce) {
+      _disposePreviewController();
+      _createPreviewController();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposePreviewController();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,16 +92,20 @@ class _VideoSeekSliderState extends State<VideoSeekSlider> {
                 targetAnchor: Alignment.topLeft,
                 followerAnchor: Alignment.topLeft,
                 offset: Offset(
-                  _hoverLabelLeft(hoverDx, constraints.maxWidth),
-                  -(_hoverLabelHeight + _hoverLabelGap),
+                  _hoverCardLeft(hoverDx, constraints.maxWidth),
+                  -(_hoverCardHeight + _hoverLabelGap),
                 ),
                 child: UnconstrainedBox(
                   alignment: Alignment.topLeft,
                   child: Material(
                     type: MaterialType.transparency,
-                    child: _SeekHoverLabel(
+                    child: VideoSeekPreviewCard(
                       duration: hoverPosition,
                       includeHours: widget.duration.inHours > 0,
+                      frameBytes: _previewController?.frameBytes,
+                      placeholderPath: widget.previewPlaceholderPath,
+                      showFrame: widget.previewFrameLoader != null,
+                      isLoading: _previewController?.isLoading ?? false,
                     ),
                   ),
                 ),
@@ -101,12 +139,18 @@ class _VideoSeekSliderState extends State<VideoSeekSlider> {
   }
 
   void _updateHoverPosition(PointerEvent event) {
-    setState(() => _hoverDx = event.localPosition.dx);
+    final hoverDx = event.localPosition.dx;
+    final renderBox = context.findRenderObject();
+    final width = renderBox is RenderBox ? renderBox.size.width : 0.0;
+    final hoverPosition = _positionAt(hoverDx, width);
+    _previewController?.request(hoverPosition, widget.duration);
+    setState(() => _hoverDx = hoverDx);
     _overlayController.show();
   }
 
   void _hideHoverLabel() {
     _overlayController.hide();
+    _previewController?.cancelPending();
     setState(() => _hoverDx = null);
   }
 
@@ -122,57 +166,39 @@ class _VideoSeekSliderState extends State<VideoSeekSlider> {
     );
   }
 
-  double _hoverLabelLeft(double dx, double width) {
-    final labelWidth = _SeekHoverLabel.widthFor(
-      includeHours: widget.duration.inHours > 0,
-    );
-    if (width <= labelWidth) return 0;
-    return (dx - (labelWidth / 2)).clamp(0.0, width - labelWidth);
+  double get _hoverCardHeight => widget.previewFrameLoader == null
+      ? VideoSeekPreviewCard.labelHeight
+      : VideoSeekPreviewCard.imageHeight + VideoSeekPreviewCard.labelHeight;
+
+  double get _hoverCardWidth => widget.previewFrameLoader == null
+      ? VideoSeekPreviewCard.labelWidthFor(
+          includeHours: widget.duration.inHours > 0,
+        )
+      : VideoSeekPreviewCard.imageWidth;
+
+  double _hoverCardLeft(double dx, double width) {
+    final cardWidth = _hoverCardWidth;
+    if (width <= cardWidth) return 0;
+    return (dx - (cardWidth / 2)).clamp(0.0, width - cardWidth);
   }
-}
 
-class _SeekHoverLabel extends StatelessWidget {
-  const _SeekHoverLabel({required this.duration, required this.includeHours});
-
-  final Duration duration;
-  final bool includeHours;
-
-  static double widthFor({required bool includeHours}) =>
-      includeHours ? 76 : 56;
-
-  @override
-  Widget build(BuildContext context) {
-    final appColors = context.appColors;
-    return Container(
-      key: const ValueKey('video-seek-hover-label'),
-      width: widthFor(includeHours: includeHours),
-      height: _VideoSeekSliderState._hoverLabelHeight,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: appColors.mediaControlSurface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Text(
-        formatVideoDuration(duration, includeHours: includeHours),
-        maxLines: 1,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: appColors.onMedia,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+  void _createPreviewController() {
+    final loader = widget.previewFrameLoader;
+    if (loader == null) return;
+    _previewController = SeekPreviewController(
+      loadFrame: loader,
+      debounceDuration: widget.previewDebounce,
+    )..addListener(_handlePreviewChanged);
   }
-}
 
-String formatVideoDuration(Duration value, {required bool includeHours}) {
-  final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
-  final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+  void _disposePreviewController() {
+    _previewController
+      ?..removeListener(_handlePreviewChanged)
+      ..dispose();
+    _previewController = null;
+  }
 
-  if (!includeHours) return '$minutes:$seconds';
-  final hours = value.inHours.toString().padLeft(2, '0');
-  return '$hours:$minutes:$seconds';
+  void _handlePreviewChanged() {
+    if (mounted) setState(() {});
+  }
 }

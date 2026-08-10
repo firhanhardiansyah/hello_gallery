@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -62,5 +63,59 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('video-seek-hover-label')), findsNothing);
+  });
+
+  testWidgets('shows a cached frame for the hovered timestamp', (tester) async {
+    final frameBytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    final requestedPositions = <Duration>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(
+          colorTheme: AppColorTheme.indigo,
+          brightness: Brightness.dark,
+        ),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 320,
+              child: VideoSeekSlider(
+                position: Duration.zero,
+                duration: const Duration(minutes: 2),
+                previewIdentity: 'video.mp4',
+                previewDebounce: Duration.zero,
+                previewFrameLoader: (position) async {
+                  requestedPositions.add(position);
+                  return frameBytes;
+                },
+                onChanged: (_) {},
+                onInteraction: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final region = find.byKey(const ValueKey('video-seek-hover-region'));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(region));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+
+    expect(requestedPositions, [const Duration(minutes: 1)]);
+    expect(
+      find.byKey(const ValueKey('video-seek-preview-card')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('video-seek-preview-frame')),
+      findsOneWidget,
+    );
+    expect(find.text('01:00'), findsOneWidget);
   });
 }
