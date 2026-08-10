@@ -489,12 +489,12 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
             result->Error("invalid_arguments", "Missing timestampMs");
             return;
           }
-          if (const auto* timestamp =
+          if (const auto* timestamp_64 =
                   std::get_if<int64_t>(&timestamp_it->second)) {
-            timestamp_ms = std::max<int64_t>(0, *timestamp);
-          } else if (const auto* timestamp =
+            timestamp_ms = std::max<int64_t>(0, *timestamp_64);
+          } else if (const auto* timestamp_32 =
                          std::get_if<int32_t>(&timestamp_it->second)) {
-            timestamp_ms = std::max<int64_t>(0, *timestamp);
+            timestamp_ms = std::max<int64_t>(0, *timestamp_32);
           } else {
             result->Error("invalid_arguments", "Invalid timestampMs");
             return;
