@@ -193,7 +193,8 @@ std::vector<uint8_t> EncodeJpeg(IWICImagingFactory* factory,
 }
 
 std::vector<uint8_t> GetVideoFrame(const std::string& path,
-                                   int64_t timestamp_ms, int maximum_size) {
+                                   int64_t timestamp_ms, int maximum_size,
+                                   bool precise) {
   if (FAILED(MFStartup(MF_VERSION, MFSTARTUP_FULL))) {
     return {};
   }
@@ -252,13 +253,23 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
       break;
     }
 
+    const LONGLONG target_timestamp =
+        std::max<int64_t>(0, timestamp_ms) * 10000;
     ComPtr<IMFSample> sample;
-    for (int attempt = 0; attempt < 24 && sample == nullptr; ++attempt) {
+    const int maximum_attempts = precise ? 180 : 24;
+    for (int attempt = 0; attempt < maximum_attempts; ++attempt) {
       DWORD stream_flags = 0;
+      LONGLONG sample_timestamp = 0;
+      ComPtr<IMFSample> candidate;
       if (FAILED(reader->ReadSample(video_stream, 0, nullptr, &stream_flags,
-                                    nullptr, &sample)) ||
+                                    &sample_timestamp, &candidate)) ||
           (stream_flags &
            static_cast<DWORD>(MF_SOURCE_READERF_ENDOFSTREAM)) != 0) {
+        break;
+      }
+      if (candidate != nullptr &&
+          (!precise || sample_timestamp >= target_timestamp)) {
+        sample = std::move(candidate);
         break;
       }
     }
@@ -470,6 +481,7 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
         }
 
         int64_t timestamp_ms = 0;
+        bool precise = false;
         if (is_frame) {
           const auto timestamp_it =
               arguments->find(flutter::EncodableValue("timestampMs"));
@@ -487,10 +499,21 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
             result->Error("invalid_arguments", "Invalid timestampMs");
             return;
           }
+          const auto precise_it =
+              arguments->find(flutter::EncodableValue("precise"));
+          if (precise_it != arguments->end()) {
+            const auto* precise_value =
+                std::get_if<bool>(&precise_it->second);
+            if (precise_value == nullptr) {
+              result->Error("invalid_arguments", "Invalid precise value");
+              return;
+            }
+            precise = *precise_value;
+          }
         }
 
         std::thread([window, requested_path, requested_size, timestamp_ms,
-                     is_thumbnail, is_frame,
+                     precise, is_thumbnail, is_frame,
                      result = std::move(result)]() mutable {
           const HRESULT com_result =
               CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -501,8 +524,8 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
               value = flutter::EncodableValue(std::move(bytes));
             }
           } else if (is_frame) {
-            auto bytes =
-                GetVideoFrame(requested_path, timestamp_ms, requested_size);
+            auto bytes = GetVideoFrame(requested_path, timestamp_ms,
+                                       requested_size, precise);
             if (!bytes.empty()) {
               value = flutter::EncodableValue(std::move(bytes));
             }

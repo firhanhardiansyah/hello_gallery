@@ -8,7 +8,7 @@ import 'package:hello_gallery/features/media_preview/data/repositories/platform_
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('extracts once and serves repeated timestamps from memory', () async {
+  test('caches coarse and precise frames independently', () async {
     const channel = MethodChannel(
       PlatformSeekPreviewFrameRepository.channelName,
     );
@@ -46,15 +46,28 @@ void main() {
 
     final first = await repository.getFrame(item, const Duration(seconds: 15));
     final second = await repository.getFrame(item, const Duration(seconds: 15));
+    final precise = await repository.getFrame(
+      item,
+      const Duration(seconds: 15),
+      precise: true,
+    );
 
     expect(first, frameBytes);
     expect(second, frameBytes);
-    expect(calls, hasLength(1));
-    expect(calls.single.method, 'getFrame');
-    expect(calls.single.arguments, {
+    expect(precise, frameBytes);
+    expect(calls, hasLength(2));
+    expect(calls.first.method, 'getFrame');
+    expect(calls.first.arguments, {
       'path': item.path,
       'timestampMs': 15000,
       'size': 240,
+      'precise': false,
+    });
+    expect(calls.last.arguments, {
+      'path': item.path,
+      'timestampMs': 15000,
+      'size': 240,
+      'precise': true,
     });
   });
 }

@@ -86,7 +86,8 @@ void main() {
                 duration: const Duration(minutes: 2),
                 previewIdentity: 'video.mp4',
                 previewDebounce: Duration.zero,
-                previewFrameLoader: (position) async {
+                previewExactDelay: const Duration(hours: 1),
+                previewFrameLoader: (position, {precise = false}) async {
                   requestedPositions.add(position);
                   return frameBytes;
                 },

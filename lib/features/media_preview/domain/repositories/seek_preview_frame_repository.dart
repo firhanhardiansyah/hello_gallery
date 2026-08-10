@@ -7,5 +7,6 @@ abstract interface class SeekPreviewFrameRepository {
     MediaItem item,
     Duration position, {
     int width = 320,
+    bool precise = false,
   });
 }

@@ -5,6 +5,7 @@ abstract final class MediaPreviewTiming {
   static const playbackFeedback = Duration(milliseconds: 250);
   static const navigationEventSuppression = Duration(milliseconds: 500);
   static const seekPreviewDebounce = Duration(milliseconds: 250);
+  static const seekPreviewExactDelay = Duration(milliseconds: 350);
 
   // Motion.
   static const quickFade = Duration(milliseconds: 120);

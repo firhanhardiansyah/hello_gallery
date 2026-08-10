@@ -14,6 +14,7 @@ class VideoSeekSlider extends StatefulWidget {
     this.previewIdentity,
     this.previewPlaceholderPath,
     this.previewDebounce = MediaPreviewTiming.seekPreviewDebounce,
+    this.previewExactDelay = MediaPreviewTiming.seekPreviewExactDelay,
     super.key,
   });
 
@@ -25,6 +26,7 @@ class VideoSeekSlider extends StatefulWidget {
   final Object? previewIdentity;
   final String? previewPlaceholderPath;
   final Duration previewDebounce;
+  final Duration previewExactDelay;
 
   @override
   State<VideoSeekSlider> createState() => _VideoSeekSliderState();
@@ -51,7 +53,8 @@ class _VideoSeekSliderState extends State<VideoSeekSlider> {
     if (oldWidget.previewIdentity != widget.previewIdentity ||
         (oldWidget.previewFrameLoader == null) !=
             (widget.previewFrameLoader == null) ||
-        oldWidget.previewDebounce != widget.previewDebounce) {
+        oldWidget.previewDebounce != widget.previewDebounce ||
+        oldWidget.previewExactDelay != widget.previewExactDelay) {
       _disposePreviewController();
       _createPreviewController();
     }
@@ -188,6 +191,7 @@ class _VideoSeekSliderState extends State<VideoSeekSlider> {
     _previewController = SeekPreviewController(
       loadFrame: loader,
       debounceDuration: widget.previewDebounce,
+      exactDelay: widget.previewExactDelay,
     )..addListener(_handlePreviewChanged);
   }
 

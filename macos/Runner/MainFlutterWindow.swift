@@ -243,6 +243,7 @@ class MainFlutterWindow: NSWindow {
           at: filePath,
           timestampMs: max(0, timestampMs),
           maximumSize: max(120, min(size, 480)),
+          precise: arguments["precise"] as? Bool ?? false,
           result: result
         )
         return
@@ -288,6 +289,7 @@ class MainFlutterWindow: NSWindow {
     at filePath: String,
     timestampMs: Int,
     maximumSize: Int,
+    precise: Bool,
     result: @escaping FlutterResult
   ) {
     DispatchQueue.global(qos: .userInitiated).async {
@@ -296,7 +298,9 @@ class MainFlutterWindow: NSWindow {
       generator.appliesPreferredTrackTransform = true
       let targetSize = CGFloat(maximumSize)
       generator.maximumSize = CGSize(width: targetSize, height: targetSize)
-      let tolerance = CMTime(value: 500, timescale: 1000)
+      let tolerance = precise
+        ? CMTime.zero
+        : CMTime(value: 500, timescale: 1000)
       generator.requestedTimeToleranceBefore = tolerance
       generator.requestedTimeToleranceAfter = tolerance
       let requestedTime = CMTime(value: CMTimeValue(timestampMs), timescale: 1000)

@@ -19,7 +19,7 @@ final class PlatformSeekPreviewFrameRepository
   static const channelName = 'hello_gallery/platform_thumbnail';
   static const _maximumMemoryEntries = 32;
   static const _maximumDiskEntries = 512;
-  static const _extractorVersion = 'native-seek-preview-v1';
+  static const _extractorVersion = 'native-seek-preview-v2';
 
   final MethodChannel _channel;
   final Future<Directory> Function() _getCacheDirectory;
@@ -33,13 +33,14 @@ final class PlatformSeekPreviewFrameRepository
     MediaItem item,
     Duration position, {
     int width = 240,
+    bool precise = false,
   }) async {
     if (!item.isVideo) return null;
     final normalizedPosition = position < Duration.zero
         ? Duration.zero
         : position;
     final normalizedWidth = width.clamp(120, 480);
-    final key = _frameKey(item, normalizedPosition, normalizedWidth);
+    final key = _frameKey(item, normalizedPosition, normalizedWidth, precise);
     final memoryBytes = _memoryCache.remove(key);
     if (memoryBytes != null) {
       _memoryCache[key] = memoryBytes;
@@ -65,6 +66,7 @@ final class PlatformSeekPreviewFrameRepository
       item: item,
       position: normalizedPosition,
       width: normalizedWidth,
+      precise: precise,
       cacheKey: key,
       cacheFile: cacheFile,
     );
@@ -80,6 +82,7 @@ final class PlatformSeekPreviewFrameRepository
     required MediaItem item,
     required Duration position,
     required int width,
+    required bool precise,
     required String cacheKey,
     required File cacheFile,
   }) async {
@@ -88,6 +91,7 @@ final class PlatformSeekPreviewFrameRepository
         'path': item.path,
         'timestampMs': position.inMilliseconds,
         'size': width,
+        'precise': precise,
       });
       if (bytes == null || bytes.isEmpty) return null;
       _remember(cacheKey, bytes);
@@ -126,8 +130,13 @@ final class PlatformSeekPreviewFrameRepository
     );
   }
 
-  String _frameKey(MediaItem item, Duration position, int width) => _hash(
-    '$_extractorVersion\u0000${_mediaKey(item)}\u0000${position.inMilliseconds}\u0000$width',
+  String _frameKey(
+    MediaItem item,
+    Duration position,
+    int width,
+    bool precise,
+  ) => _hash(
+    '$_extractorVersion\u0000${_mediaKey(item)}\u0000${position.inMilliseconds}\u0000$width\u0000$precise',
   );
 
   String _mediaKey(MediaItem item) => _hash(

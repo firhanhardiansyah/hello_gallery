@@ -68,8 +68,11 @@ class VideoControls extends ConsumerWidget {
             previewIdentity: activeItem,
             previewPlaceholderPath: seekPreviewPlaceholderPath,
             previewFrameLoader: activeItem?.isVideo == true
-                ? (position) =>
-                      seekPreviewFrames.getFrame(activeItem!, position)
+                ? (position, {precise = false}) => seekPreviewFrames.getFrame(
+                    activeItem!,
+                    position,
+                    precise: precise,
+                  )
                 : null,
           ),
           Row(

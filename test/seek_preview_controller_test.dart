@@ -7,8 +7,9 @@ import 'package:hello_gallery/features/media_preview/presentation/controllers/se
 void main() {
   test('uses adaptive timestamp buckets for video duration', () {
     final controller = SeekPreviewController(
-      loadFrame: (_) async => null,
+      loadFrame: (_, {precise = false}) async => null,
       debounceDuration: Duration.zero,
+      exactDelay: const Duration(hours: 1),
     );
     addTearDown(controller.dispose);
 
@@ -39,12 +40,13 @@ void main() {
     final firstRequest = Completer<Uint8List?>();
     final requested = <Duration>[];
     final controller = SeekPreviewController(
-      loadFrame: (position) {
+      loadFrame: (position, {precise = false}) {
         requested.add(position);
         if (requested.length == 1) return firstRequest.future;
         return Future.value(Uint8List.fromList([2]));
       },
       debounceDuration: Duration.zero,
+      exactDelay: const Duration(hours: 1),
     );
     addTearDown(controller.dispose);
 
@@ -61,14 +63,48 @@ void main() {
     expect(controller.isLoading, isFalse);
   });
 
-  test('prefetches adjacent buckets after the cursor stays idle', () async {
-    final requested = <Duration>[];
+  test('replaces the coarse frame with an exact frame after idle', () async {
+    final requested = <({Duration position, bool precise})>[];
     final controller = SeekPreviewController(
-      loadFrame: (position) async {
-        requested.add(position);
+      loadFrame: (position, {precise = false}) async {
+        requested.add((position: position, precise: precise));
+        return Uint8List.fromList([precise ? 2 : 1]);
+      },
+      debounceDuration: Duration.zero,
+      exactDelay: const Duration(milliseconds: 10),
+      prefetchDelay: const Duration(hours: 1),
+    );
+    addTearDown(controller.dispose);
+
+    controller.request(
+      const Duration(milliseconds: 12345),
+      const Duration(minutes: 5),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+
+    expect(controller.frameBytes, [1]);
+    expect(requested, const [
+      (position: Duration(seconds: 10), precise: false),
+    ]);
+
+    await Future<void>.delayed(const Duration(milliseconds: 15));
+
+    expect(controller.frameBytes, [2]);
+    expect(requested.last, const (
+      position: Duration(milliseconds: 12345),
+      precise: true,
+    ));
+  });
+
+  test('prefetches adjacent coarse buckets after exact extraction', () async {
+    final requested = <({Duration position, bool precise})>[];
+    final controller = SeekPreviewController(
+      loadFrame: (position, {precise = false}) async {
+        requested.add((position: position, precise: precise));
         return Uint8List.fromList([1]);
       },
       debounceDuration: Duration.zero,
+      exactDelay: Duration.zero,
       prefetchDelay: Duration.zero,
     );
     addTearDown(controller.dispose);
@@ -77,9 +113,10 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 5));
 
     expect(requested, const [
-      Duration(seconds: 10),
-      Duration(seconds: 15),
-      Duration(seconds: 5),
+      (position: Duration(seconds: 10), precise: false),
+      (position: Duration(seconds: 12), precise: true),
+      (position: Duration(seconds: 15), precise: false),
+      (position: Duration(seconds: 5), precise: false),
     ]);
   });
 }
