@@ -273,7 +273,20 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     final slot = await _obtainSlot(item);
     if (generation != _openGeneration || slot == null) return;
     final player = slot.player;
-    final videoController = slot.controller ??= VideoController(player);
+    var videoController = slot.controller;
+    if (videoController == null) {
+      videoController = VideoController(player);
+      slot.controller = videoController;
+      // A preloaded slot is opened without a native video output to keep its
+      // background work lightweight. macOS/libmpv does not reliably connect
+      // an output attached after that open, so wait for the texture and reload
+      // the source once when the slot becomes active.
+      await videoController.platform.future;
+      if (generation != _openGeneration || slot.disposed) return;
+      await player.open(Media(slot.item.path), play: false);
+      if (generation != _openGeneration || slot.disposed) return;
+      slot.firstFrameReady = false;
+    }
     _activeSlot = slot;
     _player = player;
     _videoController = videoController;
