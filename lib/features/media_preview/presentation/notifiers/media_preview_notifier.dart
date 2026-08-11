@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:media_kit/media_kit.dart';
@@ -18,6 +19,8 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
   Player? _player;
   VideoController? _videoController;
   final _subscriptions = <StreamSubscription<Object?>>[];
+  final _playerPool = <String, _VideoPlayerSlot>{};
+  _VideoPlayerSlot? _activeSlot;
   int _openGeneration = 0;
 
   VideoController? get videoController => _videoController;
@@ -26,12 +29,13 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
   MediaPreviewUiState build() {
     ref.onDispose(() {
       _openGeneration++;
-      unawaited(_disposePlayer());
+      unawaited(_disposeAllPlayers());
     });
     return const MediaPreviewUiState();
   }
 
   Future<void> configure(List<MediaItem> items, int initialIndex) async {
+    await _disposeAllPlayers();
     state = MediaPreviewUiState(
       items: items,
       activeIndex: initialIndex.clamp(0, items.length - 1),
@@ -101,7 +105,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     final previousIndex = state.activeIndex;
     if (items.isEmpty) {
       state = const MediaPreviewUiState();
-      await _disposePlayer();
+      await _disposeAllPlayers();
       return false;
     }
 
@@ -119,7 +123,11 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
         previousItem.sizeBytes != nextItem.sizeBytes;
 
     state = state.copyWith(items: items, activeIndex: nextIndex);
-    if (sourceChanged) await _openActive();
+    if (sourceChanged) {
+      await _openActive(forceReload: true);
+    } else {
+      unawaited(_syncPreloadWindow(_openGeneration));
+    }
     return true;
   }
 
@@ -198,6 +206,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     final position = state.position;
     final wasPlaying = state.isPlaying;
     final wasMuted = state.isMuted;
+    await _disposeAllPlayers();
     await _openActive(
       initialPosition: position,
       playWhenReady: wasPlaying,
@@ -209,38 +218,80 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     Duration initialPosition = Duration.zero,
     bool playWhenReady = true,
     bool muted = false,
+    bool forceReload = false,
   }) async {
     final generation = ++_openGeneration;
+    final previousSlot = _activeSlot;
+    final item = state.activeItem;
+    final cachedSlot = item == null || forceReload
+        ? null
+        : _playerPool[item.path];
+    final warmSlot =
+        cachedSlot != null &&
+            cachedSlot.item == item &&
+            cachedSlot.prepared &&
+            !cachedSlot.disposed
+        ? cachedSlot
+        : null;
+    final warmPlayerState = warmSlot?.player.state;
+    _activeSlot = warmSlot;
+    _player = warmSlot?.player;
+    _videoController = warmSlot?.controller;
     state = state.copyWith(
       isPlaying: false,
-      isVideoReady: false,
+      isVideoReady:
+          warmPlayerState != null &&
+          ((warmPlayerState.width ?? 0) > 0 ||
+              warmPlayerState.position > Duration.zero),
       isMuted: false,
-      position: Duration.zero,
-      duration: Duration.zero,
+      position: warmPlayerState?.position ?? Duration.zero,
+      duration: warmPlayerState?.duration ?? Duration.zero,
     );
-    await _disposePlayer();
+    await _cancelActiveSubscriptions();
+    await previousSlot?.player.pause();
     if (generation != _openGeneration) return;
-    final item = state.activeItem;
-    if (item == null || !item.isVideo) return;
-    final player = Player();
+    if (item == null || !item.isVideo) {
+      if (previousSlot != null && !previousSlot.disposed) {
+        unawaited(_resetSlotPosition(previousSlot));
+      }
+      unawaited(_syncPreloadWindow(generation));
+      return;
+    }
+    if (forceReload) {
+      await _removeSlot(item.path);
+    }
+    final slot = await _obtainSlot(item);
+    if (generation != _openGeneration || slot == null) return;
+    final player = slot.player;
+    _activeSlot = slot;
     _player = player;
-    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
-    if (generation != _openGeneration) return;
-    _videoController = VideoController(player);
-    // Notify the UI immediately that a new native video surface is available.
-    state = state.copyWith();
+    _videoController = slot.controller;
+    final playerState = player.state;
+    state = state.copyWith(
+      duration: playerState.duration,
+      position: playerState.position,
+      isVideoReady:
+          (playerState.width ?? 0) > 0 || playerState.position > Duration.zero,
+    );
     _subscriptions.addAll([
       player.stream.playing.listen((playing) {
+        if (generation != _openGeneration) return;
         state = state.copyWith(isPlaying: playing);
       }),
       player.stream.position.listen((position) {
+        if (generation != _openGeneration) return;
         state = state.copyWith(
           position: position,
           isVideoReady: state.isVideoReady || position > Duration.zero,
         );
       }),
       player.stream.duration.listen((duration) {
+        if (generation != _openGeneration) return;
         state = state.copyWith(duration: duration);
+      }),
+      player.stream.width.listen((width) {
+        if (generation != _openGeneration || (width ?? 0) <= 0) return;
+        state = state.copyWith(isVideoReady: true);
       }),
       player.stream.completed.listen((completed) {
         if (!completed || generation != _openGeneration) return;
@@ -252,34 +303,162 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
         unawaited(nextVideo());
       }),
     ]);
-    await player.open(Media(item.path), play: false);
-    if (generation != _openGeneration) return;
-    // Reapply after libmpv has read the source color metadata. Some target
-    // properties are resolved against the active video's transfer function.
-    await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
-    if (generation != _openGeneration) return;
-    await player.setPlaylistMode(
-      state.isLooping ? PlaylistMode.single : PlaylistMode.none,
-    );
+    final playlistMode = state.isLooping
+        ? PlaylistMode.single
+        : PlaylistMode.none;
+    if (player.state.playlistMode != playlistMode) {
+      await player.setPlaylistMode(playlistMode);
+    }
     if (initialPosition > Duration.zero) {
       await player.seek(initialPosition);
     }
     if (muted) {
-      await player.setVolume(0);
+      if (player.state.volume != 0) await player.setVolume(0);
       state = state.copyWith(isMuted: true);
+    } else if (player.state.volume != 100) {
+      await player.setVolume(100);
     }
     if (playWhenReady) await player.play();
+    if (generation != _openGeneration) return;
+    if (previousSlot != null &&
+        !previousSlot.disposed &&
+        !identical(previousSlot, slot)) {
+      unawaited(_resetSlotPosition(previousSlot));
+    }
+    unawaited(_syncPreloadWindow(generation));
   }
 
-  Future<void> _disposePlayer() async {
+  Future<void> _resetSlotPosition(_VideoPlayerSlot slot) async {
+    try {
+      if (!slot.disposed) await slot.player.seek(Duration.zero);
+    } on Object catch (error) {
+      if (!slot.disposed) {
+        debugPrint('Could not reset video ${slot.item.path}: $error');
+      }
+    }
+  }
+
+  Future<_VideoPlayerSlot?> _obtainSlot(MediaItem item) async {
+    var slot = _playerPool[item.path];
+    if (slot != null && slot.item != item) {
+      await _removeSlot(item.path);
+      slot = null;
+    }
+    if (slot == null) {
+      final player = Player();
+      slot = _VideoPlayerSlot(item: item, player: player);
+      _playerPool[item.path] = slot;
+      slot.preparation = _prepareSlot(slot);
+    }
+    final prepared = await slot.preparation;
+    if (!prepared ||
+        slot.disposed ||
+        !identical(_playerPool[item.path], slot)) {
+      return null;
+    }
+    return slot;
+  }
+
+  Future<bool> _prepareSlot(_VideoPlayerSlot slot) async {
+    try {
+      final player = slot.player;
+      await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+      if (slot.disposed) return false;
+      slot.controller = VideoController(player);
+      await player.open(Media(slot.item.path), play: false);
+      if (slot.disposed) return false;
+      // Reapply after libmpv has read the source color metadata. Some target
+      // properties are resolved against the active video's transfer function.
+      await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
+      slot.prepared = true;
+      return !slot.disposed;
+    } on Object catch (error) {
+      if (!slot.disposed) {
+        debugPrint('Could not preload video ${slot.item.path}: $error');
+        await _removeSlot(slot.item.path, expected: slot);
+      }
+      return false;
+    }
+  }
+
+  Future<void> _syncPreloadWindow(int generation) async {
+    if (generation != _openGeneration || state.items.isEmpty) return;
+    final activeIndex = state.activeIndex;
+    final candidates = <MediaItem>[];
+    for (final index in [activeIndex - 1, activeIndex, activeIndex + 1]) {
+      if (index >= 0 && index < state.items.length) {
+        final item = state.items[index];
+        if (item.isVideo) candidates.add(item);
+      }
+    }
+    final retainedPaths = candidates.map((item) => item.path).toSet();
+    final obsoleteSlots = _playerPool.entries
+        .where((entry) => !retainedPaths.contains(entry.key))
+        .map((entry) => entry.value)
+        .toList();
+    for (final slot in obsoleteSlots) {
+      if (generation != _openGeneration) return;
+      await _removeSlot(slot.item.path, expected: slot);
+    }
+    if (generation != _openGeneration) return;
+    await Future.wait(
+      candidates
+          .where((item) => item.path != state.activeItem?.path)
+          .map(_obtainSlot),
+    );
+  }
+
+  Future<void> _removeSlot(
+    String mediaPath, {
+    _VideoPlayerSlot? expected,
+  }) async {
+    final slot = _playerPool[mediaPath];
+    if (slot == null || (expected != null && !identical(slot, expected))) {
+      return;
+    }
+    _playerPool.remove(mediaPath);
+    if (identical(_activeSlot, slot)) {
+      _activeSlot = null;
+      _player = null;
+      _videoController = null;
+    }
+    await slot.dispose();
+  }
+
+  Future<void> _cancelActiveSubscriptions() async {
     final subscriptions = [..._subscriptions];
-    final player = _player;
     _subscriptions.clear();
-    _player = null;
-    _videoController = null;
     for (final subscription in subscriptions) {
       await subscription.cancel();
     }
-    await player?.dispose();
+  }
+
+  Future<void> _disposeAllPlayers() async {
+    await _cancelActiveSubscriptions();
+    final slots = _playerPool.values.toSet().toList();
+    _playerPool.clear();
+    _activeSlot = null;
+    _player = null;
+    _videoController = null;
+    for (final slot in slots) {
+      await slot.dispose();
+    }
+  }
+}
+
+final class _VideoPlayerSlot {
+  _VideoPlayerSlot({required this.item, required this.player});
+
+  final MediaItem item;
+  final Player player;
+  late final Future<bool> preparation;
+  late final VideoController controller;
+  bool prepared = false;
+  bool disposed = false;
+
+  Future<void> dispose() async {
+    if (disposed) return;
+    disposed = true;
+    await player.dispose();
   }
 }
