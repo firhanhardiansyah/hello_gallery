@@ -12,6 +12,46 @@ import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page
 import 'package:hello_gallery/features/thumbnail/application/providers/media_dimensions_dependencies.dart';
 
 void main() {
+  testWidgets('uses a top progress line while every gallery layout loads', (
+    tester,
+  ) async {
+    for (final layoutMode in GalleryLayoutMode.values) {
+      final controller = ScrollController();
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: GalleryBody(
+                key: ValueKey('loading-${layoutMode.name}'),
+                state: const GalleryUiState(
+                  loadState: GalleryLoadState.loading(),
+                ),
+                layoutMode: layoutMode,
+                scrollController: controller,
+                selectedIndex: 0,
+                selectedPaths: const {},
+                onSelectionChanged: (_, {required toggle, required extend}) {},
+                onClearSelection: () {},
+                onColumnCountChanged: (_) {},
+                onFolderSelected: (_) {},
+                onMediaSelected: (_) {},
+                onMediaDropped: (_, _) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 240));
+
+      expect(
+        find.byKey(const ValueKey('gallery-loading-progress')),
+        findsOneWidget,
+      );
+      expect(find.byType(GalleryCard), findsNothing);
+      controller.dispose();
+    }
+  });
+
   testWidgets('quilted layout mixes large and small gallery tiles', (
     tester,
   ) async {
@@ -168,5 +208,64 @@ void main() {
     await tester.pump();
     final afterScroll = tester.getRect(preview);
     expect(afterScroll.width / afterScroll.height, closeTo(4 / 3, 0.01));
+  });
+
+  testWidgets('waits for initial masonry ratios before showing cards', (
+    tester,
+  ) async {
+    final ratio = Completer<double>();
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final item = MediaItem(
+      path: '/gallery/landscape.jpg',
+      name: 'landscape.jpg',
+      modifiedAt: DateTime(2026),
+      mediaType: GalleryItemType.image,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mediaAspectRatioProvider.overrideWith((ref, item) => ratio.future),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: GalleryBody(
+              state: GalleryUiState(
+                loadState: const GalleryLoadState.ready(),
+                currentPath: '/gallery',
+                items: [item],
+              ),
+              layoutMode: GalleryLayoutMode.masonry,
+              showItemNames: false,
+              scrollController: controller,
+              selectedIndex: 0,
+              selectedPaths: const {},
+              onSelectionChanged: (_, {required toggle, required extend}) {},
+              onClearSelection: () {},
+              onColumnCountChanged: (_) {},
+              onFolderSelected: (_) {},
+              onMediaSelected: (_) {},
+              onMediaDropped: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 240));
+
+    expect(find.byType(MasonryGridView), findsNothing);
+    expect(
+      find.byKey(const ValueKey('gallery-loading-progress')),
+      findsOneWidget,
+    );
+
+    ratio.complete(2);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(MasonryGridView), findsOneWidget);
+    final card = tester.getRect(find.byType(GalleryCard));
+    expect(card.width / card.height, closeTo(4 / 3, 0.01));
   });
 }

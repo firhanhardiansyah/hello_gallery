@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:hello_gallery/core/theme/app_color_tokens.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 
+import '../../../../thumbnail/application/providers/media_dimensions_dependencies.dart';
 import '../../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../../../../thumbnail/application/services/thumbnail_job_scheduler.dart';
 import '../../../application/providers/gallery_dependencies.dart';
@@ -26,6 +28,10 @@ abstract final class _GalleryGridLayout {
   static const padding = AppSpacing.md;
   static const spacing = AppSpacing.xs;
   static const childAspectRatio = 3 / 4;
+  static const masonryMinimumWarmupItemCount = 12;
+  static const masonryDefaultWarmupItemCount = 24;
+  static const masonryMaximumWarmupItemCount = 48;
+  static const masonryMaximumLandscapeAspectRatio = 4 / 3;
 }
 
 class GalleryBody extends ConsumerStatefulWidget {
@@ -79,10 +85,12 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   late final FolderPreviewJobScheduler _folderPreviewScheduler;
   final _itemKeys = <String, GlobalKey>{};
   int _reportedColumnCount = 1;
+  double _itemCrossAxisExtent = 0;
   double _itemMainExtent = 0;
   bool _isScrolling = false;
   bool? _pendingScrollingState;
   bool _scrollingStateUpdateScheduled = false;
+  String? _preparedMasonryIdentity;
 
   @override
   void initState() {
@@ -95,6 +103,12 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   @override
   void didUpdateWidget(covariant GalleryBody oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.currentPath != widget.state.currentPath ||
+        oldWidget.layoutMode != widget.layoutMode ||
+        (oldWidget.state.loadState is! GalleryLoading &&
+            widget.state.loadState is GalleryLoading)) {
+      _preparedMasonryIdentity = null;
+    }
     if (oldWidget.selectedIndex != widget.selectedIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelection());
     }
@@ -188,9 +202,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   @override
   Widget build(BuildContext context) {
     return switch (widget.state.loadState) {
-      GalleryInitial() || GalleryLoading() => _LoadingGrid(
-        maxCrossAxisExtent: widget.maxCrossAxisExtent,
-      ),
+      GalleryInitial() || GalleryLoading() => const _GalleryLoadingSurface(),
       GalleryEmpty() => const Center(
         child: Text('No supported media in this folder.'),
       ),
@@ -209,6 +221,10 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _updateGridMetrics(constraints.maxWidth);
+        if (widget.layoutMode == GalleryLayoutMode.masonry &&
+            _isPreparingMasonry(visibleItems, constraints)) {
+          return const _GalleryLoadingSurface();
+        }
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: widget.onClearSelection,
@@ -218,6 +234,49 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           ),
         );
       },
+    );
+  }
+
+  bool _isPreparingMasonry(
+    List<GalleryItem> visibleItems,
+    BoxConstraints constraints,
+  ) {
+    final warmupItemCount = _masonryWarmupItemCount(constraints);
+    final warmupItems = visibleItems
+        .take(warmupItemCount)
+        .whereType<MediaItem>()
+        .toList();
+    final identity = Object.hashAll([
+      widget.state.currentPath,
+      for (final item in warmupItems)
+        Object.hash(item.path, item.modifiedAt, item.sizeBytes),
+    ]).toString();
+    if (_preparedMasonryIdentity == identity) return false;
+    final dimensions = [
+      for (final item in warmupItems) ref.watch(mediaAspectRatioProvider(item)),
+    ];
+    final isPreparing = dimensions.any(
+      (dimension) => !dimension.hasValue && !dimension.hasError,
+    );
+    if (!isPreparing) _preparedMasonryIdentity = identity;
+    return isPreparing;
+  }
+
+  int _masonryWarmupItemCount(BoxConstraints constraints) {
+    if (!constraints.hasBoundedHeight || _itemCrossAxisExtent <= 0) {
+      return _GalleryGridLayout.masonryDefaultWarmupItemCount;
+    }
+    final minimumItemHeight =
+        _itemCrossAxisExtent /
+        _GalleryGridLayout.masonryMaximumLandscapeAspectRatio;
+    final bufferedRows =
+        (constraints.maxHeight /
+                (minimumItemHeight + _GalleryGridLayout.spacing))
+            .ceil() +
+        2;
+    return (_reportedColumnCount * bufferedRows).clamp(
+      _GalleryGridLayout.masonryMinimumWarmupItemCount,
+      _GalleryGridLayout.masonryMaximumWarmupItemCount,
     );
   }
 
@@ -298,9 +357,10 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         (gridWidth / (widget.maxCrossAxisExtent + _GalleryGridLayout.spacing))
             .ceil()
             .clamp(1, 1000);
-    final itemCrossAxisExtent =
+    _itemCrossAxisExtent =
         (gridWidth - _GalleryGridLayout.spacing * (columns - 1)) / columns;
-    _itemMainExtent = itemCrossAxisExtent / _GalleryGridLayout.childAspectRatio;
+    _itemMainExtent =
+        _itemCrossAxisExtent / _GalleryGridLayout.childAspectRatio;
     if (columns == _reportedColumnCount) return;
     _reportedColumnCount = columns;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -409,24 +469,51 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   }
 }
 
-class _LoadingGrid extends StatelessWidget {
-  const _LoadingGrid({required this.maxCrossAxisExtent});
-
-  final double maxCrossAxisExtent;
+class _GalleryLoadingSurface extends StatefulWidget {
+  const _GalleryLoadingSurface();
 
   @override
-  Widget build(BuildContext context) {
-    final appColors = context.appColors;
-    return GridView.builder(
-      padding: const EdgeInsets.all(_GalleryGridLayout.padding),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: maxCrossAxisExtent,
-        childAspectRatio: _GalleryGridLayout.childAspectRatio,
-        crossAxisSpacing: _GalleryGridLayout.spacing,
-        mainAxisSpacing: _GalleryGridLayout.spacing,
-      ),
-      itemCount: 18,
-      itemBuilder: (_, _) => ColoredBox(color: appColors.loadingPlaceholder),
-    );
+  State<_GalleryLoadingSurface> createState() => _GalleryLoadingSurfaceState();
+}
+
+class _GalleryLoadingSurfaceState extends State<_GalleryLoadingSurface> {
+  static const _indicatorDelay = Duration(milliseconds: 120);
+  static const _fadeDuration = Duration(milliseconds: 120);
+  Timer? _showTimer;
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _showTimer = Timer(_indicatorDelay, () {
+      if (mounted) setState(() => _visible = true);
+    });
   }
+
+  @override
+  void dispose() {
+    _showTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const SizedBox.expand(),
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: AnimatedOpacity(
+          duration: _fadeDuration,
+          opacity: _visible ? 1 : 0,
+          child: const LinearProgressIndicator(
+            key: ValueKey('gallery-loading-progress'),
+            minHeight: 2,
+          ),
+        ),
+      ),
+    ],
+  );
 }
