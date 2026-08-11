@@ -16,7 +16,6 @@ final mediaPreviewNotifierProvider =
     );
 
 class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
-  static const _firstFrameWarmupTimeout = Duration(milliseconds: 500);
   static const _activeFirstFrameTimeout = Duration(seconds: 2);
   static const _playbackStabilizationDelay = Duration(milliseconds: 800);
   static const _readinessPositionFallback = Duration(milliseconds: 300);
@@ -260,8 +259,12 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     await _cancelActiveSubscriptions();
     await previousSlot?.player.pause();
     if (generation != _openGeneration) return;
+    // Release obsolete native video outputs while playback is paused. Doing
+    // this from delayed background maintenance can interrupt active frames.
+    await _prunePreloadWindow(generation);
+    if (generation != _openGeneration) return;
     if (item == null || !item.isVideo) {
-      unawaited(_runPoolMaintenance(generation, previousSlot: previousSlot));
+      unawaited(_runPoolMaintenance(generation));
       return;
     }
     if (forceReload) {
@@ -270,9 +273,10 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     final slot = await _obtainSlot(item);
     if (generation != _openGeneration || slot == null) return;
     final player = slot.player;
+    final videoController = slot.controller ??= VideoController(player);
     _activeSlot = slot;
     _player = player;
-    _videoController = slot.controller;
+    _videoController = videoController;
     final playerState = player.state;
     var lastPublishedPosition = playerState.position;
     state = state.copyWith(
@@ -342,9 +346,9 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     if (playWhenReady) await player.play();
     if (generation != _openGeneration) return;
     if (playWhenReady) {
-      _schedulePoolMaintenance(generation, previousSlot: previousSlot);
+      _schedulePoolMaintenance(generation);
     } else {
-      unawaited(_runPoolMaintenance(generation, previousSlot: previousSlot));
+      unawaited(_runPoolMaintenance(generation));
     }
   }
 
@@ -353,7 +357,9 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     int generation,
   ) async {
     try {
-      await slot.controller.waitUntilFirstFrameRendered.timeout(
+      final controller = slot.controller;
+      if (controller == null) return;
+      await controller.waitUntilFirstFrameRendered.timeout(
         _activeFirstFrameTimeout,
       );
       if (slot.disposed) return;
@@ -374,14 +380,11 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     }
   }
 
-  void _schedulePoolMaintenance(
-    int generation, {
-    _VideoPlayerSlot? previousSlot,
-  }) {
+  void _schedulePoolMaintenance(int generation) {
     _cancelScheduledPreload();
     _preloadTimer = Timer(_playbackStabilizationDelay, () {
       _preloadTimer = null;
-      unawaited(_runPoolMaintenance(generation, previousSlot: previousSlot));
+      unawaited(_runPoolMaintenance(generation));
     });
   }
 
@@ -398,32 +401,13 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     _preloadTimer = null;
   }
 
-  Future<void> _runPoolMaintenance(
-    int generation, {
-    _VideoPlayerSlot? previousSlot,
-  }) async {
+  Future<void> _runPoolMaintenance(int generation) async {
     try {
-      if (generation != _openGeneration) return;
-      if (previousSlot != null &&
-          !previousSlot.disposed &&
-          !identical(previousSlot, _activeSlot)) {
-        await _resetSlotPosition(previousSlot);
-      }
       if (generation != _openGeneration) return;
       await _syncPreloadWindow(generation);
     } on Object catch (error) {
       if (generation == _openGeneration) {
         debugPrint('Could not maintain video preload pool: $error');
-      }
-    }
-  }
-
-  Future<void> _resetSlotPosition(_VideoPlayerSlot slot) async {
-    try {
-      if (!slot.disposed) await slot.player.seek(Duration.zero);
-    } on Object catch (error) {
-      if (!slot.disposed) {
-        debugPrint('Could not reset video ${slot.item.path}: $error');
       }
     }
   }
@@ -454,17 +438,8 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
       final player = slot.player;
       await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
       if (slot.disposed) return false;
-      slot.controller = VideoController(player);
       await player.open(Media(slot.item.path), play: false);
       if (slot.disposed) return false;
-      try {
-        await slot.controller.waitUntilFirstFrameRendered.timeout(
-          _firstFrameWarmupTimeout,
-        );
-        slot.firstFrameReady = true;
-      } on TimeoutException {
-        // Some backends render the first frame only after playback starts.
-      }
       slot.prepared = true;
       return !slot.disposed;
     } on Object catch (error) {
@@ -478,24 +453,9 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
 
   Future<void> _syncPreloadWindow(int generation) async {
     if (generation != _openGeneration || state.items.isEmpty) return;
-    final activeIndex = state.activeIndex;
-    final candidates = <MediaItem>[];
-    for (final index in [activeIndex - 1, activeIndex, activeIndex + 1]) {
-      if (index >= 0 && index < state.items.length) {
-        final item = state.items[index];
-        if (item.isVideo) candidates.add(item);
-      }
-    }
-    final retainedPaths = candidates.map((item) => item.path).toSet();
-    final obsoleteSlots = _playerPool.entries
-        .where((entry) => !retainedPaths.contains(entry.key))
-        .map((entry) => entry.value)
-        .toList();
-    for (final slot in obsoleteSlots) {
-      if (generation != _openGeneration) return;
-      await _removeSlot(slot.item.path, expected: slot);
-    }
+    await _prunePreloadWindow(generation);
     if (generation != _openGeneration) return;
+    final activeIndex = state.activeIndex;
     final activePath = state.activeItem?.path;
     final preferredIndex = activeIndex + _preferredPreloadOffset;
     final fallbackIndex = activeIndex - _preferredPreloadOffset;
@@ -509,6 +469,25 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
       if (!item.isVideo || item.path == activePath) continue;
       if (!mayCreate && !_playerPool.containsKey(item.path)) continue;
       await _obtainSlot(item);
+    }
+  }
+
+  Future<void> _prunePreloadWindow(int generation) async {
+    if (generation != _openGeneration || state.items.isEmpty) return;
+    final activeIndex = state.activeIndex;
+    final retainedPaths = <String>{};
+    for (final index in [activeIndex - 1, activeIndex, activeIndex + 1]) {
+      if (index < 0 || index >= state.items.length) continue;
+      final item = state.items[index];
+      if (item.isVideo) retainedPaths.add(item.path);
+    }
+    final obsoleteSlots = _playerPool.entries
+        .where((entry) => !retainedPaths.contains(entry.key))
+        .map((entry) => entry.value)
+        .toList();
+    for (final slot in obsoleteSlots) {
+      if (generation != _openGeneration) return;
+      await _removeSlot(slot.item.path, expected: slot);
     }
   }
 
@@ -557,7 +536,7 @@ final class _VideoPlayerSlot {
   final MediaItem item;
   final Player player;
   late final Future<bool> preparation;
-  late final VideoController controller;
+  VideoController? controller;
   bool prepared = false;
   bool firstFrameReady = false;
   bool disposed = false;
