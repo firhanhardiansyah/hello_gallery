@@ -7,6 +7,7 @@ import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort
 
 import '../../application/providers/media_preview_dependencies.dart';
 import '../constants/media_preview_timing.dart';
+import '../controllers/media_preview_image_preloader.dart';
 import '../controllers/media_preview_overlay_controller.dart';
 import '../input/media_preview_input_handler.dart';
 import '../notifiers/media_preview_notifier.dart';
@@ -53,6 +54,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
 class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   final _focusNode = FocusNode();
   final _filmstripController = MediaPreviewFilmstripController();
+  final _imagePreloader = MediaPreviewImagePreloader();
   late final MediaPreviewInputHandler _inputHandler;
   late final MediaPreviewOverlayController _overlayController;
   int? _filmstripNavigationTargetIndex;
@@ -96,6 +98,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   void dispose() {
     _inputHandler.dispose();
+    _imagePreloader.dispose();
     _filmstripController.dispose();
     _overlayController
       ..removeListener(_handleOverlayChanged)
@@ -216,6 +219,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaPreviewNotifierProvider);
+    _imagePreloader.schedule(context, state);
     final hdrPlaybackEnabled = ref.watch(
       mediaPlaybackConfigProvider.select((config) => config.hdrEnabled),
     );
