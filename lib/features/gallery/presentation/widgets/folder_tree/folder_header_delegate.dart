@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-import '../folder_management/folder_context_menu.dart';
 import '../../states/media_drag_payload.dart';
+import '../folder_management/folder_context_menu.dart';
 
 class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   FolderHeaderDelegate({
@@ -72,7 +72,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                 _buildToggle(),
                 HugeIcon(
                   icon: expanded
-                      ? HugeIcons.strokeRoundedFolderOpen
+                      ? HugeIcons.strokeRoundedFolder02
                       : HugeIcons.strokeRoundedFolder01,
                   size: 20,
                   color: selected ? primaryColor : foregroundColor,
