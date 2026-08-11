@@ -21,6 +21,14 @@ void main() {
     expect(configurator.properties['inverse-tone-mapping'], 'no');
     expect(configurator.properties['video-output-levels'], 'full');
     expect(configurator.properties['dither-depth'], '8');
+    expect(
+      MediaKitVideoColorConfigurator.smoothPlaybackProperties,
+      containsPair('cache-on-disk', 'no'),
+    );
+    expect(
+      MediaKitVideoColorConfigurator.smoothPlaybackProperties,
+      containsPair('cache-pause-initial', 'yes'),
+    );
   });
 
   test('restores automatic native color output when HDR is enabled', () {

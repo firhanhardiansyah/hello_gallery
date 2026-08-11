@@ -32,6 +32,17 @@ final class MediaKitVideoColorConfigurator {
     'video-output-levels': 'auto',
     'dither-depth': 'auto',
   };
+  static const smoothPlaybackProperties = <String, String>{
+    // media_kit enables an on-disk cache by default. Gallery media is local,
+    // so keeping the read-ahead cache in memory avoids duplicating every read
+    // through a temporary file while playback is starting.
+    'cache-on-disk': 'no',
+    'demuxer-readahead-secs': '2',
+    // Let libmpv fill its packet cache before releasing the playback clock.
+    // Preloaded adjacent videos normally satisfy this before they are shown.
+    'cache-pause-initial': 'yes',
+    'cache-pause-wait': '0.5',
+  };
 
   Map<String, String> get properties =>
       config.hdrEnabled ? automaticHdrProperties : sdrToneMappingProperties;
@@ -39,7 +50,8 @@ final class MediaKitVideoColorConfigurator {
   Future<void> configure(Player player) async {
     final platform = player.platform;
     if (platform is! NativePlayer) return;
-    for (final property in properties.entries) {
+    final allProperties = {...smoothPlaybackProperties, ...properties};
+    for (final property in allProperties.entries) {
       if (platform.disposed) return;
       try {
         await platform.setProperty(property.key, property.value);

@@ -20,6 +20,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
   static const _activeFirstFrameTimeout = Duration(seconds: 2);
   static const _playbackStabilizationDelay = Duration(milliseconds: 800);
   static const _readinessPositionFallback = Duration(milliseconds: 300);
+  static const _positionUiUpdateInterval = Duration(milliseconds: 200);
 
   Player? _player;
   VideoController? _videoController;
@@ -206,7 +207,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
   Future<void> seekBy(Duration delta) async {
     final player = _player;
     if (player == null) return;
-    final target = state.position + delta;
+    final target = player.state.position + delta;
     await player.seek(target < Duration.zero ? Duration.zero : target);
   }
 
@@ -214,7 +215,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
 
   Future<void> applyPlaybackColorConfig() async {
     if (state.activeItem?.isVideo != true || _player == null) return;
-    final position = state.position;
+    final position = _player!.state.position;
     final wasPlaying = state.isPlaying;
     final wasMuted = state.isMuted;
     await _disposeAllPlayers();
@@ -273,6 +274,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     _player = player;
     _videoController = slot.controller;
     final playerState = player.state;
+    var lastPublishedPosition = playerState.position;
     state = state.copyWith(
       duration: playerState.duration,
       position: playerState.position,
@@ -282,14 +284,25 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
     _subscriptions.addAll([
       player.stream.playing.listen((playing) {
         if (generation != _openGeneration) return;
-        state = state.copyWith(isPlaying: playing);
+        state = state.copyWith(
+          isPlaying: playing,
+          position: playing ? state.position : player.state.position,
+        );
       }),
       player.stream.position.listen((position) {
         if (generation != _openGeneration) return;
+        final becameReady =
+            !state.isVideoReady && position >= _readinessPositionFallback;
+        final positionDelta = position - lastPublishedPosition;
+        if (!becameReady &&
+            positionDelta.abs() < _positionUiUpdateInterval &&
+            position > Duration.zero) {
+          return;
+        }
+        lastPublishedPosition = position;
         state = state.copyWith(
           position: position,
-          isVideoReady:
-              state.isVideoReady || position >= _readinessPositionFallback,
+          isVideoReady: state.isVideoReady || becameReady,
         );
       }),
       player.stream.duration.listen((duration) {
@@ -303,6 +316,7 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
         if (activeItem == null || !path.equals(activeItem.path, item.path)) {
           return;
         }
+        state = state.copyWith(position: player.state.position);
         unawaited(nextVideo());
       }),
     ]);
@@ -443,9 +457,6 @@ class MediaPreviewNotifier extends Notifier<MediaPreviewUiState> {
       slot.controller = VideoController(player);
       await player.open(Media(slot.item.path), play: false);
       if (slot.disposed) return false;
-      // Reapply after libmpv has read the source color metadata. Some target
-      // properties are resolved against the active video's transfer function.
-      await ref.read(mediaKitVideoColorConfiguratorProvider).configure(player);
       try {
         await slot.controller.waitUntilFirstFrameRendered.timeout(
           _firstFrameWarmupTimeout,
