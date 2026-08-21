@@ -75,6 +75,10 @@ final class MediaPreviewInputHandler {
   void handlePointerSignal(PointerSignalEvent event) {
     if (_disposed) return;
     if (event is! PointerScrollEvent) return;
+    // The preview canvas owns primary-modifier scrolling for media zoom.
+    // Avoid turning the same gesture into previous/next navigation when the
+    // pointer is over an overlay that does not participate in canvas zoom.
+    if (_isPrimaryModifierPressed()) return;
     GestureBinding.instance.pointerSignalResolver.register(
       event,
       _handleResolvedPointerSignal,

@@ -133,6 +133,64 @@ void main() {
 
     expect(nextCount, 1);
   });
+
+  testWidgets('reserves primary-modifier scroll for canvas zoom', (
+    tester,
+  ) async {
+    var nextCount = 0;
+    var primaryModifierPressed = true;
+    final handler = MediaPreviewInputHandler(
+      onPrevious: _noop,
+      onNext: () => nextCount++,
+      onSeekBackward: _noop,
+      onSeekForward: _noop,
+      onTogglePlay: _noop,
+      onToggleMute: _noop,
+      onRotate: _noop,
+      onToggleRotationLock: _noop,
+      onToggleLoop: _noop,
+      onToggleFilmstrip: _noop,
+      onToggleSidebar: _noop,
+      onToggleTopBar: _noop,
+      onToggleFullscreen: _noop,
+      onClose: _noop,
+      onEscape: _noop,
+      onRequestFocus: _noop,
+      onGamepadInteraction: _noop,
+      isPrimaryModifierPressed: () => primaryModifierPressed,
+    );
+    addTearDown(handler.dispose);
+
+    await tester.pumpWidget(
+      Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerSignal: handler.handlePointerSignal,
+        child: const SizedBox.expand(),
+      ),
+    );
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(
+        position: Offset(10, 10),
+        scrollDelta: Offset(0, 30),
+        kind: PointerDeviceKind.mouse,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(nextCount, 0);
+
+    primaryModifierPressed = false;
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(
+        position: Offset(10, 10),
+        scrollDelta: Offset(0, 30),
+        kind: PointerDeviceKind.mouse,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(nextCount, 1);
+  });
 }
 
 NormalizedGamepadEvent _gamepadButton(
