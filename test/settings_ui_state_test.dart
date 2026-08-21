@@ -3,6 +3,7 @@ import 'package:hello_gallery/features/settings/domain/value_objects/app_color_t
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_item_extent.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_layout_mode.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_style_level.dart';
 import 'package:hello_gallery/features/settings/presentation/states/settings_ui_state.dart';
 
 void main() {
@@ -16,6 +17,8 @@ void main() {
     expect(state.galleryLayoutMode, GalleryLayoutMode.grid);
     expect(state.galleryItemExtent, GalleryItemExtent.defaultValue);
     expect(state.gallerySort, GallerySort.nameAscending);
+    expect(state.galleryGridSpacing, GalleryStyleLevel.standard);
+    expect(state.galleryCornerRadius, GalleryStyleLevel.standard);
   });
 
   test('exposes a non-null root only from the ready state', () {

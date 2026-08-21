@@ -7,6 +7,7 @@ import 'package:hello_gallery/features/settings/domain/value_objects/app_color_t
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_item_extent.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_layout_mode.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_style_level.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -49,6 +50,8 @@ void main() {
     expect(preferences.layoutMode, GalleryLayoutMode.grid);
     expect(preferences.itemExtent, GalleryItemExtent.defaultValue);
     expect(preferences.sort, GallerySort.nameAscending);
+    expect(preferences.gridSpacing, GalleryStyleLevel.standard);
+    expect(preferences.cornerRadius, GalleryStyleLevel.standard);
   });
 
   test('gallery view preferences persist display options', () async {
@@ -60,6 +63,8 @@ void main() {
         layoutMode: GalleryLayoutMode.quilted,
         itemExtent: 400,
         sort: GallerySort.newest,
+        gridSpacing: GalleryStyleLevel.none,
+        cornerRadius: GalleryStyleLevel.xl,
       ),
     );
 
@@ -68,6 +73,8 @@ void main() {
     expect(preferences.layoutMode, GalleryLayoutMode.quilted);
     expect(preferences.itemExtent, 400);
     expect(preferences.sort, GallerySort.newest);
+    expect(preferences.gridSpacing, GalleryStyleLevel.none);
+    expect(preferences.cornerRadius, GalleryStyleLevel.xl);
   });
 
   test('masonry gallery layout can be restored from storage', () async {
@@ -86,5 +93,18 @@ void main() {
         .readGalleryViewPreferences();
 
     expect(preferences.sort, GallerySort.nameAscending);
+  });
+
+  test('unknown gallery style levels fall back to defaults', () async {
+    SharedPreferences.setMockInitialValues({
+      'gallery_grid_spacing': 'unsupported',
+      'gallery_corner_radius': 'unsupported',
+    });
+
+    final preferences = await SettingsRepositoryImpl()
+        .readGalleryViewPreferences();
+
+    expect(preferences.gridSpacing, GalleryStyleLevel.standard);
+    expect(preferences.cornerRadius, GalleryStyleLevel.standard);
   });
 }

@@ -210,6 +210,25 @@ void main() {
             as BoxDecoration;
     expect(decoration.color, Theme.of(context).colorScheme.primary);
   });
+
+  testWidgets('applies a custom corner radius to the preview', (tester) async {
+    await _pumpFolderCard(tester, 0, selected: true, cornerRadius: 16);
+
+    final decoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.descendant(
+                    of: find.byKey(
+                      const ValueKey('gallery-card-selection-border'),
+                    ),
+                    matching: find.byType(DecoratedBox),
+                  ),
+                )
+                .decoration
+            as BoxDecoration;
+
+    expect(decoration.borderRadius, BorderRadius.circular(16));
+  });
 }
 
 Future<void> _pumpFolderCard(
@@ -220,6 +239,7 @@ Future<void> _pumpFolderCard(
   bool selected = false,
   bool focused = false,
   bool showItemName = true,
+  double cornerRadius = 8,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -257,6 +277,7 @@ Future<void> _pumpFolderCard(
                 selected: selected,
                 focused: focused,
                 showItemName: showItemName,
+                cornerRadius: cornerRadius,
                 onRenameFolder: onRenameFolder,
                 onDeleteFolder: onDeleteFolder,
               ),

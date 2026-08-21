@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_view_options_menu.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('combines sorting, item names, and layout in one menu', (
     tester,
   ) async {
@@ -28,5 +31,17 @@ void main() {
     expect(find.text('Grid'), findsOneWidget);
     expect(find.text('Quilted'), findsOneWidget);
     expect(find.text('Masonry'), findsOneWidget);
+    expect(find.text('Customize gallery…'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Customize gallery…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Customize gallery…'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Customize gallery'), findsOneWidget);
+    expect(find.text('Item spacing'), findsOneWidget);
+    expect(find.text('Corner radius'), findsOneWidget);
+    expect(find.byType(Slider), findsNWidgets(2));
+    expect(find.text('Reset to defaults'), findsOneWidget);
   });
 }

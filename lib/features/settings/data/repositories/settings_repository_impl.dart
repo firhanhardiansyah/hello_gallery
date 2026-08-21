@@ -8,6 +8,7 @@ import '../../domain/value_objects/app_color_theme.dart';
 import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
 import '../../../gallery/domain/value_objects/gallery_sort.dart';
+import '../../../gallery/domain/value_objects/gallery_style_level.dart';
 
 final class SettingsRepositoryImpl implements SettingsRepository {
   static const _rootPathKey = 'gallery_root_path';
@@ -18,6 +19,8 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   static const _galleryLayoutModeKey = 'gallery_layout_mode';
   static const _galleryItemExtentKey = 'gallery_item_extent';
   static const _gallerySortKey = 'gallery_sort';
+  static const _galleryGridSpacingKey = 'gallery_grid_spacing';
+  static const _galleryCornerRadiusKey = 'gallery_corner_radius';
 
   @override
   Future<String?> readRootPath() async {
@@ -77,6 +80,12 @@ final class SettingsRepositoryImpl implements SettingsRepository {
         preferences.getDouble(_galleryItemExtentKey),
       ),
       sort: GallerySort.fromStorage(preferences.getString(_gallerySortKey)),
+      gridSpacing: GalleryStyleLevel.fromStorage(
+        preferences.getString(_galleryGridSpacingKey),
+      ),
+      cornerRadius: GalleryStyleLevel.fromStorage(
+        preferences.getString(_galleryCornerRadiusKey),
+      ),
     );
   }
 
@@ -90,6 +99,8 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       storage.setString(_galleryLayoutModeKey, preferences.layoutMode.name),
       storage.setDouble(_galleryItemExtentKey, preferences.itemExtent),
       storage.setString(_gallerySortKey, preferences.sort.name),
+      storage.setString(_galleryGridSpacingKey, preferences.gridSpacing.name),
+      storage.setString(_galleryCornerRadiusKey, preferences.cornerRadius.name),
     ]);
   }
 }

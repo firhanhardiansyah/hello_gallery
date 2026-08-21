@@ -8,6 +8,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../../../settings/presentation/notifiers/settings_notifier.dart';
 import '../../../domain/value_objects/gallery_layout_mode.dart';
 import '../../../domain/value_objects/gallery_sort.dart';
+import '../../../domain/value_objects/gallery_style_level.dart';
 import '../../notifiers/gallery_notifier.dart';
 
 enum _GalleryViewOption {
@@ -20,6 +21,7 @@ enum _GalleryViewOption {
   gridLayout,
   quiltedLayout,
   masonryLayout,
+  customizeGallery,
 }
 
 class GalleryViewOptionsMenu extends ConsumerWidget {
@@ -39,7 +41,7 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
     return PopupMenuButton<_GalleryViewOption>(
       tooltip: 'View options',
       icon: const HugeIcon(icon: HugeIcons.strokeRoundedFilterMail),
-      onSelected: (option) => _applyOption(ref, option),
+      onSelected: (option) => _applyOption(context, ref, option),
       itemBuilder: (context) => [
         const PopupMenuItem<_GalleryViewOption>(
           enabled: false,
@@ -116,11 +118,22 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
           icon: HugeIcons.strokeRoundedGrid,
           selected: layoutMode == GalleryLayoutMode.masonry,
         ),
+        PopupMenuDivider(indent: AppSpacing.md, endIndent: AppSpacing.md),
+        _item(
+          option: _GalleryViewOption.customizeGallery,
+          label: 'Customize gallery…',
+          icon: HugeIcons.strokeRoundedSlidersHorizontal,
+          selected: false,
+        ),
       ],
     );
   }
 
-  void _applyOption(WidgetRef ref, _GalleryViewOption option) {
+  void _applyOption(
+    BuildContext context,
+    WidgetRef ref,
+    _GalleryViewOption option,
+  ) {
     switch (option) {
       case _GalleryViewOption.nameAscending:
         _setSort(ref, GallerySort.nameAscending);
@@ -156,6 +169,13 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
               .read(settingsNotifierProvider.notifier)
               .setGalleryLayoutMode(GalleryLayoutMode.masonry),
         );
+      case _GalleryViewOption.customizeGallery:
+        unawaited(
+          showDialog<void>(
+            context: context,
+            builder: (context) => const _CustomizeGalleryDialog(),
+          ),
+        );
     }
   }
 
@@ -183,6 +203,106 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
             const HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 18),
         ],
       ),
+    );
+  }
+}
+
+class _CustomizeGalleryDialog extends ConsumerWidget {
+  const _CustomizeGalleryDialog();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsNotifierProvider);
+    final notifier = ref.read(settingsNotifierProvider.notifier);
+    final usesDefaults =
+        settings.galleryGridSpacing == GalleryStyleLevel.standard &&
+        settings.galleryCornerRadius == GalleryStyleLevel.standard;
+
+    return AlertDialog(
+      title: const Text('Customize gallery'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _GalleryStyleSlider(
+              title: 'Item spacing',
+              value: settings.galleryGridSpacing,
+              onChanged: (level) =>
+                  unawaited(notifier.setGalleryGridSpacing(level)),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _GalleryStyleSlider(
+              title: 'Corner radius',
+              value: settings.galleryCornerRadius,
+              onChanged: (level) =>
+                  unawaited(notifier.setGalleryCornerRadius(level)),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: usesDefaults
+              ? null
+              : () => unawaited(notifier.resetGalleryStyle()),
+          child: const Text('Reset to defaults'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Done'),
+        ),
+      ],
+    );
+  }
+}
+
+class _GalleryStyleSlider extends StatelessWidget {
+  const _GalleryStyleSlider({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final GalleryStyleLevel value;
+  final ValueChanged<GalleryStyleLevel> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(title, style: textTheme.titleSmall)),
+            Text(value.label, style: textTheme.labelLarge),
+          ],
+        ),
+        Slider(
+          value: value.index.toDouble(),
+          min: 0,
+          max: (GalleryStyleLevel.values.length - 1).toDouble(),
+          divisions: GalleryStyleLevel.values.length - 1,
+          label: value.label,
+          semanticFormatterCallback: (_) => value.label,
+          onChanged: (rawValue) =>
+              onChanged(GalleryStyleLevel.values[rawValue.round()]),
+        ),
+        Row(
+          children: [
+            for (final level in GalleryStyleLevel.values)
+              Expanded(
+                child: Text(
+                  level.label,
+                  textAlign: TextAlign.center,
+                  style: textTheme.labelSmall,
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

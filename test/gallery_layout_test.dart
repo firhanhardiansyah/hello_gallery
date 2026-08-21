@@ -102,6 +102,54 @@ void main() {
     expect(largeTile.height, greaterThan(smallTile.height));
   });
 
+  testWidgets('keeps frame padding while applying item spacing', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: GalleryBody(
+              state: GalleryUiState(
+                loadState: const GalleryLoadState.ready(),
+                currentPath: '/gallery',
+                items: [
+                  MediaItem(
+                    path: '/gallery/image.jpg',
+                    name: 'image.jpg',
+                    modifiedAt: DateTime(2026),
+                    mediaType: GalleryItemType.image,
+                  ),
+                ],
+              ),
+              gridSpacing: 12,
+              scrollController: controller,
+              selectedIndex: 0,
+              selectedPaths: const {},
+              onSelectionChanged: (_, {required toggle, required extend}) {},
+              onClearSelection: () {},
+              onColumnCountChanged: (_) {},
+              onFolderSelected: (_) {},
+              onMediaSelected: (_) {},
+              onMediaDropped: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final grid = tester.widget<GridView>(find.byType(GridView));
+    final delegate =
+        grid.gridDelegate as SliverGridDelegateWithMaxCrossAxisExtent;
+    expect(grid.padding, const EdgeInsets.all(12));
+    expect(delegate.mainAxisSpacing, 12);
+    expect(delegate.crossAxisSpacing, 12);
+  });
+
   testWidgets('masonry layout preserves each media aspect ratio', (
     tester,
   ) async {

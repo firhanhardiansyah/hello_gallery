@@ -20,6 +20,8 @@ class GalleryPage extends StatelessWidget {
       showItemNames: bindings.settings.showItemNames,
       layoutMode: bindings.settings.galleryLayoutMode,
       maxCrossAxisExtent: bindings.settings.galleryItemExtent,
+      gridSpacing: bindings.settings.galleryGridSpacing.gridSpacing,
+      cardCornerRadius: bindings.settings.galleryCornerRadius.cornerRadius,
       selectedPaths: selection.selectedPaths,
       onSelectionChanged: bindings.onSelectionChanged,
       onClearSelection: bindings.onClearSelection,

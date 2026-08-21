@@ -15,8 +15,6 @@ import '../../states/media_drag_payload.dart';
 import '../folder_management/folder_context_menu.dart';
 import '../media_management/media_context_menu.dart';
 
-const _galleryCardBorderRadius = BorderRadius.all(Radius.circular(8));
-const _dragFeedbackBorderRadius = BorderRadius.all(Radius.circular(8));
 const _maximumMasonryLandscapeAspectRatio = 4 / 3;
 
 class GalleryCard extends ConsumerStatefulWidget {
@@ -29,6 +27,7 @@ class GalleryCard extends ConsumerStatefulWidget {
     this.showItemName = true,
     this.useOriginalAspectRatio = false,
     this.deferAspectRatioUpdates = false,
+    this.cornerRadius = AppSpacing.sm,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.onRenameMedia,
@@ -48,6 +47,7 @@ class GalleryCard extends ConsumerStatefulWidget {
   final bool showItemName;
   final bool useOriginalAspectRatio;
   final bool deferAspectRatioUpdates;
+  final double cornerRadius;
   final VoidCallback? onRenameFolder;
   final VoidCallback? onDeleteFolder;
   final VoidCallback? onRenameMedia;
@@ -118,6 +118,7 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
       showItemName: showItemName,
       previewAspectRatio: previewAspectRatio,
       dropHighlighted: dropHighlighted,
+      cornerRadius: widget.cornerRadius,
       onTap: onTap,
       onDoubleTap: onDoubleTap,
     );
@@ -177,7 +178,10 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
         onDragStarted: onDragStarted,
         feedback: Transform.translate(
           offset: const Offset(AppSpacing.md, AppSpacing.md),
-          child: _MediaDragFeedback(items: payload.items),
+          child: _MediaDragFeedback(
+            items: payload.items,
+            cornerRadius: widget.cornerRadius,
+          ),
         ),
         childWhenDragging: Opacity(opacity: 0.45, child: result),
         child: result,
@@ -203,6 +207,7 @@ class _GalleryCardSurface extends StatelessWidget {
     required this.showItemName,
     required this.previewAspectRatio,
     required this.dropHighlighted,
+    required this.cornerRadius,
     required this.onTap,
     required this.onDoubleTap,
   });
@@ -213,25 +218,25 @@ class _GalleryCardSurface extends StatelessWidget {
   final bool showItemName;
   final double? previewAspectRatio;
   final bool dropHighlighted;
+  final double cornerRadius;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final borderRadius = BorderRadius.circular(cornerRadius);
     final surface = Material(
       color: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: _galleryCardBorderRadius,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: borderRadius),
       child: InkWell(
-        borderRadius: _galleryCardBorderRadius,
+        borderRadius: borderRadius,
         onTap: onTap,
         onDoubleTap: onDoubleTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildPreviewSection(colorScheme),
+            _buildPreviewSection(colorScheme, borderRadius),
 
             if (showItemName)
               Padding(
@@ -283,27 +288,33 @@ class _GalleryCardSurface extends StatelessWidget {
     );
   }
 
-  Widget _buildPreviewSection(ColorScheme colorScheme) {
+  Widget _buildPreviewSection(
+    ColorScheme colorScheme,
+    BorderRadius borderRadius,
+  ) {
     final preview = Stack(
       key: const ValueKey('gallery-card-preview'),
       fit: StackFit.expand,
       children: [
-        _Preview(item: item),
+        _Preview(item: item, borderRadius: borderRadius),
         if (selected)
           _PreviewBorder(
             key: const ValueKey('gallery-card-selection-border'),
             color: colorScheme.primary,
             backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
+            borderRadius: borderRadius,
           )
         else if (focused)
           _PreviewBorder(
             key: const ValueKey('gallery-card-focus-border'),
             color: colorScheme.primary,
+            borderRadius: borderRadius,
           ),
         if (dropHighlighted)
           _PreviewBorder(
             key: const ValueKey('gallery-card-drop-border'),
             color: colorScheme.primary,
+            borderRadius: borderRadius,
             backgroundColor: colorScheme.primaryContainer.withValues(
               alpha: 0.3,
             ),
@@ -347,9 +358,15 @@ class _GalleryCardSurface extends StatelessWidget {
 }
 
 class _PreviewBorder extends StatelessWidget {
-  const _PreviewBorder({required this.color, this.backgroundColor, super.key});
+  const _PreviewBorder({
+    required this.color,
+    required this.borderRadius,
+    this.backgroundColor,
+    super.key,
+  });
 
   final Color color;
+  final BorderRadius borderRadius;
   final Color? backgroundColor;
 
   @override
@@ -357,7 +374,7 @@ class _PreviewBorder extends StatelessWidget {
     child: DecoratedBox(
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: _galleryCardBorderRadius,
+        borderRadius: borderRadius,
         border: Border.all(color: color, width: 2),
       ),
     ),
@@ -365,7 +382,7 @@ class _PreviewBorder extends StatelessWidget {
 }
 
 class _MediaDragFeedback extends StatelessWidget {
-  const _MediaDragFeedback({required this.items});
+  const _MediaDragFeedback({required this.items, required this.cornerRadius});
 
   static const _cardWidth = 220.0;
   static const _cardHeight = 175.0;
@@ -373,6 +390,7 @@ class _MediaDragFeedback extends StatelessWidget {
   static int get _thumbnailCacheWidth => (_cardWidth * 1.5).round();
 
   final List<MediaItem> items;
+  final double cornerRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -399,6 +417,7 @@ class _MediaDragFeedback extends StatelessWidget {
                       key: ValueKey('media-drag-preview-$index'),
                       item: previews[index],
                       isFront: index == 0,
+                      cornerRadius: cornerRadius,
                     ),
                   ),
                 ),
@@ -435,10 +454,16 @@ class _MediaDragFeedback extends StatelessWidget {
 }
 
 class _DragMediaCard extends ConsumerWidget {
-  const _DragMediaCard({required this.item, required this.isFront, super.key});
+  const _DragMediaCard({
+    required this.item,
+    required this.isFront,
+    required this.cornerRadius,
+    super.key,
+  });
 
   final MediaItem item;
   final bool isFront;
+  final double cornerRadius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -447,7 +472,7 @@ class _DragMediaCard extends ConsumerWidget {
       elevation: isFront ? 10 : 5,
       shadowColor: Colors.black45,
       color: colorScheme.surfaceContainerHighest,
-      borderRadius: _dragFeedbackBorderRadius,
+      borderRadius: BorderRadius.circular(cornerRadius),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
@@ -580,14 +605,15 @@ class _DragItemCount extends StatelessWidget {
 }
 
 class _Preview extends ConsumerWidget {
-  const _Preview({required this.item});
+  const _Preview({required this.item, required this.borderRadius});
 
   final GalleryItem item;
+  final BorderRadius borderRadius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ClipRRect(
-      borderRadius: _galleryCardBorderRadius,
+      borderRadius: borderRadius,
       child: _buildContent(context, ref),
     );
   }

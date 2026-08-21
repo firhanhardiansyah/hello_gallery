@@ -8,6 +8,7 @@ import '../../domain/value_objects/app_color_theme.dart';
 import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
 import '../../../gallery/domain/value_objects/gallery_sort.dart';
+import '../../../gallery/domain/value_objects/gallery_style_level.dart';
 import '../states/settings_ui_state.dart';
 
 final settingsNotifierProvider =
@@ -41,6 +42,8 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         galleryLayoutMode: galleryView.layoutMode,
         galleryItemExtent: galleryView.itemExtent,
         gallerySort: galleryView.sort,
+        galleryGridSpacing: galleryView.gridSpacing,
+        galleryCornerRadius: galleryView.cornerRadius,
       );
     } on Object catch (error) {
       state = state.copyWith(loadState: SettingsLoadState.error('$error'));
@@ -87,6 +90,26 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
     await _saveGalleryViewPreferences();
   }
 
+  Future<void> setGalleryGridSpacing(GalleryStyleLevel level) async {
+    if (state.galleryGridSpacing == level) return;
+    state = state.copyWith(galleryGridSpacing: level);
+    await _saveGalleryViewPreferences();
+  }
+
+  Future<void> setGalleryCornerRadius(GalleryStyleLevel level) async {
+    if (state.galleryCornerRadius == level) return;
+    state = state.copyWith(galleryCornerRadius: level);
+    await _saveGalleryViewPreferences();
+  }
+
+  Future<void> resetGalleryStyle() async {
+    state = state.copyWith(
+      galleryGridSpacing: GalleryStyleLevel.standard,
+      galleryCornerRadius: GalleryStyleLevel.standard,
+    );
+    await _saveGalleryViewPreferences();
+  }
+
   Future<void> increaseGalleryItemExtent() => _setGalleryItemExtent(
     GalleryItemExtent.increase(state.galleryItemExtent),
   );
@@ -108,6 +131,8 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         layoutMode: state.galleryLayoutMode,
         itemExtent: state.galleryItemExtent,
         sort: state.gallerySort,
+        gridSpacing: state.galleryGridSpacing,
+        cornerRadius: state.galleryCornerRadius,
       ),
     );
   }

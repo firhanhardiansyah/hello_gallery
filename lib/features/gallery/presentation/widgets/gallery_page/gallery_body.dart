@@ -26,7 +26,6 @@ typedef MediaFolderDrop =
 
 abstract final class _GalleryGridLayout {
   static const padding = AppSpacing.md;
-  static const spacing = AppSpacing.xs;
   static const childAspectRatio = 3 / 4;
   static const masonryMinimumWarmupItemCount = 12;
   static const masonryDefaultWarmupItemCount = 24;
@@ -50,6 +49,8 @@ class GalleryBody extends ConsumerStatefulWidget {
     this.showItemNames = true,
     this.layoutMode = GalleryLayoutMode.grid,
     this.maxCrossAxisExtent = GalleryItemExtent.defaultValue,
+    this.gridSpacing = AppSpacing.xs,
+    this.cardCornerRadius = AppSpacing.sm,
     this.onRenameFolder,
     this.onDeleteFolder,
     this.onRenameMedia,
@@ -71,6 +72,8 @@ class GalleryBody extends ConsumerStatefulWidget {
   final bool showItemNames;
   final GalleryLayoutMode layoutMode;
   final double maxCrossAxisExtent;
+  final double gridSpacing;
+  final double cardCornerRadius;
   final ValueChanged<String>? onRenameFolder;
   final ValueChanged<String>? onDeleteFolder;
   final ValueChanged<MediaItem>? onRenameMedia;
@@ -184,7 +187,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     final row = index ~/ _reportedColumnCount;
     final itemTop =
         _GalleryGridLayout.padding +
-        row * (_itemMainExtent + _GalleryGridLayout.spacing);
+        row * (_itemMainExtent + widget.gridSpacing);
     final itemBottom = itemTop + _itemMainExtent;
     final viewportTop = position.pixels;
     final viewportBottom = viewportTop + position.viewportDimension;
@@ -270,8 +273,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         _itemCrossAxisExtent /
         _GalleryGridLayout.masonryMaximumLandscapeAspectRatio;
     final bufferedRows =
-        (constraints.maxHeight /
-                (minimumItemHeight + _GalleryGridLayout.spacing))
+        (constraints.maxHeight / (minimumItemHeight + widget.gridSpacing))
             .ceil() +
         2;
     return (_reportedColumnCount * bufferedRows).clamp(
@@ -290,8 +292,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         controller: widget.scrollController,
         padding: const EdgeInsets.all(_GalleryGridLayout.padding),
         crossAxisCount: _reportedColumnCount,
-        mainAxisSpacing: _GalleryGridLayout.spacing,
-        crossAxisSpacing: _GalleryGridLayout.spacing,
+        mainAxisSpacing: widget.gridSpacing,
+        crossAxisSpacing: widget.gridSpacing,
         addAutomaticKeepAlives: false,
         itemCount: visibleItems.length,
         itemBuilder: (context, index) =>
@@ -307,8 +309,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
         scrollCacheExtent: const ScrollCacheExtent.pixels(240),
         gridDelegate: SliverQuiltedGridDelegate(
           crossAxisCount: _reportedColumnCount,
-          mainAxisSpacing: _GalleryGridLayout.spacing,
-          crossAxisSpacing: _GalleryGridLayout.spacing,
+          mainAxisSpacing: widget.gridSpacing,
+          crossAxisSpacing: widget.gridSpacing,
           repeatPattern: QuiltedGridRepeatPattern.inverted,
           pattern: _quiltedPattern(_reportedColumnCount),
         ),
@@ -328,8 +330,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: widget.maxCrossAxisExtent,
         childAspectRatio: _GalleryGridLayout.childAspectRatio,
-        crossAxisSpacing: _GalleryGridLayout.spacing,
-        mainAxisSpacing: _GalleryGridLayout.spacing,
+        crossAxisSpacing: widget.gridSpacing,
+        mainAxisSpacing: widget.gridSpacing,
       ),
       itemCount: visibleItems.length,
       itemBuilder: (context, index) => _buildItem(context, index, visibleItems),
@@ -354,11 +356,11 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
   void _updateGridMetrics(double availableWidth) {
     final gridWidth = availableWidth - _GalleryGridLayout.padding * 2;
     final columns =
-        (gridWidth / (widget.maxCrossAxisExtent + _GalleryGridLayout.spacing))
+        (gridWidth / (widget.maxCrossAxisExtent + widget.gridSpacing))
             .ceil()
             .clamp(1, 1000);
     _itemCrossAxisExtent =
-        (gridWidth - _GalleryGridLayout.spacing * (columns - 1)) / columns;
+        (gridWidth - widget.gridSpacing * (columns - 1)) / columns;
     _itemMainExtent =
         _itemCrossAxisExtent / _GalleryGridLayout.childAspectRatio;
     if (columns == _reportedColumnCount) return;
@@ -408,6 +410,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           selected: selected,
           focused: focused,
           showItemName: widget.showItemNames,
+          cornerRadius: widget.cardCornerRadius,
           useOriginalAspectRatio:
               widget.layoutMode == GalleryLayoutMode.masonry,
           deferAspectRatioUpdates:
