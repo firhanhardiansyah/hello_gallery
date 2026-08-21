@@ -123,17 +123,13 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
   void _applyOption(WidgetRef ref, _GalleryViewOption option) {
     switch (option) {
       case _GalleryViewOption.nameAscending:
-        ref
-            .read(galleryNotifierProvider.notifier)
-            .setSort(GallerySort.nameAscending);
+        _setSort(ref, GallerySort.nameAscending);
       case _GalleryViewOption.nameDescending:
-        ref
-            .read(galleryNotifierProvider.notifier)
-            .setSort(GallerySort.nameDescending);
+        _setSort(ref, GallerySort.nameDescending);
       case _GalleryViewOption.newest:
-        ref.read(galleryNotifierProvider.notifier).setSort(GallerySort.newest);
+        _setSort(ref, GallerySort.newest);
       case _GalleryViewOption.oldest:
-        ref.read(galleryNotifierProvider.notifier).setSort(GallerySort.oldest);
+        _setSort(ref, GallerySort.oldest);
       case _GalleryViewOption.showItemNames:
         unawaited(
           ref.read(settingsNotifierProvider.notifier).setShowItemNames(true),
@@ -161,6 +157,11 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
               .setGalleryLayoutMode(GalleryLayoutMode.masonry),
         );
     }
+  }
+
+  void _setSort(WidgetRef ref, GallerySort sort) {
+    ref.read(galleryNotifierProvider.notifier).setSort(sort);
+    unawaited(ref.read(settingsNotifierProvider.notifier).setGallerySort(sort));
   }
 
   PopupMenuItem<_GalleryViewOption> _item({

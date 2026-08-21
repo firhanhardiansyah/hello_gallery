@@ -4,6 +4,7 @@ import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
 import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
+import '../../../gallery/domain/value_objects/gallery_sort.dart';
 
 part 'settings_ui_state.freezed.dart';
 
@@ -26,6 +27,7 @@ abstract class SettingsUiState with _$SettingsUiState {
     @Default(true) bool showItemNames,
     @Default(GalleryLayoutMode.grid) GalleryLayoutMode galleryLayoutMode,
     @Default(GalleryItemExtent.defaultValue) double galleryItemExtent,
+    @Default(GallerySort.nameAscending) GallerySort gallerySort,
   }) = _SettingsUiState;
 
   String? get rootPath => switch (loadState) {

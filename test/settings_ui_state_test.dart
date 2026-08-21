@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_item_extent.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_layout_mode.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hello_gallery/features/settings/presentation/states/settings_ui_state.dart';
 
 void main() {
@@ -14,6 +15,7 @@ void main() {
     expect(state.showItemNames, isTrue);
     expect(state.galleryLayoutMode, GalleryLayoutMode.grid);
     expect(state.galleryItemExtent, GalleryItemExtent.defaultValue);
+    expect(state.gallerySort, GallerySort.nameAscending);
   });
 
   test('exposes a non-null root only from the ready state', () {

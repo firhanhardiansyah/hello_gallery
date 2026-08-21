@@ -382,7 +382,7 @@ as String,
 /// @nodoc
 mixin _$SettingsUiState {
 
- SettingsLoadState get loadState; AppAppearanceMode get appearanceMode; AppColorTheme get colorTheme; bool get showItemNames; GalleryLayoutMode get galleryLayoutMode; double get galleryItemExtent;
+ SettingsLoadState get loadState; AppAppearanceMode get appearanceMode; AppColorTheme get colorTheme; bool get showItemNames; GalleryLayoutMode get galleryLayoutMode; double get galleryItemExtent; GallerySort get gallerySort;
 /// Create a copy of SettingsUiState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -393,16 +393,16 @@ $SettingsUiStateCopyWith<SettingsUiState> get copyWith => _$SettingsUiStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsUiState&&(identical(other.loadState, loadState) || other.loadState == loadState)&&(identical(other.appearanceMode, appearanceMode) || other.appearanceMode == appearanceMode)&&(identical(other.colorTheme, colorTheme) || other.colorTheme == colorTheme)&&(identical(other.showItemNames, showItemNames) || other.showItemNames == showItemNames)&&(identical(other.galleryLayoutMode, galleryLayoutMode) || other.galleryLayoutMode == galleryLayoutMode)&&(identical(other.galleryItemExtent, galleryItemExtent) || other.galleryItemExtent == galleryItemExtent));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsUiState&&(identical(other.loadState, loadState) || other.loadState == loadState)&&(identical(other.appearanceMode, appearanceMode) || other.appearanceMode == appearanceMode)&&(identical(other.colorTheme, colorTheme) || other.colorTheme == colorTheme)&&(identical(other.showItemNames, showItemNames) || other.showItemNames == showItemNames)&&(identical(other.galleryLayoutMode, galleryLayoutMode) || other.galleryLayoutMode == galleryLayoutMode)&&(identical(other.galleryItemExtent, galleryItemExtent) || other.galleryItemExtent == galleryItemExtent)&&(identical(other.gallerySort, gallerySort) || other.gallerySort == gallerySort));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,loadState,appearanceMode,colorTheme,showItemNames,galleryLayoutMode,galleryItemExtent);
+int get hashCode => Object.hash(runtimeType,loadState,appearanceMode,colorTheme,showItemNames,galleryLayoutMode,galleryItemExtent,gallerySort);
 
 @override
 String toString() {
-  return 'SettingsUiState(loadState: $loadState, appearanceMode: $appearanceMode, colorTheme: $colorTheme, showItemNames: $showItemNames, galleryLayoutMode: $galleryLayoutMode, galleryItemExtent: $galleryItemExtent)';
+  return 'SettingsUiState(loadState: $loadState, appearanceMode: $appearanceMode, colorTheme: $colorTheme, showItemNames: $showItemNames, galleryLayoutMode: $galleryLayoutMode, galleryItemExtent: $galleryItemExtent, gallerySort: $gallerySort)';
 }
 
 
@@ -413,7 +413,7 @@ abstract mixin class $SettingsUiStateCopyWith<$Res>  {
   factory $SettingsUiStateCopyWith(SettingsUiState value, $Res Function(SettingsUiState) _then) = _$SettingsUiStateCopyWithImpl;
 @useResult
 $Res call({
- SettingsLoadState loadState, AppAppearanceMode appearanceMode, AppColorTheme colorTheme, bool showItemNames, GalleryLayoutMode galleryLayoutMode, double galleryItemExtent
+ SettingsLoadState loadState, AppAppearanceMode appearanceMode, AppColorTheme colorTheme, bool showItemNames, GalleryLayoutMode galleryLayoutMode, double galleryItemExtent, GallerySort gallerySort
 });
 
 
@@ -430,7 +430,7 @@ class _$SettingsUiStateCopyWithImpl<$Res>
 
 /// Create a copy of SettingsUiState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? loadState = null,Object? appearanceMode = null,Object? colorTheme = null,Object? showItemNames = null,Object? galleryLayoutMode = null,Object? galleryItemExtent = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? loadState = null,Object? appearanceMode = null,Object? colorTheme = null,Object? showItemNames = null,Object? galleryLayoutMode = null,Object? galleryItemExtent = null,Object? gallerySort = null,}) {
   return _then(_self.copyWith(
 loadState: null == loadState ? _self.loadState : loadState // ignore: cast_nullable_to_non_nullable
 as SettingsLoadState,appearanceMode: null == appearanceMode ? _self.appearanceMode : appearanceMode // ignore: cast_nullable_to_non_nullable
@@ -438,7 +438,8 @@ as AppAppearanceMode,colorTheme: null == colorTheme ? _self.colorTheme : colorTh
 as AppColorTheme,showItemNames: null == showItemNames ? _self.showItemNames : showItemNames // ignore: cast_nullable_to_non_nullable
 as bool,galleryLayoutMode: null == galleryLayoutMode ? _self.galleryLayoutMode : galleryLayoutMode // ignore: cast_nullable_to_non_nullable
 as GalleryLayoutMode,galleryItemExtent: null == galleryItemExtent ? _self.galleryItemExtent : galleryItemExtent // ignore: cast_nullable_to_non_nullable
-as double,
+as double,gallerySort: null == gallerySort ? _self.gallerySort : gallerySort // ignore: cast_nullable_to_non_nullable
+as GallerySort,
   ));
 }
 /// Create a copy of SettingsUiState
@@ -532,10 +533,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( SettingsLoadState loadState,  AppAppearanceMode appearanceMode,  AppColorTheme colorTheme,  bool showItemNames,  GalleryLayoutMode galleryLayoutMode,  double galleryItemExtent)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( SettingsLoadState loadState,  AppAppearanceMode appearanceMode,  AppColorTheme colorTheme,  bool showItemNames,  GalleryLayoutMode galleryLayoutMode,  double galleryItemExtent,  GallerySort gallerySort)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SettingsUiState() when $default != null:
-return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.showItemNames,_that.galleryLayoutMode,_that.galleryItemExtent);case _:
+return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.showItemNames,_that.galleryLayoutMode,_that.galleryItemExtent,_that.gallerySort);case _:
   return orElse();
 
 }
@@ -553,10 +554,10 @@ return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.show
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( SettingsLoadState loadState,  AppAppearanceMode appearanceMode,  AppColorTheme colorTheme,  bool showItemNames,  GalleryLayoutMode galleryLayoutMode,  double galleryItemExtent)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( SettingsLoadState loadState,  AppAppearanceMode appearanceMode,  AppColorTheme colorTheme,  bool showItemNames,  GalleryLayoutMode galleryLayoutMode,  double galleryItemExtent,  GallerySort gallerySort)  $default,) {final _that = this;
 switch (_that) {
 case _SettingsUiState():
-return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.showItemNames,_that.galleryLayoutMode,_that.galleryItemExtent);case _:
+return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.showItemNames,_that.galleryLayoutMode,_that.galleryItemExtent,_that.gallerySort);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -573,10 +574,10 @@ return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.show
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( SettingsLoadState loadState,  AppAppearanceMode appearanceMode,  AppColorTheme colorTheme,  bool showItemNames,  GalleryLayoutMode galleryLayoutMode,  double galleryItemExtent)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( SettingsLoadState loadState,  AppAppearanceMode appearanceMode,  AppColorTheme colorTheme,  bool showItemNames,  GalleryLayoutMode galleryLayoutMode,  double galleryItemExtent,  GallerySort gallerySort)?  $default,) {final _that = this;
 switch (_that) {
 case _SettingsUiState() when $default != null:
-return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.showItemNames,_that.galleryLayoutMode,_that.galleryItemExtent);case _:
+return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.showItemNames,_that.galleryLayoutMode,_that.galleryItemExtent,_that.gallerySort);case _:
   return null;
 
 }
@@ -588,7 +589,7 @@ return $default(_that.loadState,_that.appearanceMode,_that.colorTheme,_that.show
 
 
 class _SettingsUiState extends SettingsUiState {
-  const _SettingsUiState({this.loadState = const SettingsLoadState.loading(), this.appearanceMode = AppAppearanceMode.system, this.colorTheme = AppColorTheme.indigo, this.showItemNames = true, this.galleryLayoutMode = GalleryLayoutMode.grid, this.galleryItemExtent = GalleryItemExtent.defaultValue}): super._();
+  const _SettingsUiState({this.loadState = const SettingsLoadState.loading(), this.appearanceMode = AppAppearanceMode.system, this.colorTheme = AppColorTheme.indigo, this.showItemNames = true, this.galleryLayoutMode = GalleryLayoutMode.grid, this.galleryItemExtent = GalleryItemExtent.defaultValue, this.gallerySort = GallerySort.nameAscending}): super._();
   
 
 @override@JsonKey() final  SettingsLoadState loadState;
@@ -597,6 +598,7 @@ class _SettingsUiState extends SettingsUiState {
 @override@JsonKey() final  bool showItemNames;
 @override@JsonKey() final  GalleryLayoutMode galleryLayoutMode;
 @override@JsonKey() final  double galleryItemExtent;
+@override@JsonKey() final  GallerySort gallerySort;
 
 /// Create a copy of SettingsUiState
 /// with the given fields replaced by the non-null parameter values.
@@ -608,16 +610,16 @@ _$SettingsUiStateCopyWith<_SettingsUiState> get copyWith => __$SettingsUiStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SettingsUiState&&(identical(other.loadState, loadState) || other.loadState == loadState)&&(identical(other.appearanceMode, appearanceMode) || other.appearanceMode == appearanceMode)&&(identical(other.colorTheme, colorTheme) || other.colorTheme == colorTheme)&&(identical(other.showItemNames, showItemNames) || other.showItemNames == showItemNames)&&(identical(other.galleryLayoutMode, galleryLayoutMode) || other.galleryLayoutMode == galleryLayoutMode)&&(identical(other.galleryItemExtent, galleryItemExtent) || other.galleryItemExtent == galleryItemExtent));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SettingsUiState&&(identical(other.loadState, loadState) || other.loadState == loadState)&&(identical(other.appearanceMode, appearanceMode) || other.appearanceMode == appearanceMode)&&(identical(other.colorTheme, colorTheme) || other.colorTheme == colorTheme)&&(identical(other.showItemNames, showItemNames) || other.showItemNames == showItemNames)&&(identical(other.galleryLayoutMode, galleryLayoutMode) || other.galleryLayoutMode == galleryLayoutMode)&&(identical(other.galleryItemExtent, galleryItemExtent) || other.galleryItemExtent == galleryItemExtent)&&(identical(other.gallerySort, gallerySort) || other.gallerySort == gallerySort));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,loadState,appearanceMode,colorTheme,showItemNames,galleryLayoutMode,galleryItemExtent);
+int get hashCode => Object.hash(runtimeType,loadState,appearanceMode,colorTheme,showItemNames,galleryLayoutMode,galleryItemExtent,gallerySort);
 
 @override
 String toString() {
-  return 'SettingsUiState(loadState: $loadState, appearanceMode: $appearanceMode, colorTheme: $colorTheme, showItemNames: $showItemNames, galleryLayoutMode: $galleryLayoutMode, galleryItemExtent: $galleryItemExtent)';
+  return 'SettingsUiState(loadState: $loadState, appearanceMode: $appearanceMode, colorTheme: $colorTheme, showItemNames: $showItemNames, galleryLayoutMode: $galleryLayoutMode, galleryItemExtent: $galleryItemExtent, gallerySort: $gallerySort)';
 }
 
 
@@ -628,7 +630,7 @@ abstract mixin class _$SettingsUiStateCopyWith<$Res> implements $SettingsUiState
   factory _$SettingsUiStateCopyWith(_SettingsUiState value, $Res Function(_SettingsUiState) _then) = __$SettingsUiStateCopyWithImpl;
 @override @useResult
 $Res call({
- SettingsLoadState loadState, AppAppearanceMode appearanceMode, AppColorTheme colorTheme, bool showItemNames, GalleryLayoutMode galleryLayoutMode, double galleryItemExtent
+ SettingsLoadState loadState, AppAppearanceMode appearanceMode, AppColorTheme colorTheme, bool showItemNames, GalleryLayoutMode galleryLayoutMode, double galleryItemExtent, GallerySort gallerySort
 });
 
 
@@ -645,7 +647,7 @@ class __$SettingsUiStateCopyWithImpl<$Res>
 
 /// Create a copy of SettingsUiState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? loadState = null,Object? appearanceMode = null,Object? colorTheme = null,Object? showItemNames = null,Object? galleryLayoutMode = null,Object? galleryItemExtent = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? loadState = null,Object? appearanceMode = null,Object? colorTheme = null,Object? showItemNames = null,Object? galleryLayoutMode = null,Object? galleryItemExtent = null,Object? gallerySort = null,}) {
   return _then(_SettingsUiState(
 loadState: null == loadState ? _self.loadState : loadState // ignore: cast_nullable_to_non_nullable
 as SettingsLoadState,appearanceMode: null == appearanceMode ? _self.appearanceMode : appearanceMode // ignore: cast_nullable_to_non_nullable
@@ -653,7 +655,8 @@ as AppAppearanceMode,colorTheme: null == colorTheme ? _self.colorTheme : colorTh
 as AppColorTheme,showItemNames: null == showItemNames ? _self.showItemNames : showItemNames // ignore: cast_nullable_to_non_nullable
 as bool,galleryLayoutMode: null == galleryLayoutMode ? _self.galleryLayoutMode : galleryLayoutMode // ignore: cast_nullable_to_non_nullable
 as GalleryLayoutMode,galleryItemExtent: null == galleryItemExtent ? _self.galleryItemExtent : galleryItemExtent // ignore: cast_nullable_to_non_nullable
-as double,
+as double,gallerySort: null == gallerySort ? _self.gallerySort : gallerySort // ignore: cast_nullable_to_non_nullable
+as GallerySort,
   ));
 }
 

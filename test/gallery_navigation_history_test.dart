@@ -5,6 +5,7 @@ import 'package:hello_gallery/features/gallery/application/services/gallery_dire
 import 'package:hello_gallery/features/gallery/application/use_cases/read_gallery_directory.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/repositories/gallery_repository.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hello_gallery/features/gallery/presentation/notifiers/gallery_notifier.dart';
 import 'package:hello_gallery/features/gallery/presentation/states/gallery_ui_state.dart';
 
@@ -24,6 +25,31 @@ void main() {
   });
 
   tearDown(() => container.dispose());
+
+  test('applies the restored sort before loading the root', () async {
+    repository.items = [
+      MediaItem(
+        path: '/gallery/older.jpg',
+        name: 'older.jpg',
+        modifiedAt: DateTime(2025),
+        mediaType: GalleryItemType.image,
+      ),
+      MediaItem(
+        path: '/gallery/newer.jpg',
+        name: 'newer.jpg',
+        modifiedAt: DateTime(2026),
+        mediaType: GalleryItemType.image,
+      ),
+    ];
+
+    await container
+        .read(galleryNotifierProvider.notifier)
+        .setRoot('/gallery', sort: GallerySort.newest);
+
+    final state = container.read(galleryNotifierProvider);
+    expect(state.sort, GallerySort.newest);
+    expect(state.items.map((item) => item.name), ['newer.jpg', 'older.jpg']);
+  });
 
   test('navigates backward and forward through folder history', () async {
     final notifier = container.read(galleryNotifierProvider.notifier);

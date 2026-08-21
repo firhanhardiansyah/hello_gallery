@@ -6,6 +6,7 @@ import 'package:hello_gallery/features/settings/domain/value_objects/app_appeara
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_item_extent.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_layout_mode.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -47,6 +48,7 @@ void main() {
     expect(preferences.showItemNames, isTrue);
     expect(preferences.layoutMode, GalleryLayoutMode.grid);
     expect(preferences.itemExtent, GalleryItemExtent.defaultValue);
+    expect(preferences.sort, GallerySort.nameAscending);
   });
 
   test('gallery view preferences persist display options', () async {
@@ -57,6 +59,7 @@ void main() {
         showItemNames: false,
         layoutMode: GalleryLayoutMode.quilted,
         itemExtent: 400,
+        sort: GallerySort.newest,
       ),
     );
 
@@ -64,6 +67,7 @@ void main() {
     expect(preferences.showItemNames, isFalse);
     expect(preferences.layoutMode, GalleryLayoutMode.quilted);
     expect(preferences.itemExtent, 400);
+    expect(preferences.sort, GallerySort.newest);
   });
 
   test('masonry gallery layout can be restored from storage', () async {
@@ -73,5 +77,14 @@ void main() {
         .readGalleryViewPreferences();
 
     expect(preferences.layoutMode, GalleryLayoutMode.masonry);
+  });
+
+  test('unknown gallery sort falls back to name ascending', () async {
+    SharedPreferences.setMockInitialValues({'gallery_sort': 'unsupported'});
+
+    final preferences = await SettingsRepositoryImpl()
+        .readGalleryViewPreferences();
+
+    expect(preferences.sort, GallerySort.nameAscending);
   });
 }

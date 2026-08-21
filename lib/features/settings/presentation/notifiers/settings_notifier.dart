@@ -7,6 +7,7 @@ import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
 import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
+import '../../../gallery/domain/value_objects/gallery_sort.dart';
 import '../states/settings_ui_state.dart';
 
 final settingsNotifierProvider =
@@ -39,6 +40,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         showItemNames: galleryView.showItemNames,
         galleryLayoutMode: galleryView.layoutMode,
         galleryItemExtent: galleryView.itemExtent,
+        gallerySort: galleryView.sort,
       );
     } on Object catch (error) {
       state = state.copyWith(loadState: SettingsLoadState.error('$error'));
@@ -80,6 +82,11 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
     await _saveGalleryViewPreferences();
   }
 
+  Future<void> setGallerySort(GallerySort sort) async {
+    state = state.copyWith(gallerySort: sort);
+    await _saveGalleryViewPreferences();
+  }
+
   Future<void> increaseGalleryItemExtent() => _setGalleryItemExtent(
     GalleryItemExtent.increase(state.galleryItemExtent),
   );
@@ -100,6 +107,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         showItemNames: state.showItemNames,
         layoutMode: state.galleryLayoutMode,
         itemExtent: state.galleryItemExtent,
+        sort: state.gallerySort,
       ),
     );
   }

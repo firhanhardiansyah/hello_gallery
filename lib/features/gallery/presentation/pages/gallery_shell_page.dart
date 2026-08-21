@@ -8,6 +8,7 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 import 'package:hello_gallery/core/widgets/desktop_window_title_bar.dart';
 import 'package:hello_gallery/features/gallery/application/providers/gallery_dependencies.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
+import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
 import 'package:hello_gallery/features/gallery/presentation/gallery_presentation.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/folder_tree/folder_tree_sidebar.dart';
 import 'package:hello_gallery/features/gallery/presentation/widgets/gallery_page/gallery_page_widgets.dart';
@@ -405,7 +406,7 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
     if (_preview != null) {
       previewState = ref.watch(mediaPreviewNotifierProvider);
     }
-    _listenToRoot(settings.rootPath);
+    _listenToRoot(settings.rootPath, settings.gallerySort);
 
     return Focus(
       autofocus: true,
@@ -435,7 +436,7 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
     _selection = _selection.resetForFolder(folderPath);
   }
 
-  void _listenToRoot(String? rootPath) {
+  void _listenToRoot(String? rootPath, GallerySort sort) {
     if (rootPath == null) return;
     ref.listen(galleryAutoSyncProvider(rootPath), (previous, next) {
       next.whenData((batch) => unawaited(_autoSyncCoordinator.handle(batch)));
@@ -443,7 +444,9 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
     if (rootPath == _loadedRoot) return;
     _loadedRoot = rootPath;
     Future.microtask(
-      () => ref.read(galleryNotifierProvider.notifier).setRoot(rootPath),
+      () => ref
+          .read(galleryNotifierProvider.notifier)
+          .setRoot(rootPath, sort: sort),
     );
   }
 

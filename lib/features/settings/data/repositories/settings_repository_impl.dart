@@ -7,6 +7,7 @@ import '../../domain/value_objects/app_appearance_mode.dart';
 import '../../domain/value_objects/app_color_theme.dart';
 import '../../../gallery/domain/value_objects/gallery_item_extent.dart';
 import '../../../gallery/domain/value_objects/gallery_layout_mode.dart';
+import '../../../gallery/domain/value_objects/gallery_sort.dart';
 
 final class SettingsRepositoryImpl implements SettingsRepository {
   static const _rootPathKey = 'gallery_root_path';
@@ -16,6 +17,7 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   static const _showItemNamesKey = 'show_item_names';
   static const _galleryLayoutModeKey = 'gallery_layout_mode';
   static const _galleryItemExtentKey = 'gallery_item_extent';
+  static const _gallerySortKey = 'gallery_sort';
 
   @override
   Future<String?> readRootPath() async {
@@ -74,6 +76,7 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       itemExtent: GalleryItemExtent.normalize(
         preferences.getDouble(_galleryItemExtentKey),
       ),
+      sort: GallerySort.fromStorage(preferences.getString(_gallerySortKey)),
     );
   }
 
@@ -86,6 +89,7 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       storage.setBool(_showItemNamesKey, preferences.showItemNames),
       storage.setString(_galleryLayoutModeKey, preferences.layoutMode.name),
       storage.setDouble(_galleryItemExtentKey, preferences.itemExtent),
+      storage.setString(_gallerySortKey, preferences.sort.name),
     ]);
   }
 }

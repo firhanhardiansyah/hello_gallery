@@ -18,11 +18,11 @@ class GalleryNotifier extends Notifier<GalleryUiState> {
   @override
   GalleryUiState build() => const GalleryUiState();
 
-  Future<void> setRoot(String rootPath) async {
+  Future<void> setRoot(String rootPath, {GallerySort? sort}) async {
     _backHistory.clear();
     _forwardHistory.clear();
     ref.read(folderPreviewJobSchedulerProvider).clear();
-    state = GalleryUiState(rootPath: rootPath, sort: state.sort);
+    state = GalleryUiState(rootPath: rootPath, sort: sort ?? state.sort);
     await _loadDirectory(rootPath);
   }
 
