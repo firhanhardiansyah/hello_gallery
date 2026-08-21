@@ -107,4 +107,48 @@ void main() {
 
     expect(opacity().opacity, 0);
   });
+
+  testWidgets('clean preview hides the top bar even while hovered', (
+    tester,
+  ) async {
+    var forceHidden = false;
+
+    Widget buildOverlay() => MaterialApp(
+      theme: buildAppTheme(
+        colorTheme: AppColorTheme.indigo,
+        brightness: Brightness.light,
+      ),
+      home: Scaffold(
+        body: Stack(
+          children: [
+            PreviewShellTopBarOverlay(
+              visible: true,
+              forceHidden: forceHidden,
+              child: const SizedBox(height: 56, child: Text('Top bar')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(buildOverlay());
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.text('Top bar')));
+    await tester.pump();
+
+    forceHidden = true;
+    await tester.pumpWidget(buildOverlay());
+    await tester.pumpAndSettle();
+
+    final opacity = tester.widget<AnimatedOpacity>(
+      find.byKey(const ValueKey('preview-shell-top-bar-opacity')),
+    );
+    final pointer = tester.widget<IgnorePointer>(
+      find.byKey(const ValueKey('preview-shell-top-bar-pointer')),
+    );
+    expect(opacity.opacity, 0);
+    expect(pointer.ignoring, isTrue);
+  });
 }

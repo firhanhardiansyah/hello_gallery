@@ -55,6 +55,7 @@ final class MediaPreviewPageBindings {
     required this.onToggleSidebar,
     required this.onToggleTopBar,
     required this.onControlsVisibilityChanged,
+    required this.onCleanPreviewChanged,
     required this.onClose,
     required this.onToggleFullscreen,
   });
@@ -67,6 +68,7 @@ final class MediaPreviewPageBindings {
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleTopBar;
   final ValueChanged<bool> onControlsVisibilityChanged;
+  final ValueChanged<bool> onCleanPreviewChanged;
   final VoidCallback onClose;
   final VoidCallback onToggleFullscreen;
 }

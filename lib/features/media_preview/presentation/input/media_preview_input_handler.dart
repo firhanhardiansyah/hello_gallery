@@ -21,6 +21,7 @@ final class MediaPreviewInputHandler {
     required this.onToggleFilmstrip,
     required this.onToggleSidebar,
     required this.onToggleTopBar,
+    required this.onToggleCleanPreview,
     required this.onToggleFullscreen,
     required this.onClose,
     required this.onEscape,
@@ -42,6 +43,7 @@ final class MediaPreviewInputHandler {
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleSidebar;
   final VoidCallback onToggleTopBar;
+  final VoidCallback onToggleCleanPreview;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onClose;
   final VoidCallback onEscape;
@@ -190,6 +192,8 @@ final class MediaPreviewInputHandler {
         onToggleSidebar();
       case LogicalKeyboardKey.keyT:
         onToggleTopBar();
+      case LogicalKeyboardKey.keyH:
+        onToggleCleanPreview();
       case LogicalKeyboardKey.keyF:
         onToggleFullscreen();
       case LogicalKeyboardKey.escape:

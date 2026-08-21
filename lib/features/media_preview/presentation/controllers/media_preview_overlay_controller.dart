@@ -23,16 +23,20 @@ final class MediaPreviewOverlayController extends ChangeNotifier {
   bool _controlsHovered = false;
   bool _controlsHiddenByNavigation = false;
   bool _filmstripEnabled = true;
+  bool _cleanPreviewEnabled = false;
+  bool _controlsVisibleBeforeCleanPreview = true;
   int _hiddenManualNavigationCount = 0;
   int _silentNavigationCount = 0;
   bool _disposed = false;
 
   bool get controlsVisible => _controlsVisible;
   bool get filmstripEnabled => _filmstripEnabled;
+  bool get cleanPreviewEnabled => _cleanPreviewEnabled;
   bool get isManualNavigationRunning => _hiddenManualNavigationCount > 0;
   bool get isNavigationEventSuppressed => _silentNavigationCount > 0;
 
   void showControls({bool restartTimer = true, bool userInitiated = false}) {
+    if (_cleanPreviewEnabled) return;
     if (_controlsHiddenByNavigation && !userInitiated) return;
     if (userInitiated) _controlsHiddenByNavigation = false;
     _hideTimer?.cancel();
@@ -45,7 +49,7 @@ final class MediaPreviewOverlayController extends ChangeNotifier {
 
   void scheduleAutoHide() {
     _hideTimer?.cancel();
-    if (!_controlsVisible || _controlsHovered) return;
+    if (_cleanPreviewEnabled || !_controlsVisible || _controlsHovered) return;
     final state = _readPreviewState();
     if (!state.isPlaying || state.activeItem?.isVideo != true) return;
     _hideTimer = Timer(_autoHideDuration, () {
@@ -80,6 +84,19 @@ final class MediaPreviewOverlayController extends ChangeNotifier {
     _hideTimer = Timer(_autoHideDuration, () {
       if (!_disposed) _setControlsVisible(false);
     });
+  }
+
+  void setCleanPreviewEnabled(bool enabled) {
+    if (_cleanPreviewEnabled == enabled) return;
+    _cleanPreviewEnabled = enabled;
+    _hideTimer?.cancel();
+    if (enabled) {
+      _controlsVisibleBeforeCleanPreview = _controlsVisible;
+      _setControlsVisible(false);
+      return;
+    }
+    _setControlsVisible(_controlsVisibleBeforeCleanPreview);
+    scheduleAutoHide();
   }
 
   bool toggleFilmstrip() {

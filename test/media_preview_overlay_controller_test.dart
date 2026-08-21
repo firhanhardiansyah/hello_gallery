@@ -51,6 +51,40 @@ void main() {
     expect(controller.toggleFilmstrip(), isTrue);
     expect(controller.controlsVisible, isFalse);
   });
+
+  test('clean preview suppresses activity and restores prior visibility', () {
+    final visibilityChanges = <bool>[];
+    final controller = MediaPreviewOverlayController(
+      readPreviewState: _playingVideoState,
+      onVisibilityChanged: visibilityChanges.add,
+    );
+    addTearDown(controller.dispose);
+
+    controller.setCleanPreviewEnabled(true);
+    expect(controller.cleanPreviewEnabled, isTrue);
+    expect(controller.controlsVisible, isFalse);
+
+    controller.showControls(userInitiated: true);
+    expect(controller.controlsVisible, isFalse);
+
+    controller.setCleanPreviewEnabled(false);
+    expect(controller.cleanPreviewEnabled, isFalse);
+    expect(controller.controlsVisible, isTrue);
+    expect(visibilityChanges, [false, true]);
+  });
+
+  test('clean preview preserves controls that were already hidden', () {
+    final controller = MediaPreviewOverlayController(
+      readPreviewState: _playingVideoState,
+    );
+    addTearDown(controller.dispose);
+
+    controller.hideAfterPointerExit();
+    controller.setCleanPreviewEnabled(true);
+    controller.setCleanPreviewEnabled(false);
+
+    expect(controller.controlsVisible, isFalse);
+  });
 }
 
 MediaPreviewUiState _playingVideoState() => MediaPreviewUiState(

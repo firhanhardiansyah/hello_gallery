@@ -12,12 +12,14 @@ class VirtualCursorOverlay extends StatefulWidget {
     required this.child,
     this.gamepadEvents,
     this.idleTimeout = const Duration(seconds: 3),
+    this.showCursor = true,
     super.key,
   });
 
   final Widget child;
   final Stream<NormalizedGamepadEvent>? gamepadEvents;
   final Duration idleTimeout;
+  final bool showCursor;
 
   @override
   State<VirtualCursorOverlay> createState() => _VirtualCursorOverlayState();
@@ -34,6 +36,7 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
   StreamSubscription<NormalizedGamepadEvent>? _subscription;
   Duration? _lastTick;
   Offset _position = Offset.zero;
+  Offset _lastGlobalPosition = Offset.zero;
   Size _viewportSize = Size.zero;
   double _rightX = 0;
   double _rightY = 0;
@@ -249,10 +252,12 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
   }
 
   Offset get _globalPosition {
+    if (!context.mounted) return _lastGlobalPosition;
     final renderObject = context.findRenderObject();
-    return renderObject is RenderBox
+    _lastGlobalPosition = renderObject is RenderBox
         ? renderObject.localToGlobal(_position)
         : _position;
+    return _lastGlobalPosition;
   }
 
   @override
@@ -284,12 +289,13 @@ class _VirtualCursorOverlayState extends State<VirtualCursorOverlay>
             fit: StackFit.expand,
             children: [
               widget.child,
-              if (_visible)
+              if (widget.showCursor && _visible)
                 Positioned(
                   left: _position.dx - 9,
                   top: _position.dy - 9,
                   child: IgnorePointer(
                     child: DecoratedBox(
+                      key: const ValueKey('virtual-cursor-indicator'),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primary,
                         shape: BoxShape.circle,

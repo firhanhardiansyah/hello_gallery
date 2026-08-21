@@ -52,6 +52,44 @@ void main() {
 
     expect(hideCount, 1);
   });
+
+  testWidgets('can suppress the gamepad cursor for clean preview', (
+    tester,
+  ) async {
+    final events = StreamController<NormalizedGamepadEvent>.broadcast(
+      sync: true,
+    );
+    addTearDown(events.close);
+    var showCursor = true;
+
+    Widget buildOverlay() => MaterialApp(
+      theme: buildAppTheme(
+        colorTheme: AppColorTheme.indigo,
+        brightness: Brightness.light,
+      ),
+      home: SizedBox.square(
+        dimension: 300,
+        child: VirtualCursorOverlay(
+          gamepadEvents: events.stream,
+          showCursor: showCursor,
+          child: const ColoredBox(color: Colors.black),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(buildOverlay());
+    events.add(_gamepadAxis(GamepadAxis.rightStickX, value: 1));
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.byKey(const ValueKey('virtual-cursor-indicator')), findsOne);
+
+    showCursor = false;
+    await tester.pumpWidget(buildOverlay());
+    expect(
+      find.byKey(const ValueKey('virtual-cursor-indicator')),
+      findsNothing,
+    );
+  });
 }
 
 NormalizedGamepadEvent _gamepadAxis(GamepadAxis axis, {required double value}) {

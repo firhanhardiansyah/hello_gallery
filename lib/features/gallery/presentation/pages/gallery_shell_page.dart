@@ -48,6 +48,9 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
   bool _isFullscreen = false;
   bool _previewTopBarVisible = true;
   bool? _sidebarBeforeFullscreen;
+  bool _cleanPreviewEnabled = false;
+  bool? _sidebarBeforeCleanPreview;
+  bool? _topBarBeforeCleanPreview;
   late final GalleryInputHandler _inputHandler;
   late final GalleryPageInputActions _inputActions;
   late final GalleryFolderActions _folderActions;
@@ -102,6 +105,9 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
   @override
   void didUpdateWidget(covariant GalleryShellPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.isPreviewRoute && !widget.isPreviewRoute) {
+      _restoreCleanPreviewState();
+    }
     if (oldWidget.previewPath != widget.previewPath) {
       _previewCoordinator.syncRoute(widget.previewPath);
     }
@@ -372,24 +378,61 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
         _sidebarBeforeFullscreen = _sidebarVisible;
         _sidebarVisible = false;
       } else if (!target && _isPreviewRoute) {
-        _sidebarVisible = _sidebarBeforeFullscreen ?? _sidebarVisible;
+        _sidebarVisible = _cleanPreviewEnabled
+            ? false
+            : _sidebarBeforeFullscreen ?? _sidebarVisible;
         _sidebarBeforeFullscreen = null;
       }
     });
   }
 
   void _togglePreviewTopBar() {
-    if (!_isPreviewRoute) return;
+    if (!_isPreviewRoute || _cleanPreviewEnabled) return;
     setState(() {
       _previewTopBarVisible = !_previewTopBarVisible;
     });
   }
 
   void _syncPreviewTopBarVisibility(bool visible) {
-    if (!mounted || !_isPreviewRoute || _previewTopBarVisible == visible) {
+    if (!mounted ||
+        !_isPreviewRoute ||
+        _cleanPreviewEnabled ||
+        _previewTopBarVisible == visible) {
       return;
     }
     setState(() => _previewTopBarVisible = visible);
+  }
+
+  void _setCleanPreviewEnabled(bool enabled) {
+    if (_cleanPreviewEnabled == enabled) return;
+    setState(() {
+      if (enabled) {
+        _cleanPreviewEnabled = true;
+        _sidebarBeforeCleanPreview = _isFullscreen
+            ? _sidebarBeforeFullscreen ?? _sidebarVisible
+            : _sidebarVisible;
+        _topBarBeforeCleanPreview = _previewTopBarVisible;
+        _sidebarVisible = false;
+        _previewTopBarVisible = false;
+        return;
+      }
+      _restoreCleanPreviewState();
+    });
+  }
+
+  void _restoreCleanPreviewState() {
+    if (!_cleanPreviewEnabled) return;
+    final sidebarVisible = _sidebarBeforeCleanPreview ?? _sidebarVisible;
+    _cleanPreviewEnabled = false;
+    _previewTopBarVisible = _topBarBeforeCleanPreview ?? _previewTopBarVisible;
+    if (_isFullscreen) {
+      _sidebarVisible = false;
+      _sidebarBeforeFullscreen = sidebarVisible;
+    } else {
+      _sidebarVisible = sidebarVisible;
+    }
+    _sidebarBeforeCleanPreview = null;
+    _topBarBeforeCleanPreview = null;
   }
 
   @override
@@ -415,6 +458,7 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
         onPointerDown: _inputHandler.handlePointerDown,
         child: Scaffold(
           body: VirtualCursorOverlay(
+            showCursor: !_cleanPreviewEnabled,
             child: _buildPageContent(
               settings: settings,
               gallery: gallery,
@@ -545,6 +589,7 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
         onToggleSidebar: _toggleSidebar,
         onToggleTopBar: _togglePreviewTopBar,
         onControlsVisibilityChanged: _syncPreviewTopBarVisibility,
+        onCleanPreviewChanged: _setCleanPreviewEnabled,
         onClose: _previewCoordinator.close,
         onToggleFullscreen: _toggleFullscreen,
       ),
@@ -707,6 +752,7 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
         routeContent,
         PreviewShellTopBarOverlay(
           visible: _previewTopBarVisible,
+          forceHidden: _cleanPreviewEnabled,
           child: topBar,
         ),
       ],

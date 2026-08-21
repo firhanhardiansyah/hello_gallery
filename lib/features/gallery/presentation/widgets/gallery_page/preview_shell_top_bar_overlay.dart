@@ -6,11 +6,13 @@ class PreviewShellTopBarOverlay extends StatefulWidget {
   const PreviewShellTopBarOverlay({
     required this.visible,
     required this.child,
+    this.forceHidden = false,
     super.key,
   });
 
   final bool visible;
   final Widget child;
+  final bool forceHidden;
 
   @override
   State<PreviewShellTopBarOverlay> createState() =>
@@ -21,8 +23,14 @@ class _PreviewShellTopBarOverlayState extends State<PreviewShellTopBarOverlay> {
   bool _isHovered = false;
 
   @override
+  void didUpdateWidget(covariant PreviewShellTopBarOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.forceHidden && widget.forceHidden) _isHovered = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isVisible = widget.visible || _isHovered;
+    final isVisible = !widget.forceHidden && (widget.visible || _isHovered);
 
     return Positioned(
       top: 0,

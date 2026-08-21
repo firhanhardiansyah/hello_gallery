@@ -18,6 +18,7 @@ void main() {
     var closeCount = 0;
     var sidebarCount = 0;
     var topBarCount = 0;
+    var cleanPreviewCount = 0;
     var escapeCount = 0;
     var focusCount = 0;
     var gamepadInteractionCount = 0;
@@ -35,6 +36,7 @@ void main() {
       onToggleFilmstrip: () => filmstripCount++,
       onToggleSidebar: () => sidebarCount++,
       onToggleTopBar: () => topBarCount++,
+      onToggleCleanPreview: () => cleanPreviewCount++,
       onToggleFullscreen: () => fullscreenCount++,
       onClose: () => closeCount++,
       onEscape: () => escapeCount++,
@@ -56,6 +58,7 @@ void main() {
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyL));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyG));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyT));
+    handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyH));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.keyF));
     handler.handleKeyEvent(_keyDown(LogicalKeyboardKey.escape));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
@@ -85,6 +88,7 @@ void main() {
     expect(closeCount, 1);
     expect(sidebarCount, 2);
     expect(topBarCount, 1);
+    expect(cleanPreviewCount, 1);
     expect(escapeCount, 1);
     expect(focusCount, 1);
     expect(gamepadInteractionCount, 6);
@@ -107,6 +111,7 @@ void main() {
       onToggleFilmstrip: _noop,
       onToggleSidebar: _noop,
       onToggleTopBar: _noop,
+      onToggleCleanPreview: _noop,
       onToggleFullscreen: _noop,
       onClose: _noop,
       onEscape: _noop,
@@ -152,6 +157,7 @@ void main() {
       onToggleFilmstrip: _noop,
       onToggleSidebar: _noop,
       onToggleTopBar: _noop,
+      onToggleCleanPreview: _noop,
       onToggleFullscreen: _noop,
       onClose: _noop,
       onEscape: _noop,

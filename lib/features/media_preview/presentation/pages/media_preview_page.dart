@@ -27,6 +27,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
     this.onToggleSidebar,
     this.onToggleTopBar,
     this.onControlsVisibilityChanged,
+    this.onCleanPreviewChanged,
     this.onClose,
     this.isFullscreen = false,
     this.onToggleFullscreen,
@@ -43,6 +44,7 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
   final VoidCallback? onToggleSidebar;
   final VoidCallback? onToggleTopBar;
   final ValueChanged<bool>? onControlsVisibilityChanged;
+  final ValueChanged<bool>? onCleanPreviewChanged;
   final VoidCallback? onClose;
   final bool isFullscreen;
   final VoidCallback? onToggleFullscreen;
@@ -82,9 +84,10 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       onToggleFilmstrip: _toggleFilmstrip,
       onToggleSidebar: _toggleSidebar,
       onToggleTopBar: _toggleTopBar,
+      onToggleCleanPreview: _toggleCleanPreview,
       onToggleFullscreen: _toggleFullscreen,
       onClose: _closePreview,
-      onEscape: _closePreview,
+      onEscape: _handleEscape,
       onRequestFocus: _focusNode.requestFocus,
       onGamepadInteraction: _scheduleGamepadAutoHide,
     )..start();
@@ -127,9 +130,30 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   void _scheduleGamepadAutoHide() =>
       _overlayController.scheduleGamepadAutoHide();
 
-  void _toggleSidebar() => widget.onToggleSidebar?.call();
+  void _toggleSidebar() {
+    if (_overlayController.cleanPreviewEnabled) return;
+    widget.onToggleSidebar?.call();
+  }
 
-  void _toggleTopBar() => widget.onToggleTopBar?.call();
+  void _toggleTopBar() {
+    if (_overlayController.cleanPreviewEnabled) return;
+    widget.onToggleTopBar?.call();
+  }
+
+  void _toggleCleanPreview() {
+    final enabled = !_overlayController.cleanPreviewEnabled;
+    if (enabled) widget.onCleanPreviewChanged?.call(true);
+    _overlayController.setCleanPreviewEnabled(enabled);
+    if (!enabled) widget.onCleanPreviewChanged?.call(false);
+  }
+
+  void _handleEscape() {
+    if (_overlayController.cleanPreviewEnabled) {
+      _toggleCleanPreview();
+      return;
+    }
+    _closePreview();
+  }
 
   void _toggleFullscreen() => widget.onToggleFullscreen?.call();
 
@@ -166,6 +190,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   }
 
   void _toggleFilmstrip() {
+    if (_overlayController.cleanPreviewEnabled) return;
     _showControls(userInitiated: true);
     final showFilmstrip = _overlayController.toggleFilmstrip();
     if (!showFilmstrip) return;
@@ -251,6 +276,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     );
     final isVideoPreview = state.activeItem?.isVideo == true;
     final filmstripVisible =
+        !_overlayController.cleanPreviewEnabled &&
         _overlayController.filmstripEnabled &&
         (!isVideoPreview || _overlayController.controlsVisible);
     if (filmstripVisible && state.items.isNotEmpty) {
@@ -261,7 +287,9 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
       child: Listener(
         onPointerSignal: _inputHandler.handlePointerSignal,
         child: MediaPreviewPointerRegion(
-          cursor: state.isPlaying && !_overlayController.controlsVisible
+          cursor:
+              _overlayController.cleanPreviewEnabled ||
+                  (state.isPlaying && !_overlayController.controlsVisible)
               ? SystemMouseCursors.none
               : MouseCursor.defer,
           onActivity: () => _showControls(userInitiated: true),
