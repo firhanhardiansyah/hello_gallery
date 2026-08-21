@@ -25,6 +25,10 @@ void main() {
 
     final rotatedBox = tester.widget<RotatedBox>(find.byType(RotatedBox));
     expect(rotatedBox.quarterTurns, 1);
+    final viewer = tester.widget<InteractiveViewer>(
+      find.byType(InteractiveViewer),
+    );
+    expect(viewer.scaleFactor, 400);
   });
 
   testWidgets('zooms video with primary-modifier scroll', (tester) async {

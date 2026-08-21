@@ -27,6 +27,7 @@ class MediaPreviewCanvas extends StatefulWidget {
 class _MediaPreviewCanvasState extends State<MediaPreviewCanvas> {
   static const _minScale = 1.0;
   static const _maxScale = 5.0;
+  static const _scaleFactor = 400.0;
 
   final _transformationController = TransformationController();
   bool _zoomModifierPressed = false;
@@ -84,6 +85,7 @@ class _MediaPreviewCanvasState extends State<MediaPreviewCanvas> {
         transformationController: _transformationController,
         minScale: _minScale,
         maxScale: _maxScale,
+        scaleFactor: _scaleFactor,
         scaleEnabled: _zoomModifierPressed,
         trackpadScrollCausesScale: true,
         child: widget.isVideo ? _buildVideo() : _buildImage(context),
