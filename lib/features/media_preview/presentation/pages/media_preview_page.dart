@@ -297,6 +297,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
           child: MediaPreviewView(
             state: state,
             controlsVisible: _overlayController.controlsVisible,
+            cleanPreviewEnabled: _overlayController.cleanPreviewEnabled,
             isFullscreen: widget.isFullscreen,
             rotationQuarterTurns: rotationQuarterTurns,
             isRotationLocked: state.isRotationLocked,

@@ -5,6 +5,7 @@ import 'package:hello_gallery/core/theme/app_spacing.dart';
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../notifiers/media_preview_notifier.dart';
 import '../states/media_preview_ui_state.dart';
+import 'clean_video_progress_slider.dart';
 import 'filmstrip/media_preview_filmstrip.dart';
 import 'filmstrip/media_preview_filmstrip_controller.dart';
 import 'image_preview_actions.dart';
@@ -16,6 +17,7 @@ class MediaPreviewView extends ConsumerWidget {
   const MediaPreviewView({
     required this.state,
     required this.controlsVisible,
+    required this.cleanPreviewEnabled,
     required this.isFullscreen,
     required this.rotationQuarterTurns,
     required this.isRotationLocked,
@@ -36,6 +38,7 @@ class MediaPreviewView extends ConsumerWidget {
 
   final MediaPreviewUiState state;
   final bool controlsVisible;
+  final bool cleanPreviewEnabled;
   final bool isFullscreen;
   final int rotationQuarterTurns;
   final bool isRotationLocked;
@@ -114,6 +117,17 @@ class MediaPreviewView extends ConsumerWidget {
             onToggleHdrPlayback: onToggleHdrPlayback,
             onToggleFullscreen: onToggleFullscreen,
             onInteraction: onInteraction,
+          ),
+        if (item.isVideo && cleanPreviewEnabled)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: CleanVideoProgressSlider(
+              position: state.position,
+              duration: state.duration,
+              onChanged: controller.seek,
+            ),
           ),
         MediaPreviewFilmstrip(
           items: state.items,
