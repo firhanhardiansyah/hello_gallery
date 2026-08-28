@@ -11,6 +11,7 @@ class GalleryViewPreferences {
     this.sort = GallerySort.nameAscending,
     this.gridSpacing = GalleryStyleLevel.standard,
     this.cornerRadius = GalleryStyleLevel.standard,
+    this.mediaPreviewFilmstripEnabled = true,
   });
 
   final bool showItemNames;
@@ -19,4 +20,5 @@ class GalleryViewPreferences {
   final GallerySort sort;
   final GalleryStyleLevel gridSpacing;
   final GalleryStyleLevel cornerRadius;
+  final bool mediaPreviewFilmstripEnabled;
 }

@@ -19,6 +19,7 @@ void main() {
     expect(state.gallerySort, GallerySort.nameAscending);
     expect(state.galleryGridSpacing, GalleryStyleLevel.standard);
     expect(state.galleryCornerRadius, GalleryStyleLevel.standard);
+    expect(state.mediaPreviewFilmstripEnabled, isTrue);
   });
 
   test('exposes a non-null root only from the ready state', () {

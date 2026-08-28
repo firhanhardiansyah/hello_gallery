@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
+import 'package:hello_gallery/features/settings/presentation/notifiers/settings_notifier.dart';
 
 import '../../application/providers/media_preview_dependencies.dart';
 import '../constants/media_preview_timing.dart';
@@ -70,6 +71,9 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     _overlayController = MediaPreviewOverlayController(
       readPreviewState: () => ref.read(mediaPreviewNotifierProvider),
       onVisibilityChanged: widget.onControlsVisibilityChanged,
+      filmstripEnabled: ref
+          .read(settingsNotifierProvider)
+          .mediaPreviewFilmstripEnabled,
     )..addListener(_handleOverlayChanged);
     _inputHandler = MediaPreviewInputHandler(
       onPrevious: () => _navigateHidingControls(_controller.previous),
@@ -193,6 +197,11 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     if (_overlayController.cleanPreviewEnabled) return;
     _showControls(userInitiated: true);
     final showFilmstrip = _overlayController.toggleFilmstrip();
+    unawaited(
+      ref
+          .read(settingsNotifierProvider.notifier)
+          .setMediaPreviewFilmstripEnabled(showFilmstrip),
+    );
     if (!showFilmstrip) return;
     final activeIndex = ref.read(mediaPreviewNotifierProvider).activeIndex;
     _filmstripController.reveal(activeIndex, animated: false, force: true);
@@ -244,6 +253,16 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaPreviewNotifierProvider);
+    ref.listen(
+      settingsNotifierProvider.select(
+        (settings) => settings.mediaPreviewFilmstripEnabled,
+      ),
+      (previous, enabled) {
+        if (previous != enabled) {
+          _overlayController.setFilmstripEnabled(enabled);
+        }
+      },
+    );
     _imagePreloader.schedule(context, state);
     final hdrPlaybackEnabled = ref.watch(
       mediaPlaybackConfigProvider.select((config) => config.hdrEnabled),

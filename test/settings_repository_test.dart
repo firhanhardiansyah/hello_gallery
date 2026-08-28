@@ -52,6 +52,7 @@ void main() {
     expect(preferences.sort, GallerySort.nameAscending);
     expect(preferences.gridSpacing, GalleryStyleLevel.standard);
     expect(preferences.cornerRadius, GalleryStyleLevel.standard);
+    expect(preferences.mediaPreviewFilmstripEnabled, isTrue);
   });
 
   test('gallery view preferences persist display options', () async {
@@ -65,6 +66,7 @@ void main() {
         sort: GallerySort.newest,
         gridSpacing: GalleryStyleLevel.none,
         cornerRadius: GalleryStyleLevel.xl,
+        mediaPreviewFilmstripEnabled: false,
       ),
     );
 
@@ -75,6 +77,7 @@ void main() {
     expect(preferences.sort, GallerySort.newest);
     expect(preferences.gridSpacing, GalleryStyleLevel.none);
     expect(preferences.cornerRadius, GalleryStyleLevel.xl);
+    expect(preferences.mediaPreviewFilmstripEnabled, isFalse);
   });
 
   test('masonry gallery layout can be restored from storage', () async {

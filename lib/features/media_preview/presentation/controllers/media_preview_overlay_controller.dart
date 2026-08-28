@@ -10,9 +10,11 @@ final class MediaPreviewOverlayController extends ChangeNotifier {
     required MediaPreviewUiState Function() readPreviewState,
     ValueChanged<bool>? onVisibilityChanged,
     Duration autoHideDuration = MediaPreviewTiming.controlsAutoHide,
+    bool filmstripEnabled = true,
   }) : _readPreviewState = readPreviewState,
        _onVisibilityChanged = onVisibilityChanged,
-       _autoHideDuration = autoHideDuration;
+       _autoHideDuration = autoHideDuration,
+       _filmstripEnabled = filmstripEnabled;
 
   final MediaPreviewUiState Function() _readPreviewState;
   final ValueChanged<bool>? _onVisibilityChanged;
@@ -22,7 +24,7 @@ final class MediaPreviewOverlayController extends ChangeNotifier {
   bool _controlsVisible = true;
   bool _controlsHovered = false;
   bool _controlsHiddenByNavigation = false;
-  bool _filmstripEnabled = true;
+  bool _filmstripEnabled;
   bool _cleanPreviewEnabled = false;
   bool _controlsVisibleBeforeCleanPreview = true;
   int _hiddenManualNavigationCount = 0;
@@ -100,9 +102,14 @@ final class MediaPreviewOverlayController extends ChangeNotifier {
   }
 
   bool toggleFilmstrip() {
-    _filmstripEnabled = !_filmstripEnabled;
-    notifyListeners();
+    setFilmstripEnabled(!_filmstripEnabled);
     return _filmstripEnabled;
+  }
+
+  void setFilmstripEnabled(bool enabled) {
+    if (_filmstripEnabled == enabled) return;
+    _filmstripEnabled = enabled;
+    notifyListeners();
   }
 
   Future<void> navigateWithoutControls(Future<void> Function() navigate) async {

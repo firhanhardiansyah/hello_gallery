@@ -52,6 +52,18 @@ void main() {
     expect(controller.controlsVisible, isFalse);
   });
 
+  test('restores and synchronizes persisted filmstrip visibility', () {
+    final controller = MediaPreviewOverlayController(
+      readPreviewState: _playingVideoState,
+      filmstripEnabled: false,
+    );
+    addTearDown(controller.dispose);
+
+    expect(controller.filmstripEnabled, isFalse);
+    controller.setFilmstripEnabled(true);
+    expect(controller.filmstripEnabled, isTrue);
+  });
+
   test('clean preview suppresses activity and restores prior visibility', () {
     final visibilityChanges = <bool>[];
     final controller = MediaPreviewOverlayController(

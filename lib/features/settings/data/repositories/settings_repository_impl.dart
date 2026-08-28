@@ -21,6 +21,8 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   static const _gallerySortKey = 'gallery_sort';
   static const _galleryGridSpacingKey = 'gallery_grid_spacing';
   static const _galleryCornerRadiusKey = 'gallery_corner_radius';
+  static const _mediaPreviewFilmstripEnabledKey =
+      'media_preview_filmstrip_enabled';
 
   @override
   Future<String?> readRootPath() async {
@@ -86,6 +88,8 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       cornerRadius: GalleryStyleLevel.fromStorage(
         preferences.getString(_galleryCornerRadiusKey),
       ),
+      mediaPreviewFilmstripEnabled:
+          preferences.getBool(_mediaPreviewFilmstripEnabledKey) ?? true,
     );
   }
 
@@ -101,6 +105,10 @@ final class SettingsRepositoryImpl implements SettingsRepository {
       storage.setString(_gallerySortKey, preferences.sort.name),
       storage.setString(_galleryGridSpacingKey, preferences.gridSpacing.name),
       storage.setString(_galleryCornerRadiusKey, preferences.cornerRadius.name),
+      storage.setBool(
+        _mediaPreviewFilmstripEnabledKey,
+        preferences.mediaPreviewFilmstripEnabled,
+      ),
     ]);
   }
 }

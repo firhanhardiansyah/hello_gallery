@@ -31,6 +31,7 @@ abstract class SettingsUiState with _$SettingsUiState {
     @Default(GallerySort.nameAscending) GallerySort gallerySort,
     @Default(GalleryStyleLevel.standard) GalleryStyleLevel galleryGridSpacing,
     @Default(GalleryStyleLevel.standard) GalleryStyleLevel galleryCornerRadius,
+    @Default(true) bool mediaPreviewFilmstripEnabled,
   }) = _SettingsUiState;
 
   String? get rootPath => switch (loadState) {

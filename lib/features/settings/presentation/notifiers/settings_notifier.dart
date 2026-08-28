@@ -44,6 +44,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         gallerySort: galleryView.sort,
         galleryGridSpacing: galleryView.gridSpacing,
         galleryCornerRadius: galleryView.cornerRadius,
+        mediaPreviewFilmstripEnabled: galleryView.mediaPreviewFilmstripEnabled,
       );
     } on Object catch (error) {
       state = state.copyWith(loadState: SettingsLoadState.error('$error'));
@@ -102,6 +103,12 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
     await _saveGalleryViewPreferences();
   }
 
+  Future<void> setMediaPreviewFilmstripEnabled(bool enabled) async {
+    if (state.mediaPreviewFilmstripEnabled == enabled) return;
+    state = state.copyWith(mediaPreviewFilmstripEnabled: enabled);
+    await _saveGalleryViewPreferences();
+  }
+
   Future<void> resetGalleryStyle() async {
     state = state.copyWith(
       galleryGridSpacing: GalleryStyleLevel.standard,
@@ -133,6 +140,7 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
         sort: state.gallerySort,
         gridSpacing: state.galleryGridSpacing,
         cornerRadius: state.galleryCornerRadius,
+        mediaPreviewFilmstripEnabled: state.mediaPreviewFilmstripEnabled,
       ),
     );
   }
