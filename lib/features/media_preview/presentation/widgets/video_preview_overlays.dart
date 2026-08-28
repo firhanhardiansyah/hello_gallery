@@ -26,6 +26,7 @@ class VideoPreviewOverlays extends StatelessWidget {
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
     required this.onToggleHdrPlayback,
+    required this.onToggleCleanPreview,
     required this.onToggleFullscreen,
     required this.onInteraction,
     super.key,
@@ -46,6 +47,7 @@ class VideoPreviewOverlays extends StatelessWidget {
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleHdrPlayback;
+  final VoidCallback onToggleCleanPreview;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onInteraction;
 
@@ -78,6 +80,7 @@ class VideoPreviewOverlays extends StatelessWidget {
           onToggleRotationLock: onToggleRotationLock,
           onToggleFilmstrip: onToggleFilmstrip,
           onToggleHdrPlayback: onToggleHdrPlayback,
+          onToggleCleanPreview: onToggleCleanPreview,
           onInteraction: onInteraction,
           onHoverChanged: onControlsHoverChanged,
           onToggleFullscreen: onToggleFullscreen,
@@ -260,6 +263,7 @@ class _VideoControlsOverlay extends StatelessWidget {
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
     required this.onToggleHdrPlayback,
+    required this.onToggleCleanPreview,
     required this.onInteraction,
     required this.onHoverChanged,
     required this.onToggleFullscreen,
@@ -277,6 +281,7 @@ class _VideoControlsOverlay extends StatelessWidget {
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleHdrPlayback;
+  final VoidCallback onToggleCleanPreview;
   final VoidCallback onInteraction;
   final ValueChanged<bool> onHoverChanged;
   final VoidCallback onToggleFullscreen;
@@ -311,6 +316,7 @@ class _VideoControlsOverlay extends StatelessWidget {
               onToggleRotationLock: onToggleRotationLock,
               onToggleFilmstrip: onToggleFilmstrip,
               onToggleHdrPlayback: onToggleHdrPlayback,
+              onToggleCleanPreview: onToggleCleanPreview,
               onInteraction: onInteraction,
               onToggleFullscreen: onToggleFullscreen,
             ),

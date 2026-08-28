@@ -311,6 +311,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             onToggleRotationLock: _toggleRotationLock,
             onToggleFilmstrip: _toggleFilmstrip,
             onToggleHdrPlayback: _toggleHdrPlayback,
+            onToggleCleanPreview: _toggleCleanPreview,
             onSelectMedia: _selectFromFilmstrip,
             onToggleFullscreen: _toggleFullscreen,
           ),

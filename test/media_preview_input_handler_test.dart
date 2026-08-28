@@ -64,6 +64,7 @@ void main() {
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.back));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.b));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.touchpad));
+    handler.handleGamepadEvent(_gamepadButton(GamepadButton.leftStick));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.dpadLeft));
     handler.handleGamepadEvent(_gamepadButton(GamepadButton.a));
     handler.handleGamepadEvent(_gamepadAxis(GamepadAxis.rightTrigger));
@@ -88,10 +89,10 @@ void main() {
     expect(closeCount, 1);
     expect(sidebarCount, 2);
     expect(topBarCount, 1);
-    expect(cleanPreviewCount, 1);
+    expect(cleanPreviewCount, 2);
     expect(escapeCount, 1);
     expect(focusCount, 1);
-    expect(gamepadInteractionCount, 6);
+    expect(gamepadInteractionCount, 7);
   });
 
   testWidgets('uses unclaimed pointer scroll for media navigation', (

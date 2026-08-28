@@ -31,6 +31,7 @@ class MediaPreviewView extends ConsumerWidget {
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
     required this.onToggleHdrPlayback,
+    required this.onToggleCleanPreview,
     required this.onSelectMedia,
     required this.onToggleFullscreen,
     super.key,
@@ -52,6 +53,7 @@ class MediaPreviewView extends ConsumerWidget {
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleHdrPlayback;
+  final VoidCallback onToggleCleanPreview;
   final ValueChanged<int> onSelectMedia;
   final VoidCallback onToggleFullscreen;
 
@@ -115,6 +117,7 @@ class MediaPreviewView extends ConsumerWidget {
             onToggleRotationLock: onToggleRotationLock,
             onToggleFilmstrip: onToggleFilmstrip,
             onToggleHdrPlayback: onToggleHdrPlayback,
+            onToggleCleanPreview: onToggleCleanPreview,
             onToggleFullscreen: onToggleFullscreen,
             onInteraction: onInteraction,
           ),

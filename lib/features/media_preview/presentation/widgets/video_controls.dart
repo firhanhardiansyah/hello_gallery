@@ -24,6 +24,7 @@ class VideoControls extends ConsumerWidget {
     required this.onToggleRotationLock,
     required this.onToggleFilmstrip,
     required this.onToggleHdrPlayback,
+    required this.onToggleCleanPreview,
     required this.onToggleFullscreen,
     this.seekPreviewPlaceholderPath,
     super.key,
@@ -40,6 +41,7 @@ class VideoControls extends ConsumerWidget {
   final VoidCallback onToggleRotationLock;
   final VoidCallback onToggleFilmstrip;
   final VoidCallback onToggleHdrPlayback;
+  final VoidCallback onToggleCleanPreview;
   final VoidCallback onToggleFullscreen;
   final String? seekPreviewPlaceholderPath;
 
@@ -165,6 +167,14 @@ class VideoControls extends ConsumerWidget {
                     onPressed: () {
                       onInteraction();
                       onToggleHdrPlayback();
+                    },
+                  ),
+                  _VideoControlAction(
+                    tooltip: 'Hide interface (H)',
+                    icon: HugeIcons.strokeRoundedViewOff,
+                    onPressed: () {
+                      onInteraction();
+                      onToggleCleanPreview();
                     },
                   ),
                   _VideoControlAction(

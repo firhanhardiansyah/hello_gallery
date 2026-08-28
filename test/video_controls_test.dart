@@ -23,6 +23,7 @@ void main() {
     var filmstripCount = 0;
     var hdrCount = 0;
     var playbackCount = 0;
+    var cleanPreviewCount = 0;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -44,6 +45,7 @@ void main() {
               onToggleRotationLock: () => rotationLockCount++,
               onToggleFilmstrip: () => filmstripCount++,
               onToggleHdrPlayback: () => hdrCount++,
+              onToggleCleanPreview: () => cleanPreviewCount++,
               onToggleFullscreen: () => fullscreenCount++,
             ),
           ),
@@ -68,6 +70,7 @@ void main() {
     final rotationLockButton = find.byTooltip('Lock rotation');
     final filmstripButton = find.byTooltip('Hide media list (G)');
     final hdrButton = find.byTooltip('Enable HDR playback');
+    final cleanPreviewButton = find.byTooltip('Hide interface (H)');
     final fullscreenButton = find.byTooltip('Fullscreen');
     expect(
       tester.getCenter(loopButton).dx,
@@ -87,6 +90,10 @@ void main() {
     );
     expect(
       tester.getCenter(hdrButton).dx,
+      lessThan(tester.getCenter(cleanPreviewButton).dx),
+    );
+    expect(
+      tester.getCenter(cleanPreviewButton).dx,
       lessThan(tester.getCenter(fullscreenButton).dx),
     );
     expect(container.read(mediaPreviewNotifierProvider).isLooping, isTrue);
@@ -98,6 +105,8 @@ void main() {
     expect(filmstripCount, 1);
     await tester.tap(hdrButton);
     expect(hdrCount, 1);
+    await tester.tap(cleanPreviewButton);
+    expect(cleanPreviewCount, 1);
     await tester.tap(fullscreenButton);
     expect(fullscreenCount, 1);
   });
@@ -136,6 +145,7 @@ void main() {
               onToggleRotationLock: _noop,
               onToggleFilmstrip: _noop,
               onToggleHdrPlayback: _noop,
+              onToggleCleanPreview: _noop,
               onToggleFullscreen: _noop,
             ),
           ),
@@ -181,6 +191,7 @@ void main() {
               onToggleRotationLock: _noop,
               onToggleFilmstrip: _noop,
               onToggleHdrPlayback: _noop,
+              onToggleCleanPreview: _noop,
               onToggleFullscreen: _noop,
             ),
           ),

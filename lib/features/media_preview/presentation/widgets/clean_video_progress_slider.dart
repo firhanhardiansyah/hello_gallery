@@ -77,18 +77,23 @@ class _CleanVideoProgressSliderState extends State<CleanVideoProgressSlider> {
                     right: 0,
                     bottom: _active ? _activeTrackBottom : 0,
                     height: _active ? _activeTrackHeight : _idleTrackHeight,
-                    child: ColoredBox(
-                      color: context.appColors.onMediaMuted.withValues(
-                        alpha: 0.35,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          key: const ValueKey('clean-video-progress-value'),
-                          widthFactor: progress,
-                          heightFactor: 1,
-                          child: ColoredBox(
-                            color: Theme.of(context).colorScheme.primary,
+                    child: AnimatedOpacity(
+                      key: const ValueKey('clean-video-progress-opacity'),
+                      duration: _animationDuration,
+                      opacity: _active ? 1 : 0,
+                      child: ColoredBox(
+                        color: context.appColors.onMediaMuted.withValues(
+                          alpha: 0.35,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            key: const ValueKey('clean-video-progress-value'),
+                            widthFactor: progress,
+                            heightFactor: 1,
+                            child: ColoredBox(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                         ),
                       ),

@@ -150,9 +150,10 @@ final class MediaPreviewInputHandler {
       case GamepadButton.rightBumper:
       case GamepadButton.leftTrigger:
       case GamepadButton.rightTrigger:
-      case GamepadButton.leftStick:
       case GamepadButton.rightStick:
         return;
+      case GamepadButton.leftStick:
+        _runGamepadAction(onToggleCleanPreview);
     }
   }
 
