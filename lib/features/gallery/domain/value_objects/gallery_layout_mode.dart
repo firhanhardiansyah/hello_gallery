@@ -1,5 +1,6 @@
 enum GalleryLayoutMode {
   grid,
+  aspectRatioGrid,
   quilted,
   masonry;
 

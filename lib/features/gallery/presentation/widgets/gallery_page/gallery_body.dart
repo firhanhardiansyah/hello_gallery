@@ -411,6 +411,8 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
           focused: focused,
           showItemName: widget.showItemNames,
           cornerRadius: widget.cardCornerRadius,
+          preserveMediaAspectRatio:
+              widget.layoutMode == GalleryLayoutMode.aspectRatioGrid,
           useOriginalAspectRatio:
               widget.layoutMode == GalleryLayoutMode.masonry,
           deferAspectRatioUpdates:

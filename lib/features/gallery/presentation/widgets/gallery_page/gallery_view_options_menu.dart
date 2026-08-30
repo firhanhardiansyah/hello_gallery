@@ -19,6 +19,7 @@ enum _GalleryViewOption {
   showItemNames,
   hideItemNames,
   gridLayout,
+  aspectRatioGridLayout,
   quiltedLayout,
   masonryLayout,
   customizeGallery,
@@ -107,6 +108,12 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
           selected: layoutMode == GalleryLayoutMode.grid,
         ),
         _item(
+          option: _GalleryViewOption.aspectRatioGridLayout,
+          label: 'Aspect Ratio Grid',
+          icon: HugeIcons.strokeRoundedImageComposition,
+          selected: layoutMode == GalleryLayoutMode.aspectRatioGrid,
+        ),
+        _item(
           option: _GalleryViewOption.quiltedLayout,
           label: 'Quilted',
           icon: HugeIcons.strokeRoundedLayoutGrid,
@@ -156,6 +163,12 @@ class GalleryViewOptionsMenu extends ConsumerWidget {
           ref
               .read(settingsNotifierProvider.notifier)
               .setGalleryLayoutMode(GalleryLayoutMode.grid),
+        );
+      case _GalleryViewOption.aspectRatioGridLayout:
+        unawaited(
+          ref
+              .read(settingsNotifierProvider.notifier)
+              .setGalleryLayoutMode(GalleryLayoutMode.aspectRatioGrid),
         );
       case _GalleryViewOption.quiltedLayout:
         unawaited(

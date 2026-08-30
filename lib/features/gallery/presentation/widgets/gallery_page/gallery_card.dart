@@ -25,6 +25,7 @@ class GalleryCard extends ConsumerStatefulWidget {
     this.selected = false,
     this.focused = false,
     this.showItemName = true,
+    this.preserveMediaAspectRatio = false,
     this.useOriginalAspectRatio = false,
     this.deferAspectRatioUpdates = false,
     this.cornerRadius = AppSpacing.sm,
@@ -45,6 +46,7 @@ class GalleryCard extends ConsumerStatefulWidget {
   final bool selected;
   final bool focused;
   final bool showItemName;
+  final bool preserveMediaAspectRatio;
   final bool useOriginalAspectRatio;
   final bool deferAspectRatioUpdates;
   final double cornerRadius;
@@ -83,6 +85,7 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
     final selected = widget.selected;
     final focused = widget.focused;
     final showItemName = widget.showItemName;
+    final preserveMediaAspectRatio = widget.preserveMediaAspectRatio;
     final useOriginalAspectRatio = widget.useOriginalAspectRatio;
     final onRenameFolder = widget.onRenameFolder;
     final onDeleteFolder = widget.onDeleteFolder;
@@ -116,6 +119,7 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
       selected: selected,
       focused: focused,
       showItemName: showItemName,
+      preserveMediaAspectRatio: preserveMediaAspectRatio,
       previewAspectRatio: previewAspectRatio,
       dropHighlighted: dropHighlighted,
       cornerRadius: widget.cornerRadius,
@@ -205,6 +209,7 @@ class _GalleryCardSurface extends StatelessWidget {
     required this.selected,
     required this.focused,
     required this.showItemName,
+    required this.preserveMediaAspectRatio,
     required this.previewAspectRatio,
     required this.dropHighlighted,
     required this.cornerRadius,
@@ -216,6 +221,7 @@ class _GalleryCardSurface extends StatelessWidget {
   final bool selected;
   final bool focused;
   final bool showItemName;
+  final bool preserveMediaAspectRatio;
   final double? previewAspectRatio;
   final bool dropHighlighted;
   final double cornerRadius;
@@ -296,12 +302,18 @@ class _GalleryCardSurface extends StatelessWidget {
       key: const ValueKey('gallery-card-preview'),
       fit: StackFit.expand,
       children: [
-        _Preview(item: item, borderRadius: borderRadius),
+        _Preview(
+          item: item,
+          borderRadius: borderRadius,
+          preserveMediaAspectRatio: preserveMediaAspectRatio,
+        ),
         if (selected)
           _PreviewBorder(
             key: const ValueKey('gallery-card-selection-border'),
             color: colorScheme.primary,
-            backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
+            backgroundColor: preserveMediaAspectRatio
+                ? null
+                : colorScheme.primary.withValues(alpha: 0.08),
             borderRadius: borderRadius,
           )
         else if (focused)
@@ -605,10 +617,15 @@ class _DragItemCount extends StatelessWidget {
 }
 
 class _Preview extends ConsumerWidget {
-  const _Preview({required this.item, required this.borderRadius});
+  const _Preview({
+    required this.item,
+    required this.borderRadius,
+    required this.preserveMediaAspectRatio,
+  });
 
   final GalleryItem item;
   final BorderRadius borderRadius;
+  final bool preserveMediaAspectRatio;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -631,32 +648,81 @@ class _Preview extends ConsumerWidget {
           );
     }
     if (item case final MediaItem media when !media.isVideo) {
-      return Image.file(
+      final image = Image.file(
         File(media.path),
-        fit: BoxFit.cover,
+        fit: preserveMediaAspectRatio ? BoxFit.contain : BoxFit.cover,
         cacheWidth: 420,
         errorBuilder: (_, _, _) => const Center(
           child: HugeIcon(icon: HugeIcons.strokeRoundedImageNotFound01),
         ),
       );
+      return preserveMediaAspectRatio
+          ? _ContainedMediaThumbnail(borderRadius: borderRadius, child: image)
+          : image;
     }
     if (item case final MediaItem media) {
       final thumbnail = ref.watch(videoThumbnailProvider(media));
       return thumbnail.when(
         data: (thumbnailPath) => thumbnailPath == null
             ? const _VideoPlaceholder()
-            : Image.file(
-                File(thumbnailPath),
-                fit: BoxFit.cover,
-                cacheWidth: 320,
-                errorBuilder: (_, _, _) => const _VideoPlaceholder(),
+            : _MediaThumbnail(
+                path: thumbnailPath,
+                preserveAspectRatio: preserveMediaAspectRatio,
+                borderRadius: borderRadius,
               ),
-        loading: () => const _VideoPlaceholder(),
-        error: (_, _) => const _VideoPlaceholder(),
+        loading: () => _VideoPlaceholder(transparent: preserveMediaAspectRatio),
+        error: (_, _) =>
+            _VideoPlaceholder(transparent: preserveMediaAspectRatio),
       );
     }
     return const _VideoPlaceholder();
   }
+}
+
+class _MediaThumbnail extends StatelessWidget {
+  const _MediaThumbnail({
+    required this.path,
+    required this.preserveAspectRatio,
+    required this.borderRadius,
+  });
+
+  final String path;
+  final bool preserveAspectRatio;
+  final BorderRadius borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = Image.file(
+      File(path),
+      fit: preserveAspectRatio ? BoxFit.contain : BoxFit.cover,
+      cacheWidth: 320,
+      errorBuilder: (_, _, _) =>
+          _VideoPlaceholder(transparent: preserveAspectRatio),
+    );
+    return preserveAspectRatio
+        ? _ContainedMediaThumbnail(borderRadius: borderRadius, child: image)
+        : image;
+  }
+}
+
+class _ContainedMediaThumbnail extends StatelessWidget {
+  const _ContainedMediaThumbnail({
+    required this.borderRadius,
+    required this.child,
+  });
+
+  final BorderRadius borderRadius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    key: const ValueKey('aspect-ratio-thumbnail-frame'),
+    child: ClipRRect(
+      key: const ValueKey('aspect-ratio-thumbnail-clip'),
+      borderRadius: borderRadius,
+      child: child,
+    ),
+  );
 }
 
 class _FolderPlaceholder extends StatelessWidget {
@@ -752,13 +818,16 @@ class _FolderMediaPreview extends ConsumerWidget {
 }
 
 class _VideoPlaceholder extends StatelessWidget {
-  const _VideoPlaceholder({this.compact = false});
+  const _VideoPlaceholder({this.compact = false, this.transparent = false});
 
   final bool compact;
+  final bool transparent;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: context.appColors.mediaPlaceholder,
+    color: transparent
+        ? Colors.transparent
+        : context.appColors.mediaPlaceholder,
     child: Center(
       child: HugeIcon(
         icon: HugeIcons.strokeRoundedPlayCircle,

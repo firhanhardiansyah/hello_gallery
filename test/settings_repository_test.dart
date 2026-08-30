@@ -89,6 +89,17 @@ void main() {
     expect(preferences.layoutMode, GalleryLayoutMode.masonry);
   });
 
+  test('aspect ratio grid layout can be restored from storage', () async {
+    SharedPreferences.setMockInitialValues({
+      'gallery_layout_mode': 'aspectRatioGrid',
+    });
+
+    final preferences = await SettingsRepositoryImpl()
+        .readGalleryViewPreferences();
+
+    expect(preferences.layoutMode, GalleryLayoutMode.aspectRatioGrid);
+  });
+
   test('unknown gallery sort falls back to name ascending', () async {
     SharedPreferences.setMockInitialValues({'gallery_sort': 'unsupported'});
 

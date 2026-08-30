@@ -150,6 +150,83 @@ void main() {
     expect(delegate.crossAxisSpacing, 12);
   });
 
+  testWidgets(
+    'aspect ratio grid keeps square cells and contains media thumbnails',
+    (tester) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: GalleryBody(
+                state: GalleryUiState(
+                  loadState: const GalleryLoadState.ready(),
+                  currentPath: '/gallery',
+                  items: [
+                    MediaItem(
+                      path: '/gallery/landscape.jpg',
+                      name: 'landscape.jpg',
+                      modifiedAt: DateTime(2026),
+                      mediaType: GalleryItemType.image,
+                    ),
+                  ],
+                ),
+                layoutMode: GalleryLayoutMode.aspectRatioGrid,
+                showItemNames: false,
+                cardCornerRadius: 16,
+                scrollController: controller,
+                selectedIndex: 0,
+                selectedPaths: const {'/gallery/landscape.jpg'},
+                onSelectionChanged: (_, {required toggle, required extend}) {},
+                onClearSelection: () {},
+                onColumnCountChanged: (_) {},
+                onFolderSelected: (_) {},
+                onMediaSelected: (_) {},
+                onMediaDropped: (_, _) {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final card = tester.getRect(find.byType(GalleryCard));
+      final thumbnail = tester.widget<Image>(
+        find.descendant(
+          of: find.byType(GalleryCard),
+          matching: find.byType(Image),
+        ),
+      );
+      expect(card.width / card.height, closeTo(1, 0.01));
+      expect(thumbnail.fit, BoxFit.contain);
+      final thumbnailClip = tester.widget<ClipRRect>(
+        find.byKey(const ValueKey('aspect-ratio-thumbnail-clip')),
+      );
+      expect(thumbnailClip.borderRadius, BorderRadius.circular(16));
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('aspect-ratio-thumbnail-frame')),
+          matching: find.byType(ColoredBox),
+        ),
+        findsNothing,
+      );
+      final selectionDecoration =
+          tester
+                  .widget<DecoratedBox>(
+                    find.descendant(
+                      of: find.byKey(
+                        const ValueKey('gallery-card-selection-border'),
+                      ),
+                      matching: find.byType(DecoratedBox),
+                    ),
+                  )
+                  .decoration
+              as BoxDecoration;
+      expect(selectionDecoration.color, isNull);
+    },
+  );
+
   testWidgets('masonry layout preserves each media aspect ratio', (
     tester,
   ) async {

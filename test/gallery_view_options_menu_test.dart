@@ -29,6 +29,7 @@ void main() {
     expect(find.text('Hide item names'), findsOneWidget);
     expect(find.text('Layout'), findsOneWidget);
     expect(find.text('Grid'), findsOneWidget);
+    expect(find.text('Aspect Ratio Grid'), findsOneWidget);
     expect(find.text('Quilted'), findsOneWidget);
     expect(find.text('Masonry'), findsOneWidget);
     expect(find.text('Customize gallery…'), findsOneWidget);
