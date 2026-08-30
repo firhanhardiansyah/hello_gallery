@@ -26,7 +26,7 @@ typedef MediaFolderDrop =
 
 abstract final class _GalleryGridLayout {
   static const padding = AppSpacing.md;
-  static const childAspectRatio = 3 / 4;
+  static const childAspectRatio = 1.0;
   static const masonryMinimumWarmupItemCount = 12;
   static const masonryDefaultWarmupItemCount = 24;
   static const masonryMaximumWarmupItemCount = 48;
