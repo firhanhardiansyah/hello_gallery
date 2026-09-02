@@ -53,8 +53,12 @@ void main() {
 
     expect(find.text('3 items selected'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('gallery-shell-top-bar-border')),
-      findsOneWidget,
+      tester
+          .widget<DesktopWindowTitleBar>(find.byType(DesktopWindowTitleBar))
+          .backgroundColor,
+      Theme.of(
+        tester.element(find.byType(GalleryShellTopBar)),
+      ).colorScheme.surfaceContainerHigh,
     );
     expect(find.byTooltip('New folder'), findsNothing);
     expect(find.byTooltip('Hide sidebar'), findsOneWidget);
@@ -172,11 +176,6 @@ void main() {
       find.byKey(const ValueKey('preview-title')),
     );
     expect(title.style?.color, AppColorTokens.light.onMedia);
-    expect(
-      find.byKey(const ValueKey('gallery-shell-top-bar-border')),
-      findsNothing,
-    );
-
     await tester.tap(find.byTooltip('Back to gallery'));
     expect(closeCount, 1);
   });

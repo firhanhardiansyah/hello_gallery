@@ -58,7 +58,7 @@ class GalleryShellTopBar extends ConsumerWidget {
       platform: platform,
       backgroundColor: isPreview
           ? Colors.transparent
-          : Theme.of(context).scaffoldBackgroundColor,
+          : Theme.of(context).colorScheme.surfaceContainerHigh,
       reserveMacOSWindowButtons: !sidebarVisible,
       showWindowsCaptionControls: !isFullscreen,
       windowsCaptionControls: isPreview
@@ -140,17 +140,7 @@ class GalleryShellTopBar extends ConsumerWidget {
         ),
       ),
     );
-    if (isPreview) return titleBar;
-    return DecoratedBox(
-      key: const ValueKey('gallery-shell-top-bar-border'),
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor, width: .3),
-        ),
-      ),
-      child: titleBar,
-    );
+    return titleBar;
   }
 
   List<Widget> _buildSelectionActions(BuildContext context) => [

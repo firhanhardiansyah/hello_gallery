@@ -148,13 +148,6 @@ class _SidebarResizeHandle extends StatelessWidget {
       child: SizedBox(
         width: _hitAreaWidth,
         height: double.infinity,
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: VerticalDivider(
-            width: .3,
-            color: Theme.of(context).dividerColor,
-          ),
-        ),
       ),
     ),
   );

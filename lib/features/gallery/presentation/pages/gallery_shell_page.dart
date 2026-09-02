@@ -595,24 +595,27 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
       ),
       child: widget.child,
     );
-    return Row(
-      children: [
-        _buildSidebar(
-          rootPath: rootPath,
-          gallery: gallery,
-          previewState: previewState,
-        ),
-        Expanded(
-          child: _buildMainPanel(
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      child: Row(
+        children: [
+          _buildSidebar(
             rootPath: rootPath,
-            settings: settings,
             gallery: gallery,
             previewState: previewState,
-            selectedMediaItems: selectedMediaItems,
-            routeContent: routeContent,
           ),
-        ),
-      ],
+          Expanded(
+            child: _buildMainPanel(
+              rootPath: rootPath,
+              settings: settings,
+              gallery: gallery,
+              previewState: previewState,
+              selectedMediaItems: selectedMediaItems,
+              routeContent: routeContent,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -742,7 +745,18 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
       return Column(
         children: [
           topBar,
-          Expanded(child: routeContent),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+              child: Material(
+                elevation: 2,
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                clipBehavior: Clip.antiAlias,
+                child: routeContent,
+              ),
+            ),
+          ),
         ],
       );
     }

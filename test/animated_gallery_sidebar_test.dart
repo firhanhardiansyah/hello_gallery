@@ -67,6 +67,7 @@ void main() {
     );
 
     final handle = find.byKey(const ValueKey('gallery-sidebar-resize-handle'));
+    expect(find.byType(VerticalDivider), findsNothing);
     await tester.drag(handle, const Offset(80, 0));
     await tester.pump();
 
