@@ -169,7 +169,7 @@ void main() {
 
     expect(label.width, lessThan(card.width));
     expect(decoration, isA<BoxDecoration>());
-    expect((decoration as BoxDecoration).color, isNotNull);
+    expect((decoration as BoxDecoration).color, Colors.transparent);
   });
 
   testWidgets(

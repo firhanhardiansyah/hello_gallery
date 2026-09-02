@@ -40,6 +40,8 @@ class GalleryCard extends ConsumerStatefulWidget {
     super.key,
   });
 
+  static const itemNameExtent = 28.0;
+
   final GalleryItem item;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
@@ -243,44 +245,7 @@ class _GalleryCardSurface extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildPreviewSection(colorScheme, borderRadius),
-
-            if (showItemName)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xs,
-                  AppSpacing.sm,
-                  AppSpacing.xs,
-                  AppSpacing.xs,
-                ),
-                child: Align(
-                  child: DecoratedBox(
-                    key: const ValueKey('gallery-card-label-background'),
-                    decoration: BoxDecoration(
-                      color: selected || focused
-                          ? colorScheme.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xs,
-                      ),
-                      child: Text(
-                        item.name,
-                        maxLines: selected || focused ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: selected || focused
-                              ? colorScheme.onPrimary
-                              : colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            if (showItemName) _buildItemNameSection(colorScheme),
           ],
         ),
       ),
@@ -367,6 +332,42 @@ class _GalleryCardSurface extends StatelessWidget {
         ? Expanded(child: preview)
         : AspectRatio(aspectRatio: aspectRatio, child: preview);
   }
+
+  Widget _buildItemNameSection(ColorScheme colorScheme) => SizedBox(
+    height: GalleryCard.itemNameExtent,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: DecoratedBox(
+          key: const ValueKey('gallery-card-label-background'),
+          decoration: BoxDecoration(
+            color: selected || focused
+                ? colorScheme.primary
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            child: Text(
+              item.name,
+              maxLines: selected || focused ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected || focused
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _PreviewBorder extends StatelessWidget {

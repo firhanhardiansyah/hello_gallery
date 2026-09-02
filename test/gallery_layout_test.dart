@@ -102,6 +102,78 @@ void main() {
     expect(largeTile.height, greaterThan(smallTile.height));
   });
 
+  testWidgets('adds label height without resizing the grid thumbnail', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    var showItemNames = false;
+    late StateSetter updateGallery;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 600,
+              height: 600,
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  updateGallery = setState;
+                  return GalleryBody(
+                    state: GalleryUiState(
+                      loadState: const GalleryLoadState.ready(),
+                      currentPath: '/gallery',
+                      items: [
+                        MediaItem(
+                          path: '/gallery/image.jpg',
+                          name: 'image.jpg',
+                          modifiedAt: DateTime(2026),
+                          mediaType: GalleryItemType.image,
+                        ),
+                      ],
+                    ),
+                    showItemNames: showItemNames,
+                    scrollController: controller,
+                    selectedIndex: 0,
+                    selectedPaths: const {},
+                    onSelectionChanged:
+                        (_, {required toggle, required extend}) {},
+                    onClearSelection: () {},
+                    onColumnCountChanged: (_) {},
+                    onFolderSelected: (_) {},
+                    onMediaSelected: (_) {},
+                    onMediaDropped: (_, _) {},
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final hiddenNameCard = tester.getRect(find.byType(GalleryCard));
+    final hiddenNamePreview = tester.getRect(
+      find.byKey(const ValueKey('gallery-card-preview')),
+    );
+
+    updateGallery(() => showItemNames = true);
+    await tester.pump();
+
+    final shownNameCard = tester.getRect(find.byType(GalleryCard));
+    final shownNamePreview = tester.getRect(
+      find.byKey(const ValueKey('gallery-card-preview')),
+    );
+
+    expect(shownNamePreview.size, hiddenNamePreview.size);
+    expect(
+      shownNameCard.height,
+      hiddenNameCard.height + GalleryCard.itemNameExtent,
+    );
+  });
+
   testWidgets('keeps frame padding while applying item spacing', (
     tester,
   ) async {

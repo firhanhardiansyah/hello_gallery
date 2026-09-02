@@ -330,6 +330,7 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: widget.maxCrossAxisExtent,
         childAspectRatio: _GalleryGridLayout.childAspectRatio,
+        mainAxisExtent: _itemMainExtent,
         crossAxisSpacing: widget.gridSpacing,
         mainAxisSpacing: widget.gridSpacing,
       ),
@@ -362,7 +363,11 @@ class _GalleryBodyState extends ConsumerState<GalleryBody> {
     _itemCrossAxisExtent =
         (gridWidth - widget.gridSpacing * (columns - 1)) / columns;
     _itemMainExtent =
-        _itemCrossAxisExtent / _GalleryGridLayout.childAspectRatio;
+        _itemCrossAxisExtent / _GalleryGridLayout.childAspectRatio +
+        (widget.showItemNames &&
+                widget.layoutMode != GalleryLayoutMode.quilted
+            ? GalleryCard.itemNameExtent
+            : 0);
     if (columns == _reportedColumnCount) return;
     _reportedColumnCount = columns;
     WidgetsBinding.instance.addPostFrameCallback((_) {
