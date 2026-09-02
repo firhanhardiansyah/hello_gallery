@@ -68,6 +68,9 @@ class GalleryCard extends ConsumerStatefulWidget {
 class _GalleryCardState extends ConsumerState<GalleryCard> {
   double? _displayedAspectRatio;
   bool _hasBuilt = false;
+  bool _hovered = false;
+  final _itemNameLayerLink = LayerLink();
+  final _itemNameOverlayController = OverlayPortalController();
 
   @override
   void didUpdateWidget(covariant GalleryCard oldWidget) {
@@ -127,6 +130,8 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
       cornerRadius: widget.cornerRadius,
       onTap: onTap,
       onDoubleTap: onDoubleTap,
+      itemNameLayerLink: _itemNameLayerLink,
+      itemNameOverlayController: _itemNameOverlayController,
     );
 
     Widget withContextMenu(Widget child) {
@@ -193,7 +198,21 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
         child: result,
       );
     }
-    return result;
+    return MouseRegion(
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
+      child: result,
+    );
+  }
+
+  void _setHovered(bool hovered) {
+    if (_hovered == hovered) return;
+    _hovered = hovered;
+    if (hovered && widget.showItemName) {
+      _itemNameOverlayController.show();
+    } else {
+      _itemNameOverlayController.hide();
+    }
   }
 
   double _masonryDisplayAspectRatio(double sourceAspectRatio) {
@@ -217,6 +236,8 @@ class _GalleryCardSurface extends StatelessWidget {
     required this.cornerRadius,
     required this.onTap,
     required this.onDoubleTap,
+    required this.itemNameLayerLink,
+    required this.itemNameOverlayController,
   });
 
   final GalleryItem item;
@@ -229,6 +250,8 @@ class _GalleryCardSurface extends StatelessWidget {
   final double cornerRadius;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
+  final LayerLink itemNameLayerLink;
+  final OverlayPortalController itemNameOverlayController;
 
   @override
   Widget build(BuildContext context) {
@@ -335,39 +358,71 @@ class _GalleryCardSurface extends StatelessWidget {
 
   Widget _buildItemNameSection(ColorScheme colorScheme) => SizedBox(
     height: GalleryCard.itemNameExtent,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: DecoratedBox(
-          key: const ValueKey('gallery-card-label-background'),
-          decoration: BoxDecoration(
-            color: selected || focused
-                ? colorScheme.primary
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
+    child: LayoutBuilder(
+      builder: (context, constraints) => OverlayPortal(
+        controller: itemNameOverlayController,
+        overlayChildBuilder: (context) => Positioned(
+          width: constraints.maxWidth,
+          child: CompositedTransformFollower(
+            link: itemNameLayerLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.topCenter,
+            followerAnchor: Alignment.topCenter,
+            child: IgnorePointer(
+              child: _buildHoveredItemNameLabel(colorScheme),
             ),
-            child: Text(
-              item.name,
-              maxLines: selected || focused ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: selected || focused
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurface,
-              ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: CompositedTransformTarget(
+            link: itemNameLayerLink,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: _buildItemNameLabel(colorScheme),
             ),
           ),
         ),
       ),
     ),
   );
+
+  Widget _buildItemNameLabel(ColorScheme colorScheme) => DecoratedBox(
+    key: const ValueKey('gallery-card-label-background'),
+    decoration: BoxDecoration(
+      color: selected || focused ? colorScheme.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: _buildItemNameText(colorScheme),
+  );
+
+  Widget _buildHoveredItemNameLabel(ColorScheme colorScheme) => Material(
+    key: const ValueKey('gallery-card-hover-label'),
+    elevation: 4,
+    color: selected || focused ? colorScheme.primary : colorScheme.surface,
+    borderRadius: BorderRadius.circular(6),
+    clipBehavior: Clip.antiAlias,
+    child: _buildItemNameText(colorScheme, maxLines: 8),
+  );
+
+  Widget _buildItemNameText(ColorScheme colorScheme, {int? maxLines}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: Text(
+          item.name,
+          maxLines: maxLines ?? (selected || focused ? 2 : 1),
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: selected || focused
+                ? colorScheme.onPrimary
+                : colorScheme.onSurface,
+          ),
+        ),
+      );
 }
 
 class _PreviewBorder extends StatelessWidget {

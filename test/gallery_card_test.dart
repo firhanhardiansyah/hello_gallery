@@ -229,6 +229,39 @@ void main() {
 
     expect(decoration.borderRadius, BorderRadius.circular(16));
   });
+
+  testWidgets('shows an eight-line label anchored to the item name on hover', (
+    tester,
+  ) async {
+    await _pumpFolderCard(
+      tester,
+      0,
+      itemName: 'A long album title that needs additional lines on hover',
+    );
+    final card = tester.getRect(find.byType(GalleryCard));
+    final label = tester.getRect(
+      find.byKey(const ValueKey('gallery-card-label-background')),
+    );
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.byType(GalleryCard)));
+    await tester.pump();
+
+    final hoverLabel = find.byKey(
+      const ValueKey('gallery-card-hover-label'),
+    );
+    expect(hoverLabel, findsOneWidget);
+    final hoverLabelText = tester.widget<Text>(
+      find.descendant(of: hoverLabel, matching: find.byType(Text)),
+    );
+    final hoverLabelRect = tester.getRect(hoverLabel);
+
+    expect(hoverLabelText.maxLines, 8);
+    expect(hoverLabelRect.width, card.width);
+    expect(hoverLabelRect.top, label.top);
+    expect(hoverLabelRect.center.dx, label.center.dx);
+  });
 }
 
 Future<void> _pumpFolderCard(
@@ -239,6 +272,7 @@ Future<void> _pumpFolderCard(
   bool selected = false,
   bool focused = false,
   bool showItemName = true,
+  String itemName = 'Album',
   double cornerRadius = 8,
 }) async {
   await tester.pumpWidget(
@@ -270,7 +304,7 @@ Future<void> _pumpFolderCard(
               child: GalleryCard(
                 item: GalleryFolder(
                   path: '/gallery/album',
-                  name: 'Album',
+                  name: itemName,
                   modifiedAt: DateTime(2026),
                 ),
                 onTap: () {},
