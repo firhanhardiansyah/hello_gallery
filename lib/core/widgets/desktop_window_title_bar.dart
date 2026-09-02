@@ -71,7 +71,12 @@ class DesktopWindowTitleBar extends StatelessWidget {
               ),
             ),
             if (showCaptionControls)
-              windowsCaptionControls ?? const DesktopWindowsCaptionControls(),
+              windowsCaptionControls ??
+                  DesktopWindowsCaptionControls(
+                    brightness: ThemeData.estimateBrightnessForColor(
+                      backgroundColor,
+                    ),
+                  ),
           ],
         ),
       ),

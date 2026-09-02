@@ -19,11 +19,14 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.foregroundColor,
     required this.onToggle,
     required this.onOpen,
+    this.activeIndicatorWidth = defaultActiveIndicatorWidth,
     this.onRename,
     this.onDelete,
     this.canAcceptMedia,
     this.onMediaDropped,
-  });
+  }) : assert(activeIndicatorWidth > 0);
+
+  static const defaultActiveIndicatorWidth = 3.0;
 
   final int depth;
   final String name;
@@ -35,6 +38,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Color overlappingSurfaceColor;
   final Color primaryColor;
   final Color foregroundColor;
+  final double activeIndicatorWidth;
   final VoidCallback onToggle;
   final VoidCallback? onOpen;
   final VoidCallback? onRename;
@@ -64,47 +68,71 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
             left: AppSpacing.sm + (depth * 14),
             right: AppSpacing.md,
           ),
-          child: InkWell(
-            onTap: onOpen ?? onToggle,
-            borderRadius: BorderRadius.circular(6),
-            child: Row(
-              children: [
-                _buildToggle(),
-                HugeIcon(
-                  icon: expanded
-                      ? HugeIcons.strokeRoundedFolder02
-                      : HugeIcons.strokeRoundedFolder01,
-                  size: 20,
-                  color: selected ? primaryColor : foregroundColor,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: selected
-                        ? TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w700,
-                          )
-                        : null,
-                  ),
-                ),
-                if (itemCount case final count?) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                    ),
-                    child: Badge.count(
-                      count: count,
-                      backgroundColor: colorScheme.primary,
-                      textColor: colorScheme.onPrimary,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (selected)
+                Positioned(
+                  top: AppSpacing.sm,
+                  bottom: AppSpacing.sm,
+                  left: 0,
+                  child: SizedBox(
+                    key: const ValueKey('active-folder-indicator'),
+                    width: activeIndicatorWidth,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: foregroundColor,
+                        borderRadius: BorderRadius.circular(
+                          activeIndicatorWidth / 2,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ],
-            ),
+                ),
+              InkWell(
+                onTap: onOpen ?? onToggle,
+                borderRadius: BorderRadius.circular(6),
+                child: Row(
+                  children: [
+                    const SizedBox(width: AppSpacing.sm),
+                    HugeIcon(
+                      icon: expanded
+                          ? HugeIcons.strokeRoundedFolder02
+                          : HugeIcons.strokeRoundedFolder01,
+                      size: 20,
+                      color: foregroundColor,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          if (itemCount case final count?) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 0,
+                              ),
+                              child: Badge.count(
+                                count: count,
+                                backgroundColor: colorScheme.primary,
+                                textColor: colorScheme.onPrimary,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    _buildToggle(color: foregroundColor),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -149,7 +177,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
     return result;
   }
 
-  Widget _buildToggle() {
+  Widget _buildToggle({required Color color}) {
     if (loading) {
       return const SizedBox.square(
         dimension: 40,
@@ -169,7 +197,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         icon: expanded
             ? HugeIcons.strokeRoundedArrowDown01
             : HugeIcons.strokeRoundedArrowRight01,
-        color: foregroundColor,
+        color: color,
       ),
     );
   }
@@ -185,6 +213,7 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
         surfaceColor != oldDelegate.surfaceColor ||
         overlappingSurfaceColor != oldDelegate.overlappingSurfaceColor ||
         primaryColor != oldDelegate.primaryColor ||
-        foregroundColor != oldDelegate.foregroundColor;
+        foregroundColor != oldDelegate.foregroundColor ||
+        activeIndicatorWidth != oldDelegate.activeIndicatorWidth;
   }
 }

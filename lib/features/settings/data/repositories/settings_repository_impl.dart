@@ -15,6 +15,8 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   static const _rootBookmarkKey = 'gallery_root_bookmark';
   static const _appearanceModeKey = 'appearance_mode';
   static const _colorThemeKey = 'color_theme';
+  static const _customColorThemeValueKey = 'custom_color_theme_value';
+  static const _customColorThemeUseExactKey = 'custom_color_theme_use_exact';
   static const _showItemNamesKey = 'show_item_names';
   static const _galleryLayoutModeKey = 'gallery_layout_mode';
   static const _galleryItemExtentKey = 'gallery_item_extent';
@@ -58,16 +60,41 @@ final class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<AppColorTheme> readColorTheme() async {
     final preferences = await SharedPreferences.getInstance();
-    return AppColorTheme.fromStorage(preferences.getString(_colorThemeKey));
+    return AppColorTheme.fromStorage(
+      preferences.getString(_colorThemeKey),
+      customColorValue: preferences.getInt(_customColorThemeValueKey),
+      useExactColor: preferences.getBool(_customColorThemeUseExactKey) ?? false,
+    );
+  }
+
+  @override
+  Future<AppColorTheme> readCustomColorTheme() async {
+    final preferences = await SharedPreferences.getInstance();
+    return AppColorTheme.custom(
+      preferences.getInt(_customColorThemeValueKey) ??
+          AppColorTheme.defaultCustomColorValue,
+      useExactColor: preferences.getBool(_customColorThemeUseExactKey) ?? false,
+    );
   }
 
   @override
   Future<void> saveThemePreferences(ThemePreferences preferences) async {
     final storage = await SharedPreferences.getInstance();
-    await Future.wait([
+    final writes = <Future<bool>>[
       storage.setString(_appearanceModeKey, preferences.appearanceMode.name),
       storage.setString(_colorThemeKey, preferences.colorTheme.name),
-    ]);
+    ];
+    final customColorValue = preferences.colorTheme.customColorValue;
+    if (customColorValue != null) {
+      writes.add(storage.setInt(_customColorThemeValueKey, customColorValue));
+      writes.add(
+        storage.setBool(
+          _customColorThemeUseExactKey,
+          preferences.colorTheme.useExactColor,
+        ),
+      );
+    }
+    await Future.wait(writes);
   }
 
   @override

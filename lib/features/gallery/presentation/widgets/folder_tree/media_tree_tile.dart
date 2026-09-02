@@ -47,14 +47,17 @@ class MediaTreeTile extends StatelessWidget {
                   ? HugeIcons.strokeRoundedVideo01
                   : HugeIcons.strokeRoundedImage01,
               size: 20,
-              color: selected ? colorScheme.primary : null,
+              color: selected ? colorScheme.onPrimaryContainer : null,
             ),
             title: Text(
               media.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: selected
-                  ? const TextStyle(fontWeight: FontWeight.w700)
+                  ? TextStyle(
+                      color: colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w700,
+                    )
                   : null,
             ),
             onTap: onTap,

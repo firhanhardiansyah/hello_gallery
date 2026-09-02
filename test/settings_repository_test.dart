@@ -41,6 +41,42 @@ void main() {
     expect(await repository.readColorTheme(), AppColorTheme.emerald);
   });
 
+  test('custom color theme restores its saved color', () async {
+    SharedPreferences.setMockInitialValues({
+      'color_theme': 'custom',
+      'custom_color_theme_value': 0xFF2A9D8F,
+      'custom_color_theme_use_exact': true,
+    });
+    final repository = SettingsRepositoryImpl();
+
+    expect(
+      await repository.readColorTheme(),
+      AppColorTheme.custom(0xFF2A9D8F, useExactColor: true),
+    );
+  });
+
+  test(
+    'last custom color remains available after selecting a preset',
+    () async {
+      final repository = SettingsRepositoryImpl();
+
+      await repository.saveThemePreferences(
+        ThemePreferences(
+          colorTheme: AppColorTheme.custom(0xFFE76F51, useExactColor: true),
+        ),
+      );
+      await repository.saveThemePreferences(
+        const ThemePreferences(colorTheme: AppColorTheme.emerald),
+      );
+
+      expect(await repository.readColorTheme(), AppColorTheme.emerald);
+      expect(
+        await repository.readCustomColorTheme(),
+        AppColorTheme.custom(0xFFE76F51, useExactColor: true),
+      );
+    },
+  );
+
   test('gallery view preferences show item names by default', () async {
     final repository = SettingsRepositoryImpl();
 

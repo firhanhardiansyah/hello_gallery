@@ -14,6 +14,8 @@ abstract interface class SettingsRepository {
 
   Future<AppColorTheme> readColorTheme();
 
+  Future<AppColorTheme> readCustomColorTheme();
+
   Future<void> saveThemePreferences(ThemePreferences preferences);
 
   Future<GalleryViewPreferences> readGalleryViewPreferences();

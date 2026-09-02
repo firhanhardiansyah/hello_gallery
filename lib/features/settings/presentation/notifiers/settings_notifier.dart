@@ -76,6 +76,23 @@ class SettingsNotifier extends Notifier<SettingsUiState> {
     await _saveThemePreferences();
   }
 
+  void previewColorTheme(AppColorTheme theme) {
+    state = state.copyWith(colorTheme: theme);
+  }
+
+  Future<AppColorTheme> readCustomColorTheme() {
+    return ref.read(settingsRepositoryProvider).readCustomColorTheme();
+  }
+
+  Future<void> setCustomColorTheme(
+    int colorValue, {
+    required bool useExactColor,
+  }) {
+    return setColorTheme(
+      AppColorTheme.custom(colorValue, useExactColor: useExactColor),
+    );
+  }
+
   Future<void> setShowItemNames(bool showItemNames) async {
     state = state.copyWith(showItemNames: showItemNames);
     await _saveGalleryViewPreferences();

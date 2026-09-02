@@ -86,6 +86,30 @@ void main() {
     );
   });
 
+  testWidgets('derives Windows caption icon brightness from its background', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: const DesktopWindowTitleBar(
+          platform: DesktopWindowPlatform.windows,
+          backgroundColor: Color(0xFFF4D35E),
+          child: SizedBox.expand(),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<DesktopWindowsCaptionControls>(
+            find.byType(DesktopWindowsCaptionControls),
+          )
+          .brightness,
+      Brightness.light,
+    );
+  });
+
   testWidgets('toggles the desktop window on mouse double click', (
     tester,
   ) async {
