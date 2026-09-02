@@ -746,15 +746,18 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
         children: [
           topBar,
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-              child: Material(
-                elevation: 2,
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
-                clipBehavior: Clip.antiAlias,
-                child: routeContent,
+            child: AnimatedPhysicalModel(
+              duration: AnimatedGallerySidebar.duration,
+              curve: AnimatedGallerySidebar.curve,
+              shape: BoxShape.rectangle,
+              elevation: 2,
+              color: Theme.of(context).colorScheme.surface,
+              shadowColor: Theme.of(context).shadowColor,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(_sidebarVisible ? 12 : 0),
               ),
+              clipBehavior: Clip.antiAlias,
+              child: routeContent,
             ),
           ),
         ],
