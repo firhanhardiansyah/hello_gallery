@@ -16,6 +16,16 @@ void main() {
     modifiedAt: DateTime(2026),
     mediaType: GalleryItemType.video,
   );
+  final olderFolder = GalleryFolder(
+    path: '/gallery/Folder 2',
+    name: 'Folder 2',
+    modifiedAt: DateTime(2025),
+  );
+  final newerFolder = GalleryFolder(
+    path: '/gallery/Folder 10',
+    name: 'Folder 10',
+    modifiedAt: DateTime(2026),
+  );
 
   test('sorts media names using natural order', () {
     final items = [newer, older]
@@ -38,5 +48,31 @@ void main() {
       );
 
     expect(items, [newer, older]);
+  });
+
+  test('sorts folder names using natural order', () {
+    final items = [newerFolder, olderFolder]
+      ..sort(
+        (left, right) => GalleryItemSortRules.compareFolders(
+          left,
+          right,
+          GallerySort.nameAscending,
+        ),
+      );
+
+    expect(items, [olderFolder, newerFolder]);
+  });
+
+  test('sorts newest folders first', () {
+    final items = [olderFolder, newerFolder]
+      ..sort(
+        (left, right) => GalleryItemSortRules.compareFolders(
+          left,
+          right,
+          GallerySort.newest,
+        ),
+      );
+
+    expect(items, [newerFolder, olderFolder]);
   });
 }

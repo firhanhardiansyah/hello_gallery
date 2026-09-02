@@ -106,10 +106,12 @@ class FolderHeaderDelegate extends SliverPersistentHeaderDelegate {
                     Expanded(
                       child: Row(
                         children: [
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Flexible(
+                            child: Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           if (itemCount case final count?) ...[

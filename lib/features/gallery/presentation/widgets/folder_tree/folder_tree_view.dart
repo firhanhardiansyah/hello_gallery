@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
-import 'package:hello_gallery/core/utils/natural_compare.dart';
 import 'package:path/path.dart' as path;
 
 import '../../../domain/entities/gallery_item.dart';
@@ -73,9 +72,7 @@ class FolderTreeView extends StatelessWidget {
     final media = [...?contents?.media]
       ..sort((a, b) => GalleryItemSortRules.compareMedia(a, b, sort));
     final folders = [...?contents?.folders]
-      ..sort(
-        (a, b) => naturalCompare(path.basename(a.path), path.basename(b.path)),
-      );
+      ..sort((a, b) => GalleryItemSortRules.compareFolders(a, b, sort));
 
     final sectionSlivers = <Widget>[
       if (!isRoot)

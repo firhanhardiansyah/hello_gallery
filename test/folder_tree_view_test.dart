@@ -49,6 +49,61 @@ void main() {
     expect(childKey.currentContext, isNotNull);
   });
 
+  testWidgets('applies the selected sort order to child folders', (
+    tester,
+  ) async {
+    const rootPath = '/gallery';
+    const folder2Path = '$rootPath/Folder 2';
+    const folder10Path = '$rootPath/Folder 10';
+
+    Future<void> pumpTree(GallerySort sort) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FolderTreeView(
+              rootPath: rootPath,
+              currentFolderPath: rootPath,
+              sort: sort,
+              expandedPaths: const {rootPath},
+              loadingPaths: const {},
+              contentsByPath: {
+                rootPath: FolderTreeContents(
+                  folders: [
+                    GalleryFolder(
+                      path: folder2Path,
+                      name: 'Folder 2',
+                      modifiedAt: DateTime(2026),
+                    ),
+                    GalleryFolder(
+                      path: folder10Path,
+                      name: 'Folder 10',
+                      modifiedAt: DateTime(2025),
+                    ),
+                  ],
+                ),
+              },
+              revealKeyFor: (_) => GlobalKey(),
+              onToggleFolder: (_) {},
+              onMediaSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+    }
+
+    await pumpTree(GallerySort.nameDescending);
+    expect(
+      tester.getTopLeft(find.text('Folder 10')).dy,
+      lessThan(tester.getTopLeft(find.text('Folder 2')).dy),
+    );
+
+    await pumpTree(GallerySort.newest);
+    expect(
+      tester.getTopLeft(find.text('Folder 2')).dy,
+      lessThan(tester.getTopLeft(find.text('Folder 10')).dy),
+    );
+  });
+
   testWidgets('keeps folder toggle separate from the row open action', (
     tester,
   ) async {
