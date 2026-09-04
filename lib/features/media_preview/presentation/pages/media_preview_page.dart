@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 import 'package:hello_gallery/features/gallery/domain/value_objects/gallery_sort.dart';
+import 'package:hello_gallery/features/gallery/presentation/widgets/media_management/media_context_menu.dart';
 import 'package:hello_gallery/features/settings/presentation/notifiers/settings_notifier.dart';
 
 import '../../application/providers/media_preview_dependencies.dart';
@@ -29,6 +30,8 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
     this.onToggleTopBar,
     this.onControlsVisibilityChanged,
     this.onCleanPreviewChanged,
+    this.onRenameMedia,
+    this.onDeleteMedia,
     this.onClose,
     this.isFullscreen = false,
     this.onToggleFullscreen,
@@ -46,6 +49,8 @@ class MediaPreviewPage extends ConsumerStatefulWidget {
   final VoidCallback? onToggleTopBar;
   final ValueChanged<bool>? onControlsVisibilityChanged;
   final ValueChanged<bool>? onCleanPreviewChanged;
+  final Future<void> Function(MediaItem item)? onRenameMedia;
+  final Future<void> Function(MediaItem item)? onDeleteMedia;
   final VoidCallback? onClose;
   final bool isFullscreen;
   final VoidCallback? onToggleFullscreen;
@@ -250,6 +255,24 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
     unawaited(_overlayController.navigateWithoutControls(navigate));
   }
 
+  void _openMediaContextMenu(
+    MediaItem item,
+    TapDownDetails details,
+  ) {
+    final onRenameMedia = widget.onRenameMedia;
+    final onDeleteMedia = widget.onDeleteMedia;
+    if (onRenameMedia == null || onDeleteMedia == null) return;
+    _showControls(userInitiated: true);
+    unawaited(
+      showMediaContextMenu(
+        context: context,
+        globalPosition: details.globalPosition,
+        onRename: () => unawaited(onRenameMedia(item)),
+        onMoveToTrash: () => unawaited(onDeleteMedia(item)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mediaPreviewNotifierProvider);
@@ -324,6 +347,7 @@ class _MediaPreviewPageState extends ConsumerState<MediaPreviewPage> {
             hdrPlaybackEnabled: hdrPlaybackEnabled,
             filmstripController: _filmstripController,
             onInteraction: () => _showControls(userInitiated: true),
+            onMediaSecondaryTapDown: _openMediaContextMenu,
             onTogglePlayback: _togglePlay,
             onControlsHoverChanged: _setControlsHovered,
             onRotate: _rotateActiveMedia,

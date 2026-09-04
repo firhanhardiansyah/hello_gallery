@@ -27,6 +27,8 @@ class MediaPreviewRoutePage extends StatelessWidget {
       onToggleTopBar: bindings.onToggleTopBar,
       onControlsVisibilityChanged: bindings.onControlsVisibilityChanged,
       onCleanPreviewChanged: bindings.onCleanPreviewChanged,
+      onRenameMedia: bindings.onRenameMedia,
+      onDeleteMedia: bindings.onDeleteMedia,
       onClose: bindings.onClose,
       isFullscreen: bindings.isFullscreen,
       onToggleFullscreen: bindings.onToggleFullscreen,

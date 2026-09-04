@@ -210,7 +210,7 @@ class _GalleryCardState extends ConsumerState<GalleryCard> {
     _hovered = hovered;
     if (hovered && widget.showItemName) {
       _itemNameOverlayController.show();
-    } else {
+    } else if (_itemNameOverlayController.isShowing) {
       _itemNameOverlayController.hide();
     }
   }

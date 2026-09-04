@@ -140,4 +140,33 @@ void main() {
 
     await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
   });
+
+  testWidgets('shows a fallback when the preview image no longer exists', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(
+          colorTheme: AppColorTheme.indigo,
+          brightness: Brightness.dark,
+        ),
+        home: const MediaPreviewCanvas(
+          itemPath: 'missing-preview-image.jpg',
+          isVideo: false,
+          videoController: null,
+          rotationQuarterTurns: 0,
+        ),
+      ),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('media-preview-image-unavailable')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

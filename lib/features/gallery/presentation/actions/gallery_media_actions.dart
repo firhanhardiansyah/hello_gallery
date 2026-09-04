@@ -116,12 +116,12 @@ final class GalleryMediaActions {
     });
   }
 
-  Future<void> rename({
+  Future<String?> rename({
     required BuildContext context,
     required String rootPath,
     required MediaItem item,
   }) async {
-    await runModal(() async {
+    return runModal(() async {
       String? newPath;
       final renamed = await showMediaNameDialog(
         context: context,
@@ -137,38 +137,39 @@ final class GalleryMediaActions {
         },
       );
       final destination = newPath;
-      if (!renamed || destination == null || !context.mounted) return;
-      if (path.equals(destination, item.path)) return;
+      if (!renamed || destination == null || !context.mounted) return null;
+      if (path.equals(destination, item.path)) return destination;
 
       await invalidateMediaCache(item);
       final directoryPath = path.dirname(item.path);
       clearFolderPreviewCache();
       notifyFolderTreeChanged({directoryPath});
       await syncDirectories({directoryPath});
-      if (!context.mounted) return;
+      if (!context.mounted) return destination;
       removeSelectedPaths([item.path]);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Renamed to ${path.basename(destination)}')),
       );
+      return destination;
     });
   }
 
-  Future<void> delete({
+  Future<MediaTrashResult?> delete({
     required BuildContext context,
     required String rootPath,
     required List<MediaItem> items,
   }) async {
-    if (items.isEmpty) return;
+    if (items.isEmpty) return null;
     final uniqueItems = <String, MediaItem>{
       for (final item in items) path.normalize(item.path): item,
     }.values.toList(growable: false);
 
-    await runModal(() async {
+    return runModal(() async {
       final confirmed = await showMoveMediaToTrashDialog(
         context: context,
         mediaNames: [for (final item in uniqueItems) item.name],
       );
-      if (!confirmed || !context.mounted) return;
+      if (!confirmed || !context.mounted) return null;
       final result = await runFolderOperationWithProgress(
         context: context,
         message: uniqueItems.length == 1
@@ -176,7 +177,7 @@ final class GalleryMediaActions {
             : 'Moving ${uniqueItems.length} files to Trash...',
         operation: () => trashMedia(rootPath: rootPath, items: uniqueItems),
       );
-      if (!context.mounted) return;
+      if (!context.mounted) return result;
 
       await Future.wait([
         for (final item in result.moved) invalidateMediaCache(item),
@@ -189,7 +190,7 @@ final class GalleryMediaActions {
         notifyFolderTreeChanged(affectedDirectories);
         await syncDirectories(affectedDirectories);
       }
-      if (!context.mounted) return;
+      if (!context.mounted) return result;
       removeSelectedPaths(result.moved.map((item) => item.path));
 
       final movedCount = result.moved.length;
@@ -200,6 +201,7 @@ final class GalleryMediaActions {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
+      return result;
     });
   }
 }

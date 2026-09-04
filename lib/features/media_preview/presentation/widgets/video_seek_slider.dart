@@ -152,7 +152,9 @@ class _VideoSeekSliderState extends State<VideoSeekSlider> {
   }
 
   void _hideHoverLabel() {
-    _overlayController.hide();
+    if (_overlayController.isShowing) {
+      _overlayController.hide();
+    }
     _previewController?.cancelPending();
     setState(() => _hoverDx = null);
   }

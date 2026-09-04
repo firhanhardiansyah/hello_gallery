@@ -10,10 +10,12 @@ Future<void> showMediaContextMenu({
   VoidCallback? onRename,
 }) async {
   final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+  final menuPosition = globalPosition + const Offset(4, 4);
+
   final action = await showMenu<MediaContextAction>(
     context: context,
     position: RelativeRect.fromRect(
-      Rect.fromPoints(globalPosition, globalPosition),
+      Rect.fromPoints(menuPosition, menuPosition),
       Offset.zero & overlay.size,
     ),
     items: [

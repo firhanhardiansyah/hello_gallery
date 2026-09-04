@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hello_gallery/core/theme/app_spacing.dart';
+import 'package:hello_gallery/features/gallery/domain/entities/gallery_item.dart';
 
 import '../../../thumbnail/application/providers/thumbnail_dependencies.dart';
 import '../notifiers/media_preview_notifier.dart';
@@ -25,6 +26,7 @@ class MediaPreviewView extends ConsumerWidget {
     required this.hdrPlaybackEnabled,
     required this.filmstripController,
     required this.onInteraction,
+    required this.onMediaSecondaryTapDown,
     required this.onTogglePlayback,
     required this.onControlsHoverChanged,
     required this.onRotate,
@@ -47,6 +49,8 @@ class MediaPreviewView extends ConsumerWidget {
   final bool hdrPlaybackEnabled;
   final MediaPreviewFilmstripController filmstripController;
   final VoidCallback onInteraction;
+  final void Function(MediaItem item, TapDownDetails details)
+  onMediaSecondaryTapDown;
   final VoidCallback onTogglePlayback;
   final ValueChanged<bool> onControlsHoverChanged;
   final VoidCallback onRotate;
@@ -80,6 +84,8 @@ class MediaPreviewView extends ConsumerWidget {
           key: ValueKey(item.path),
           onTap: item.isVideo ? onTogglePlayback : null,
           onDoubleTap: onToggleFullscreen,
+          onSecondaryTapDown: (details) =>
+              onMediaSecondaryTapDown(item, details),
           child: MediaPreviewCanvas(
             itemPath: item.path,
             isVideo: item.isVideo,

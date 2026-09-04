@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/features/media_preview/presentation/widgets/media_preview_interaction_surface.dart';
 
@@ -27,4 +28,23 @@ void main() {
       expect(tapCount, 0);
     },
   );
+
+  testWidgets('secondary click reports the pointer position', (tester) async {
+    TapDownDetails? receivedDetails;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaPreviewInteractionSurface(
+          onDoubleTap: () {},
+          onSecondaryTapDown: (details) => receivedDetails = details,
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+
+    const position = Offset(120, 160);
+    await tester.tapAt(position, buttons: kSecondaryButton);
+    await tester.pump();
+
+    expect(receivedDetails?.globalPosition, position);
+  });
 }

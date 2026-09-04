@@ -114,6 +114,16 @@ class _MediaPreviewCanvasState extends State<MediaPreviewCanvas> {
       key: ValueKey('image:${widget.itemPath}'),
       fit: BoxFit.contain,
       gaplessPlayback: false,
+      errorBuilder: (context, error, stackTrace) => ColoredBox(
+        key: const ValueKey('media-preview-image-unavailable'),
+        color: context.appColors.mediaBackground,
+        child: Center(
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
       frameBuilder: (context, child, frame, syncLoaded) {
         if (syncLoaded || frame != null) return child;
         return ColoredBox(

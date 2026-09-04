@@ -345,6 +345,51 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
     }
   }
 
+  Future<void> _renamePreviewMedia(
+    String rootPath,
+    MediaItem item,
+  ) async {
+    final destination = await _mediaActions.rename(
+      context: context,
+      rootPath: rootPath,
+      item: item,
+    );
+    if (!mounted || destination == null || path.equals(destination, item.path)) {
+      return;
+    }
+    _openPreviewRoute(destination);
+  }
+
+  Future<void> _deletePreviewMedia(
+    String rootPath,
+    MediaItem item,
+  ) async {
+    final stateBeforeDelete = ref.read(mediaPreviewNotifierProvider);
+    final result = await _mediaActions.delete(
+      context: context,
+      rootPath: rootPath,
+      items: [item],
+    );
+    if (!mounted || result == null) return;
+    final activeWasMoved = result.moved.any(
+      (movedItem) => path.equals(movedItem.path, item.path),
+    );
+    if (!activeWasMoved) return;
+
+    final remainingItems = stateBeforeDelete.items
+        .where((candidate) => !path.equals(candidate.path, item.path))
+        .toList(growable: false);
+    if (remainingItems.isEmpty) {
+      await _previewCoordinator.close();
+      return;
+    }
+    final nextIndex = stateBeforeDelete.activeIndex.clamp(
+      0,
+      remainingItems.length - 1,
+    );
+    _openPreviewRoute(remainingItems[nextIndex].path);
+  }
+
   bool _previewPathIsInside(String folderPath) {
     final previewPath = widget.previewPath;
     return previewPath != null &&
@@ -590,6 +635,8 @@ class _GalleryShellPageState extends ConsumerState<GalleryShellPage> {
         onToggleTopBar: _togglePreviewTopBar,
         onControlsVisibilityChanged: _syncPreviewTopBarVisibility,
         onCleanPreviewChanged: _setCleanPreviewEnabled,
+        onRenameMedia: (item) => _renamePreviewMedia(rootPath, item),
+        onDeleteMedia: (item) => _deletePreviewMedia(rootPath, item),
         onClose: _previewCoordinator.close,
         onToggleFullscreen: _toggleFullscreen,
       ),

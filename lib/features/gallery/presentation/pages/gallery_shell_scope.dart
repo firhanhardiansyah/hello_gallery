@@ -56,6 +56,8 @@ final class MediaPreviewPageBindings {
     required this.onToggleTopBar,
     required this.onControlsVisibilityChanged,
     required this.onCleanPreviewChanged,
+    required this.onRenameMedia,
+    required this.onDeleteMedia,
     required this.onClose,
     required this.onToggleFullscreen,
   });
@@ -69,6 +71,8 @@ final class MediaPreviewPageBindings {
   final VoidCallback onToggleTopBar;
   final ValueChanged<bool> onControlsVisibilityChanged;
   final ValueChanged<bool> onCleanPreviewChanged;
+  final Future<void> Function(MediaItem item) onRenameMedia;
+  final Future<void> Function(MediaItem item) onDeleteMedia;
   final VoidCallback onClose;
   final VoidCallback onToggleFullscreen;
 }
