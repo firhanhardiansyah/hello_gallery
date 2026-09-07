@@ -8,7 +8,7 @@
 PRODUCT_NAME = hello_gallery
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.helloGallery
+PRODUCT_BUNDLE_IDENTIFIER = com.playground.hellogallery
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Firhan Hardiansyah. All rights reserved.
