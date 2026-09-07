@@ -306,14 +306,25 @@ class MainFlutterWindow: NSWindow {
       let requestedTime = CMTime(value: CMTimeValue(timestampMs), timescale: 1000)
 
       do {
-        let image = try generator.copyCGImage(at: requestedTime, actualTime: nil)
+        var actualTime = CMTime.invalid
+        let image = try generator.copyCGImage(
+          at: requestedTime,
+          actualTime: &actualTime
+        )
         let data = NSBitmapImageRep(cgImage: image).representation(
           using: .jpeg,
           properties: [.compressionFactor: 0.72]
         )
+        let actualSeconds = CMTimeGetSeconds(actualTime)
+        let actualTimestampMs = actualSeconds.isFinite
+          ? Int((actualSeconds * 1000).rounded())
+          : timestampMs
         DispatchQueue.main.async {
           if let data {
-            result(FlutterStandardTypedData(bytes: data))
+            result([
+              "bytes": FlutterStandardTypedData(bytes: data),
+              "actualTimestampMs": actualTimestampMs,
+            ])
           } else {
             result(nil)
           }

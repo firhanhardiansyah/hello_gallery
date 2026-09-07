@@ -19,26 +19,25 @@ final class PlatformSeekPreviewFrameRepository
   static const channelName = 'hello_gallery/platform_thumbnail';
   static const _maximumMemoryEntries = 32;
   static const _maximumDiskEntries = 512;
-  static const _extractorVersion = 'native-seek-preview-v3';
+  static const _extractorVersion = 'native-seek-preview-v4';
 
   final MethodChannel _channel;
   final Future<Directory> Function() _getCacheDirectory;
-  final _memoryCache = <String, Uint8List>{};
-  final _pending = <String, Future<Uint8List?>>{};
+  final _memoryCache = <String, SeekPreviewFrame>{};
+  final _pending = <String, Future<SeekPreviewFrame?>>{};
   Future<Directory>? _cacheDirectory;
   int _writesSincePrune = 0;
 
   @override
-  Future<Uint8List?> getFrame(
+  Future<SeekPreviewFrame?> getFrame(
     MediaItem item,
     Duration position, {
     int width = 240,
     bool precise = false,
   }) async {
     if (!item.isVideo) return null;
-    final normalizedPosition = position < Duration.zero
-        ? Duration.zero
-        : position;
+    final clampedPosition = position < Duration.zero ? Duration.zero : position;
+    final normalizedPosition = _quantizePosition(clampedPosition, precise);
     final normalizedWidth = width.clamp(120, 480);
     final key = _frameKey(item, normalizedPosition, normalizedWidth, precise);
     final memoryBytes = _memoryCache.remove(key);
@@ -52,8 +51,14 @@ final class PlatformSeekPreviewFrameRepository
       try {
         final bytes = await cacheFile.readAsBytes();
         if (bytes.isNotEmpty) {
-          _remember(key, bytes);
-          return bytes;
+          final frame = SeekPreviewFrame(
+            bytes: bytes,
+            requestedPosition: normalizedPosition,
+            actualPosition: normalizedPosition,
+            precise: precise,
+          );
+          _remember(key, frame);
+          return frame;
         }
       } on Object {
         // Regenerate an unreadable cache entry.
@@ -78,7 +83,7 @@ final class PlatformSeekPreviewFrameRepository
     }
   }
 
-  Future<Uint8List?> _extract({
+  Future<SeekPreviewFrame?> _extract({
     required MediaItem item,
     required Duration position,
     required int width,
@@ -87,16 +92,35 @@ final class PlatformSeekPreviewFrameRepository
     required File cacheFile,
   }) async {
     try {
-      final bytes = await _channel.invokeMethod<Uint8List>('getFrame', {
+      final response = await _channel.invokeMethod<Object?>('getFrame', {
         'path': item.path,
         'timestampMs': position.inMilliseconds,
         'size': width,
         'precise': precise,
       });
+      final Uint8List? bytes;
+      var actualPosition = position;
+      if (response case final Uint8List legacyBytes) {
+        bytes = legacyBytes;
+      } else if (response case final Map<Object?, Object?> values) {
+        bytes = values['bytes'] as Uint8List?;
+        final actualTimestampMs = values['actualTimestampMs'];
+        if (actualTimestampMs is int) {
+          actualPosition = Duration(milliseconds: actualTimestampMs);
+        }
+      } else {
+        bytes = null;
+      }
       if (bytes == null || bytes.isEmpty) return null;
-      _remember(cacheKey, bytes);
+      final frame = SeekPreviewFrame(
+        bytes: bytes,
+        requestedPosition: position,
+        actualPosition: actualPosition,
+        precise: precise,
+      );
+      _remember(cacheKey, frame);
       unawaited(_persist(cacheFile, bytes));
-      return bytes;
+      return frame;
     } on PlatformException {
       return null;
     } on MissingPluginException {
@@ -152,9 +176,16 @@ final class PlatformSeekPreviewFrameRepository
     return hash.toRadixString(16).padLeft(16, '0');
   }
 
-  void _remember(String key, Uint8List bytes) {
+  Duration _quantizePosition(Duration position, bool precise) {
+    if (!precise) return position;
+    const quantumMs = 250;
+    final quantizedMs = (position.inMilliseconds ~/ quantumMs) * quantumMs;
+    return Duration(milliseconds: quantizedMs);
+  }
+
+  void _remember(String key, SeekPreviewFrame frame) {
     _memoryCache.remove(key);
-    _memoryCache[key] = bytes;
+    _memoryCache[key] = frame;
     while (_memoryCache.length > _maximumMemoryEntries) {
       _memoryCache.remove(_memoryCache.keys.first);
     }

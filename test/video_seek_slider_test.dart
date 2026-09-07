@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hello_gallery/app/theme/app_theme.dart';
+import 'package:hello_gallery/features/media_preview/domain/repositories/seek_preview_frame_repository.dart';
 import 'package:hello_gallery/features/media_preview/presentation/widgets/video_seek_slider.dart';
 import 'package:hello_gallery/features/settings/domain/value_objects/app_color_theme.dart';
 
@@ -89,7 +90,12 @@ void main() {
                 previewExactDelay: const Duration(hours: 1),
                 previewFrameLoader: (position, {precise = false}) async {
                   requestedPositions.add(position);
-                  return frameBytes;
+                  return SeekPreviewFrame(
+                    bytes: frameBytes,
+                    requestedPosition: position,
+                    actualPosition: position,
+                    precise: precise,
+                  );
                 },
                 onChanged: (_) {},
                 onInteraction: () {},

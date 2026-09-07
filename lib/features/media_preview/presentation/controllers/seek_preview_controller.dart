@@ -2,14 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../domain/repositories/seek_preview_frame_repository.dart';
+
 typedef SeekPreviewFrameLoader =
-    Future<Uint8List?> Function(Duration position, {bool precise});
+    Future<SeekPreviewFrame?> Function(Duration position, {bool precise});
 
 final class SeekPreviewController extends ChangeNotifier {
   SeekPreviewController({
     required SeekPreviewFrameLoader loadFrame,
     required Duration debounceDuration,
-    Duration exactDelay = const Duration(milliseconds: 350),
+    Duration exactDelay = const Duration(milliseconds: 250),
     Duration prefetchDelay = const Duration(milliseconds: 750),
   }) : _loadFrame = loadFrame,
        _debounceDuration = debounceDuration,
@@ -21,20 +23,20 @@ final class SeekPreviewController extends ChangeNotifier {
   final Duration _exactDelay;
   final Duration _prefetchDelay;
 
-  Timer? _debounceTimer;
+  Timer? _coarseTimer;
   Timer? _exactTimer;
   Timer? _prefetchTimer;
-  Uint8List? _frameBytes;
+  SeekPreviewFrame? _frame;
   Duration? _requestedBucket;
   Duration _lastTotalDuration = Duration.zero;
   bool _loading = false;
-  bool _coarseRequestInFlight = false;
-  bool _coarseRequestQueued = false;
+  bool _requestInFlight = false;
+  _PreviewLoad? _queuedLoad;
+  final List<Duration> _prefetchQueue = [];
   int _requestGeneration = 0;
-  int? _exactFrameGeneration;
   bool _disposed = false;
 
-  Uint8List? get frameBytes => _frameBytes;
+  Uint8List? get frameBytes => _frame?.bytes;
   bool get isLoading => _loading;
 
   void request(Duration position, Duration totalDuration) {
@@ -45,30 +47,37 @@ final class SeekPreviewController extends ChangeNotifier {
     final bucketChanged = bucket != _requestedBucket;
 
     _requestedBucket = bucket;
-    _exactFrameGeneration = null;
     _exactTimer?.cancel();
     _prefetchTimer?.cancel();
+    _prefetchQueue.clear();
 
-    if (bucketChanged || _frameBytes == null || _loading) {
-      final shouldNotify = !_loading;
+    if (bucketChanged || _frame == null) {
+      if (bucketChanged) _frame = null;
+      final shouldNotify = !_loading || bucketChanged;
       _loading = true;
       if (shouldNotify) notifyListeners();
-      _scheduleCoarseLoad(bucket, generation);
-    } else {
-      _debounceTimer?.cancel();
+      _scheduleCoarseLoad();
     }
 
     _exactTimer = Timer(
       _exactDelay,
-      () => _loadExact(exactPosition, bucket, generation),
+      () => _enqueueLoad(
+        _PreviewLoad(
+          position: exactPosition,
+          bucket: bucket,
+          generation: generation,
+          precise: true,
+        ),
+      ),
     );
   }
 
   void cancelPending() {
-    _debounceTimer?.cancel();
+    _coarseTimer?.cancel();
     _exactTimer?.cancel();
     _prefetchTimer?.cancel();
-    _coarseRequestQueued = false;
+    _queuedLoad = null;
+    _prefetchQueue.clear();
     _requestGeneration++;
     if (_loading) {
       _loading = false;
@@ -78,9 +87,10 @@ final class SeekPreviewController extends ChangeNotifier {
 
   Duration bucketFor(Duration position, Duration totalDuration) {
     final interval = intervalFor(totalDuration);
+    final intervalMs = interval.inMilliseconds;
     final bucketMilliseconds =
-        (position.inMilliseconds ~/ interval.inMilliseconds) *
-        interval.inMilliseconds;
+        ((position.inMilliseconds + (intervalMs ~/ 2)) ~/ intervalMs) *
+        intervalMs;
     final maximum = totalDuration > Duration.zero
         ? totalDuration - const Duration(milliseconds: 1)
         : Duration.zero;
@@ -90,76 +100,107 @@ final class SeekPreviewController extends ChangeNotifier {
   }
 
   Duration intervalFor(Duration totalDuration) => switch (totalDuration) {
-    <= const Duration(minutes: 10) => const Duration(seconds: 5),
-    <= const Duration(hours: 1) => const Duration(seconds: 10),
-    _ => const Duration(seconds: 20),
+    <= const Duration(minutes: 10) => const Duration(seconds: 1),
+    <= const Duration(hours: 1) => const Duration(seconds: 2),
+    _ => const Duration(seconds: 5),
   };
 
-  Future<void> _loadCoarse(Duration bucket, int generation) async {
-    if (_coarseRequestInFlight) {
-      _coarseRequestQueued = true;
+  void _scheduleCoarseLoad() {
+    if (_coarseTimer?.isActive ?? false) return;
+    _coarseTimer = Timer(_debounceDuration, () {
+      final bucket = _requestedBucket;
+      if (bucket == null || _disposed) return;
+      _enqueueLoad(
+        _PreviewLoad(
+          position: bucket,
+          bucket: bucket,
+          generation: _requestGeneration,
+          precise: false,
+        ),
+      );
+    });
+  }
+
+  void _enqueueLoad(_PreviewLoad load) {
+    if (_disposed || load.generation != _requestGeneration) return;
+    if (_requestInFlight) {
+      _queuedLoad = load;
       return;
     }
-    _coarseRequestInFlight = true;
-    final frameBytes = await _loadFrame(bucket, precise: false);
-    _coarseRequestInFlight = false;
-    if (_disposed) return;
+    _requestInFlight = true;
+    unawaited(_runLoad(load));
+  }
 
-    if (generation == _requestGeneration &&
-        _exactFrameGeneration != generation) {
-      if (frameBytes != null) _frameBytes = frameBytes;
+  Future<void> _runLoad(_PreviewLoad load) async {
+    SeekPreviewFrame? frame;
+    try {
+      frame = await _loadFrame(load.position, precise: load.precise);
+    } on Object {
+      frame = null;
+    }
+
+    if (!_disposed && !load.prefetch && load.generation == _requestGeneration) {
+      if (frame != null && _isTimestampAcceptable(frame, load)) {
+        _frame = frame;
+      }
       _loading = false;
       notifyListeners();
-    }
-
-    if (_coarseRequestQueued) {
-      _coarseRequestQueued = false;
-      final latestBucket = _requestedBucket;
-      if (latestBucket != null) {
-        unawaited(_loadCoarse(latestBucket, _requestGeneration));
+      if (load.precise && frame != null) {
+        _scheduleAdjacentPrefetch(load.bucket, load.generation);
       }
     }
-  }
 
-  Future<void> _loadExact(
-    Duration position,
-    Duration bucket,
-    int generation,
-  ) async {
-    final frameBytes = await _loadFrame(position, precise: true);
-    if (_disposed || generation != _requestGeneration) return;
-
-    if (frameBytes != null) {
-      _frameBytes = frameBytes;
-      _exactFrameGeneration = generation;
+    _requestInFlight = false;
+    if (_disposed) return;
+    final queued = _queuedLoad;
+    _queuedLoad = null;
+    if (queued != null) {
+      _enqueueLoad(queued);
+      return;
     }
-    _loading = false;
-    notifyListeners();
-    _scheduleAdjacentPrefetch(bucket, generation);
+    _drainPrefetchQueue();
   }
 
-  void _scheduleCoarseLoad(Duration bucket, int generation) {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(
-      _debounceDuration,
-      () => _loadCoarse(bucket, generation),
-    );
+  bool _isTimestampAcceptable(SeekPreviewFrame frame, _PreviewLoad load) {
+    final difference = (frame.actualPosition - frame.requestedPosition)
+        .absolute();
+    final tolerance = load.precise
+        ? const Duration(milliseconds: 750)
+        : const Duration(milliseconds: 1000);
+    return difference <= tolerance;
   }
 
   void _scheduleAdjacentPrefetch(Duration bucket, int generation) {
     _prefetchTimer?.cancel();
-    _prefetchTimer = Timer(_prefetchDelay, () async {
+    _prefetchTimer = Timer(_prefetchDelay, () {
       if (_disposed || generation != _requestGeneration) return;
       final interval = intervalFor(_lastTotalDuration);
-      final candidates = [bucket + interval, bucket - interval];
-      for (final candidate in candidates) {
-        if (_disposed || generation != _requestGeneration) return;
-        if (candidate < Duration.zero || candidate >= _lastTotalDuration) {
-          continue;
-        }
-        await _loadFrame(candidate, precise: false);
-      }
+      _prefetchQueue
+        ..clear()
+        ..addAll(
+          [bucket + interval, bucket - interval].where(
+            (candidate) =>
+                candidate >= Duration.zero && candidate < _lastTotalDuration,
+          ),
+        );
+      _drainPrefetchQueue();
     });
+  }
+
+  void _drainPrefetchQueue() {
+    if (_requestInFlight || _queuedLoad != null || _prefetchQueue.isEmpty) {
+      return;
+    }
+    final position = _prefetchQueue.removeAt(0);
+    _enqueueLoad(
+      _PreviewLoad(
+        position: position,
+        bucket: position,
+        generation: _requestGeneration,
+        precise: false,
+        prefetch: true,
+      ),
+    );
   }
 
   Duration _clampPosition(Duration position, Duration totalDuration) {
@@ -172,11 +213,29 @@ final class SeekPreviewController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _debounceTimer?.cancel();
+    _coarseTimer?.cancel();
     _exactTimer?.cancel();
     _prefetchTimer?.cancel();
+    _queuedLoad = null;
+    _prefetchQueue.clear();
     super.dispose();
   }
+}
+
+final class _PreviewLoad {
+  const _PreviewLoad({
+    required this.position,
+    required this.bucket,
+    required this.generation,
+    required this.precise,
+    this.prefetch = false,
+  });
+
+  final Duration position;
+  final Duration bucket;
+  final int generation;
+  final bool precise;
+  final bool prefetch;
 }
 
 extension on Duration {
@@ -185,4 +244,6 @@ extension on Duration {
     if (this > maximum) return maximum;
     return this;
   }
+
+  Duration absolute() => isNegative ? -this : this;
 }

@@ -36,6 +36,11 @@ struct PendingThumbnailResult {
   flutter::EncodableValue value;
 };
 
+struct VideoFrameResult {
+  std::vector<uint8_t> bytes;
+  int64_t actual_timestamp_ms = 0;
+};
+
 std::wstring Utf8ToWide(const std::string& value) {
   if (value.empty()) {
     return {};
@@ -192,14 +197,14 @@ std::vector<uint8_t> EncodeJpeg(IWICImagingFactory* factory,
   return bytes;
 }
 
-std::vector<uint8_t> GetVideoFrame(const std::string& path,
-                                   int64_t timestamp_ms, int maximum_size,
-                                   bool precise) {
+VideoFrameResult GetVideoFrame(const std::string& path, int64_t timestamp_ms,
+                               int maximum_size, bool precise) {
   if (FAILED(MFStartup(MF_VERSION, MFSTARTUP_FULL))) {
     return {};
   }
 
   std::vector<uint8_t> encoded;
+  int64_t actual_timestamp_ms = std::max<int64_t>(0, timestamp_ms);
   do {
     ComPtr<IMFAttributes> attributes;
     if (FAILED(MFCreateAttributes(&attributes, 1))) {
@@ -264,6 +269,7 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
                                                   0, target_timestamp -
                                                          coarse_tolerance);
     ComPtr<IMFSample> sample;
+    LONGLONG actual_timestamp = 0;
     const int maximum_attempts = precise ? 600 : 240;
     for (int attempt = 0; attempt < maximum_attempts; ++attempt) {
       DWORD stream_flags = 0;
@@ -277,14 +283,16 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
       }
       if (candidate != nullptr) {
         sample = std::move(candidate);
+        actual_timestamp = sample_timestamp;
         if (sample_timestamp >= accepted_timestamp) {
           break;
         }
       }
     }
-    if (sample == nullptr) {
+    if (sample == nullptr || actual_timestamp < accepted_timestamp) {
       break;
     }
+    actual_timestamp_ms = actual_timestamp / 10000;
 
     ComPtr<IMFMediaBuffer> media_buffer;
     if (FAILED(sample->ConvertToContiguousBuffer(&media_buffer))) {
@@ -381,7 +389,7 @@ std::vector<uint8_t> GetVideoFrame(const std::string& path,
   } while (false);
 
   MFShutdown();
-  return encoded;
+  return VideoFrameResult{std::move(encoded), actual_timestamp_ms};
 }
 
 std::optional<std::pair<uint64_t, uint64_t>> GetVideoDimensions(
@@ -533,10 +541,15 @@ void RegisterPlatformThumbnailChannel(flutter::BinaryMessenger* messenger,
               value = flutter::EncodableValue(std::move(bytes));
             }
           } else if (is_frame) {
-            auto bytes = GetVideoFrame(requested_path, timestamp_ms,
+            auto frame = GetVideoFrame(requested_path, timestamp_ms,
                                        requested_size, precise);
-            if (!bytes.empty()) {
-              value = flutter::EncodableValue(std::move(bytes));
+            if (!frame.bytes.empty()) {
+              flutter::EncodableMap frame_map;
+              frame_map[flutter::EncodableValue("bytes")] =
+                  flutter::EncodableValue(std::move(frame.bytes));
+              frame_map[flutter::EncodableValue("actualTimestampMs")] =
+                  flutter::EncodableValue(frame.actual_timestamp_ms);
+              value = flutter::EncodableValue(std::move(frame_map));
             }
           } else if (const auto dimensions =
                          GetVideoDimensions(requested_path)) {

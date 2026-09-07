@@ -17,7 +17,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           calls.add(call);
-          return frameBytes;
+          return {'bytes': frameBytes, 'actualTimestampMs': 15017};
         });
     addTearDown(
       () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -48,13 +48,21 @@ void main() {
     final second = await repository.getFrame(item, const Duration(seconds: 15));
     final precise = await repository.getFrame(
       item,
-      const Duration(seconds: 15),
+      const Duration(milliseconds: 15123),
+      precise: true,
+    );
+    final nearbyPrecise = await repository.getFrame(
+      item,
+      const Duration(milliseconds: 15249),
       precise: true,
     );
 
-    expect(first, frameBytes);
-    expect(second, frameBytes);
-    expect(precise, frameBytes);
+    expect(first?.bytes, frameBytes);
+    expect(second?.bytes, frameBytes);
+    expect(precise?.bytes, frameBytes);
+    expect(nearbyPrecise?.bytes, frameBytes);
+    expect(first?.actualPosition, const Duration(milliseconds: 15017));
+    expect(precise?.actualPosition, const Duration(milliseconds: 15017));
     expect(calls, hasLength(2));
     expect(calls.first.method, 'getFrame');
     expect(calls.first.arguments, {
