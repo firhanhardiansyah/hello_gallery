@@ -1,186 +1,249 @@
-# Local Gallery
+<p align="center">
+  <img src="docs/assets/hello-gallery-icon.png" width="128" alt="Hello Gallery icon">
+</p>
 
-Desktop-first local photo and video gallery for Windows and macOS, built with
-Flutter and Riverpod.
+<h1 align="center">Hello Gallery</h1>
 
-## MVP status
+<p align="center">
+  A desktop-first photo and video gallery for browsing local media with a fast,
+  customizable interface.
+</p>
 
-Implemented:
+## Overview
 
-- persisted root-folder selection (`file_picker` + `shared_preferences`)
-- browsing direct children of folders
-- image, video, and folder models
-- folder cards with up to four lightweight image previews
-- virtualized grid plus incremental batches of 60 items
-- A–Z, Z–A, newest, and oldest sorting
-- image detail with pan/zoom
-- on-demand `media_kit` video playback with custom controls
-- generated video-card previews with bounded concurrent extraction
-- previous/next media with natural filename ordering
-- keyboard and cross-platform gamepad controls
-- native fullscreen on Windows and macOS
-- persistent macOS folder access through security-scoped bookmarks
-- expandable folder/media sidebar with active-item auto-reveal
-- loading, empty, and error states
+Hello Gallery is a Flutter desktop application for Windows and macOS. It keeps
+media on the local machine, remembers the selected gallery folder, and combines
+folder navigation, multiple gallery layouts, image viewing, and video playback
+in one interface.
 
-Planned after the MVP is validated: recursive indexing, Drift/Isar metadata
-cache, persistent disk thumbnails, debounced `watcher` updates, and additional
-large-library performance work.
+The project is currently under active development. Windows is the primary
+development target, with macOS-specific folder permissions and native media
+support included in the codebase.
 
-## Controls
+## Highlights
 
-Keyboard and gamepad controls are context-aware and work in both the gallery
-and media detail.
+- Browse local folders with breadcrumb, history, and expandable tree navigation.
+- Display media using grid, aspect-ratio grid, quilted, or masonry layouts.
+- Sort items by natural filename order or modification date.
+- Adjust thumbnail size, spacing, corner radius, labels, and folder previews.
+- Select, rename, move, group, and send media or folders to the native trash.
+- Preview images with pan, zoom, rotation, fullscreen, and adjacent preloading.
+- Play videos using `media_kit` with custom controls, looping, mute, HDR toggle,
+  rotation, clean view, and a navigable filmstrip.
+- Show cached video thumbnails and timestamp-aware seek preview frames.
+- React to filesystem changes without requiring a manual gallery reload.
+- Use light, dark, or system appearance with configurable color themes.
+- Navigate using keyboard, mouse, or an Xbox-style/PlayStation-style gamepad.
 
-### Keyboard
+## Supported media
 
-| Key | Action |
+| Type | Extensions |
 | --- | --- |
-| Arrow keys | Select a gallery item; in detail, navigate or seek video |
-| `Enter` or `Space` | Open the selected gallery item |
-| `Space` in detail | Play or pause video |
-| `M` | Mute or unmute video |
-| `F` | Enter or leave native fullscreen |
-| `S` | Show or hide the sidebar in gallery and media detail |
-| `Escape` | Leave fullscreen first; otherwise go to the parent folder or gallery |
+| Images | `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`, `.heic`, `.tif`, `.tiff` |
+| Videos | `.mp4`, `.mkv`, `.mov`, `.avi`, `.webm`, `.m4v`, `.wmv` |
 
-Completed videos automatically advance to the next video in the current
-folder. Images between two videos are skipped for automatic advancement, while
-manual previous/next continues to navigate every media item.
+Actual decoding support can also depend on the operating system and bundled
+media libraries.
 
-### Gamepad
+## Requirements
 
-Gamepad input uses normalized Xbox-style names. The PlayStation equivalent is
-included in parentheses.
+- Flutter SDK compatible with Dart `^3.10.4`
+- Windows 10/11 with Visual Studio C++ desktop development tools, or
+- macOS with Xcode and CocoaPods
 
-| Gamepad input | Action |
-| --- | --- |
-| D-pad | Select a gallery item; in detail, navigate or seek video |
-| Left stick Up/Down | Scroll vertically under the virtual cursor |
-| Left stick Left/Right | Scroll horizontally when supported |
-| Right stick | Move the in-app virtual cursor |
-| `RB` (`R1`) | Primary click; hold and move to drag |
-| Hold `LB` (`L1`) | Precision cursor movement at 25% speed |
-| Right stick click (`R3`) | Recenter the virtual cursor |
-| `A` (`Cross`) | Open the selected gallery item; in detail, play or pause video |
-| `X` (`Square`) | Mute or unmute video |
-| `Y` (`Triangle`) or Start | Enter or leave native fullscreen |
-| Back/Select/Share or Touchpad | Show or hide the sidebar |
-| `B` (`Circle`) | Go back while preserving fullscreen |
+Check the local toolchain before running the project:
 
-Both analog sticks use a dead zone and acceleration curve. The left stick sends
-continuous scroll events to the widget under the virtual cursor. Small movement
-scrolls precisely and full movement scrolls quickly. The right stick controls a
-virtual cursor limited to the app window, which hides after three idle seconds.
-Analog activity hides the native cursor while gamepad pointer mode remains
-active, even after the virtual cursor fades from inactivity. Moving a physical
-mouse restores the native cursor and hides the virtual cursor. Home and trigger
-buttons are currently unassigned.
-
-## Architecture
-
-The project uses feature-first Riverpod with a small Controller → Repository →
-Service chain. It intentionally avoids use-case/interactor and domain mapping
-layers until they solve a demonstrated problem.
-
-```text
-lib/
-  app/
-    app.dart                 # MaterialApp composition
-    theme.dart               # application theme
-  shared/
-    models/
-      gallery_item.dart      # GalleryItem, GalleryFolder, MediaItem
-      gallery_sort.dart      # shared ordering contract
-  features/
-    gallery/
-      gallery_page.dart      # grid and folder navigation UI
-      gallery_controller.dart
-      gallery_state.dart
-      gallery_repository.dart
-      gallery_service.dart   # filesystem access and extension filtering
-      widgets/gallery_card.dart
-    media_detail/
-      media_detail_page.dart
-      media_detail_controller.dart
-      media_detail_state.dart
-    settings/
-      settings_controller.dart
-      settings_state.dart
-      settings_repository.dart
-    media_index/             # stage-two interfaces
-      media_index_service.dart
-      thumbnail_service.dart
-      file_watcher_service.dart
+```sh
+flutter doctor
 ```
 
-### Responsibilities
-
-- **UI** renders state, forwards user intent, and owns short-lived visual state.
-- **Controller + State** coordinate a feature: loading, navigation, sorting,
-  pagination, and player lifecycle. Controllers do not perform raw filesystem
-  or preferences access.
-- **Repository** is the stable data boundary. Today it delegates to a filesystem
-  scan; later it can combine cached metadata with fresh filesystem facts without
-  changing controllers.
-- **Service** talks to platform-facing APIs such as `dart:io`, media playback,
-  thumbnail generation, and filesystem events.
-- **Shared models** describe data crossing feature boundaries. They stay as
-  plain immutable Dart objects and contain no persistence annotations yet.
-
-`GalleryItem` is the sealed base type. `GalleryFolder` contains zero to four
-preview paths; `MediaItem` represents an image or video and carries filesystem
-metadata. `GallerySort` is shared by gallery and detail so one ordered list can
-drive the grid, sidebar, and previous/next navigation. `GalleryState` owns the
-current directory and visible batch. `MediaDetailState` owns the active index
-and playback facts.
-
-## Data flow
-
-```text
-Directory / watcher event
-  → GalleryService (read and normalize filesystem entries)
-  → metadata cache (stage two: return cached rows, upsert changed rows)
-  → GalleryRepository (single read API and cache policy)
-  → GalleryController (sort, batch, loading/error state)
-  → Grid/sidebar UI (builder virtualization)
-```
-
-For stage two, the initial root index is persisted by stable canonical path.
-Watcher events are debounced and grouped by parent directory. Create/update
-events stat and upsert only affected entries; delete events remove only affected
-rows. The controller patches the current ordered list and only falls back to a
-directory rescan when event semantics are ambiguous (for example, an unmatched
-rename pair).
-
-## Roadmap
-
-1. **MVP foundation (current):** choose/persist root, browse one directory at a
-   time, builder grid, image/video detail, custom basic playback controls.
-2. **MVP hardening (in progress):** expand controller/widget tests, improve
-   inaccessible-folder recovery, and validate keyboard/gamepad behavior across
-   supported controller models.
-3. **Index/cache:** add Drift (preferred for queryable sort/pagination) or Isar,
-   store path/type/size/mtime/dimensions/duration, and scan on a worker isolate.
-4. **Realtime updates:** use `watcher` with a 200–400 ms debounce, incrementally
-   patch repository/cache/state, and reconcile uncertain rename events.
-5. **Thumbnails:** store bounded-size thumbnails under `path_provider` cache,
-   key by canonical path + mtime + size, prioritize visible items, and limit
-   concurrent decoding.
-6. **Large-library UX:** repository-backed cursor pagination, folder tree/sidebar,
-   active-item auto-scroll, cancellable scans, skeleton polish, and cache limits.
-
-Each stage should stay runnable. Do not add recursive indexing and watcher
-mutation in the same change: first make cached reads authoritative, then feed
-incremental events into that tested boundary.
-
-## Run
+## Getting started
 
 ```sh
 flutter pub get
-flutter run -d macos
-# or on Windows
+```
+
+Run on Windows:
+
+```sh
 flutter run -d windows
 ```
 
-Validate changes with `dart format lib`, `flutter analyze`, and `flutter test`.
+Run on macOS:
+
+```sh
+flutter run -d macos
+```
+
+On first launch, choose a root folder containing the media library. The choice
+and gallery appearance preferences are persisted locally. On macOS, folder
+access is restored using security-scoped bookmarks.
+
+## Controls
+
+### Gallery
+
+| Input | Action |
+| --- | --- |
+| Arrow keys | Move the active gallery selection |
+| `Enter` or `Space` | Open the selected folder or media item |
+| `Ctrl/Cmd + A` | Select or clear all visible media |
+| `Ctrl/Cmd + +` / `Ctrl/Cmd + -` | Increase or decrease gallery item size |
+| `S` | Show or hide the sidebar |
+| `F` | Enter or leave fullscreen |
+| `Escape` | Leave fullscreen or navigate back |
+| Browser Back/Forward or mouse side buttons | Navigate folder history |
+
+### Media preview
+
+| Input | Action |
+| --- | --- |
+| `Up` / `Down` | Open the previous or next media item |
+| `Left` / `Right` | Seek video backward or forward by three seconds |
+| `Space` | Play or pause video |
+| `M` | Mute or unmute video |
+| `R` | Rotate clockwise |
+| `Ctrl/Cmd + R` | Lock or unlock rotation |
+| `L` | Toggle video loop |
+| `G` | Show or hide the media filmstrip |
+| `S` | Show or hide the sidebar |
+| `T` | Show or hide the top bar |
+| `H` | Toggle clean preview mode |
+| `F` | Enter or leave fullscreen |
+| `Escape` | Leave fullscreen or close the preview |
+| Mouse wheel | Navigate between media items |
+| `Ctrl/Cmd + mouse wheel` | Zoom the active media |
+
+### Gamepad
+
+Gamepad input uses normalized Xbox-style names; PlayStation equivalents are
+shown in parentheses.
+
+| Input | Gallery | Media preview |
+| --- | --- | --- |
+| D-pad | Move selection | Previous/next or seek video |
+| `A` (`Cross`) | Open selected item | Play or pause video |
+| `B` (`Circle`) | Navigate back | Close preview |
+| `X` (`Square`) | — | Mute or unmute |
+| `Y` (`Triangle`) / Start | Toggle fullscreen | Toggle fullscreen |
+| Back/Select/Share or Touchpad | Toggle sidebar | Toggle sidebar |
+| Left trigger (`L2`) | — | Lock or unlock rotation |
+| Right trigger (`R2`) | — | Rotate clockwise |
+| Left stick click (`L3`) | — | Toggle clean preview mode |
+| Left stick | Scroll | Scroll supported surfaces |
+| Right stick | Move virtual cursor | Move virtual cursor |
+| `RB` (`R1`) | Primary click/drag | Primary click/drag |
+| Hold `LB` (`L1`) | Precision cursor movement | Precision cursor movement |
+| Right stick click (`R3`) | Recenter virtual cursor | Recenter virtual cursor |
+
+## Build
+
+Create a Windows release bundle:
+
+```sh
+flutter build windows --release
+```
+
+The executable and all required runtime files are produced in:
+
+```text
+build/windows/x64/runner/Release/
+```
+
+The entire directory must be distributed together; `hello_gallery.exe` is not
+a standalone binary.
+
+### Windows installer
+
+The repository includes an Inno Setup configuration and build helper:
+
+```text
+installer/
+  build_installer.ps1
+  hello_gallery.iss
+```
+
+After installing Inno Setup 6 or 7, create the release build and installer with:
+
+```powershell
+.\installer\build_installer.ps1
+```
+
+The generated installer is written to:
+
+```text
+dist/HelloGallery-Setup-<version>.exe
+```
+
+The installer version is read from the Windows executable, which in turn is
+generated from the `version` field in `pubspec.yaml`.
+
+## Application identity and icons
+
+- Application name: `Hello Gallery`
+- Bundle identifier: `com.playground.hellogallery`
+- Windows executable: `hello_gallery.exe`
+
+Branding assets are stored separately for documentation and each platform:
+
+```text
+docs/assets/hello-gallery-icon.png
+windows/runner/resources/app_icon.ico
+macos/Runner/Assets.xcassets/AppIcon.appiconset/
+```
+
+After replacing the Windows icon, rebuild the application and installer:
+
+```sh
+flutter clean
+flutter pub get
+flutter build windows --release
+```
+
+## Architecture
+
+The application uses feature-first organization with presentation,
+application, domain, and data boundaries.
+
+```text
+lib/
+  app/                    App composition, routing, and theme
+  core/                   Shared platform and UI infrastructure
+  features/
+    gallery/              Browsing, selection, organization, and folder tree
+    gamepad/              Virtual cursor and normalized gamepad input
+    media_index/          Filesystem watching and incremental change handling
+    media_preview/        Image/video preview and playback controls
+    settings/             Root folder, appearance, and persisted preferences
+    thumbnail/            Thumbnail generation, dimensions, scheduling, cache
+```
+
+The UI forwards intent to notifiers and application services. Domain types and
+rules remain platform-independent, while data sources and repositories isolate
+filesystem, preferences, native channels, and media-decoding behavior.
+
+Thumbnail and preview work is scheduled and bounded to keep large galleries
+responsive. Generated thumbnails are cached using media identity and file
+metadata so modified files invalidate stale results.
+
+## Development checks
+
+Before submitting changes, run:
+
+```sh
+dart format lib test
+flutter analyze
+flutter test
+```
+
+The Windows native runner can be verified with:
+
+```sh
+flutter build windows --release
+```
+
+## Project status
+
+Current development priorities include improving seek-preview responsiveness,
+hardening behavior across different video codecs, refining large-library
+performance, and expanding platform-level integration tests.
